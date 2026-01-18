@@ -1,0 +1,100 @@
+:root {
+  /* Elegant Light Blue - CI Palette */
+
+  /* Backgrounds */
+  --bg-primary: #ffffff;
+  /* Pure White */
+  --bg-secondary: #f4f7fa;
+  /* Very Pale Blue-Grey (App Background) */
+  --bg-panel: #ffffff;
+  /* Panels should be white to stand out on secondary, or very light blue */
+  --bg-block: #e3f2fd;
+  /* Light Blue Blocks (for grouping) */
+  --bg-header: #ffffff;
+  /* Header White or custom */
+
+  /* Text */
+  --text-primary: #2c3e50;
+  /* Dark Slate Blue/Gray */
+  --text-secondary: #546e7a;
+  /* Muted Slate */
+  --text-label: #34495e;
+  /* Labels */
+  --text-light: #ffffff;
+  /* Text on dark buttons/headers */
+
+  /* Accents */
+  --primary-blue: #2196f3;
+  /* Standard Material Blue */
+  --light-blue: #bbdefb;
+  /* Lighter Blue */
+  --dark-blue: #1976d2;
+  /* Darker Blue */
+
+  /* Digital / Status */
+  --digital-bg: #263238;
+  /* Dark Blue-Gray for digital readouts */
+  --digital-text: #00e676;
+  /* Bright Green */
+  --digital-text-red: #ff5252;
+
+  /* Semantic Status Colors (High Contrast) */
+  --status-ok: #00c853;
+  /* Material Green A700 */
+  --status-ok-bg: #e8f5e9;
+  /* Light Green Bg */
+  --status-warning: #ff6d00;
+  /* Material Orange A700 */
+  --status-warning-bg: #fff3e0;
+  /* Light Orange Bg */
+  --status-error: #d50000;
+  /* Material Red A700 */
+  --status-error-bg: #ffebee;
+  /* Light Red Bg */
+  --status-idle: #78909c;
+  /* Blue Grey 400 */
+  --status-idle-bg: #eceff1;
+  /* Light Grey Bg */
+
+  /* Function Keys */
+  --btn-fkey-bg: #ffffff;
+  --btn-fkey-border: #90caf9;
+  --btn-fkey-text: #1565c0;
+  --btn-fkey-active: #e3f2fd;
+
+  /* Borders & Shadows */
+  --border-color: #e0e0e0;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+  /* Windows default fonts */
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 14px;
+  /* Slightly compact industrial size */
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}

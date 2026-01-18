@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>即時監控操作說明 - Flexo IoT</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Tahoma, sans-serif;
+            line-height: 1.8;
+            color: #333;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #1976d2;
+            font-size: 2rem;
+            border-bottom: 3px solid #1976d2;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #1565c0;
+            font-size: 1.4rem;
+            margin: 25px 0 15px;
+            padding-left: 12px;
+            border-left: 4px solid #42a5f5;
+        }
+
+        h3 {
+            color: #1e88e5;
+            font-size: 1.1rem;
+            margin: 15px 0 10px;
+        }
+
+        p {
+            margin: 10px 0;
+            text-align: justify;
+        }
+
+        .intro {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+
+        .fkey-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .fkey-table th {
+            background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+            color: white;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .fkey-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .fkey-table tr:nth-child(even) {
+            background-color: #f5f5f5;
+        }
+
+        .fkey-table tr:hover {
+            background-color: #e3f2fd;
+        }
+
+        .key-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #42a5f5 0%, #1976d2 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-family: monospace;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .key-badge.pink {
+            background: linear-gradient(135deg, #f48fb1 0%, #e91e63 100%);
+        }
+
+        .step-list {
+            counter-reset: step-counter;
+            list-style: none;
+            padding: 0;
+        }
+
+        .step-list li {
+            counter-increment: step-counter;
+            padding: 15px 15px 15px 60px;
+            margin: 10px 0;
+            background: #fafafa;
+            border-radius: 8px;
+            position: relative;
+            border-left: 3px solid #42a5f5;
+        }
+
+        .step-list li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .note {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .note::before {
+            content: "💡 提示：";
+            font-weight: bold;
+            color: #e65100;
+        }
+
+        .warning {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .warning::before {
+            content: "⚠️ 注意：";
+            font-weight: bold;
+            color: #c62828;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .status-green {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-yellow {
+            background: #fff8e1;
+            color: #f57f17;
+        }
+
+        .status-red {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .color-dot.green {
+            background: #4caf50;
+        }
+
+        .color-dot.yellow {
+            background: #ffc107;
+        }
+
+        .color-dot.red {
+            background: #f44336;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🖥️ 即時監控操作說明 (Monitor Dashboard)</h1>
+
+        <div class="intro">
+            <p><strong>即時監控</strong> 是您日常工作的核心介面。以下為儀表板上各個區塊的詳細功能說明：</p>
+            <ol class="step-list" style="margin-top: 20px;">
+                <li><strong>班別資訊 (Shift Info)</strong>：顯示目前值班的班別（日班/夜班）與時段，確保生產記錄歸屬正確。</li>
+                <li><strong>操作員 (Operator)</strong>：顯示登入者姓名。所有生產履歷與異常回報皆會記錄此人員。</li>
+                <li><strong>連線狀態 (Connection)</strong>：右上角顯示 PLC 連線燈號。綠燈代表通訊正常，紅燈代表斷線。</li>
+                <li><strong>目前車速 (Line Speed)</strong>：顯示機台即時運轉速度 (m/min)。數值顏色會隨速度變化（紅/黃/綠）。</li>
+                <li><strong>生產計數 (Current Qty)</strong>：目前工單已生產的數量。系統會自動扣除初始值 (Auto-Tare)。</li>
+                <li><strong>目標數量 (Target Qty)</strong>：工單預計生產總量。當生產計數達到此數值，機台會自動停機或提示。</li>
+                <li><strong>綠色生產區 (Active Zone)</strong>：畫面中央綠色背景區域，顯示「正在生產中」的工單資訊。</li>
+                <li><strong>黃色排程區 (Queue Zone)</strong>：下方列表顯示「即將生產」的工單。可透過 F1/F2 調整順序。</li>
+                <li><strong>換單計時 (Changeover Timer)</strong>：綠色生產區邊框顏色代表換單效率。綠色=快，紅色=慢。</li>
+                <li><strong>異常跑馬燈 (Alert Bar)</strong>：頂部紅色區域顯示機台異常訊息（如：急停、馬達過載）。</li>
+                <li><strong>功能鍵列 (F-Key Bar)</strong>：底部黑色區域對應鍵盤 F1~F12 功能鍵，提供快速操作指引。</li>
+                <li><strong>系統時間 (System Time)</strong>：顯示目前伺服器時間，所有生產報表以此時間為準。</li>
+            </ol>
+        </div>
+
+        <h2>一、登入系統</h2>
+        <ol class="step-list">
+            <li>系統啟動後，請先確認畫面顯示<strong>登入視窗</strong>。</li>
+            <li>點選您的<strong>班別</strong>（日班/夜班）。</li>
+            <li>在清單中找到您的<strong>人員代號</strong>並點選。</li>
+            <li>按下<strong>【選取】</strong>即可進入主畫面。</li>
+        </ol>
+
+        <h2>二、功能鍵操作 (F-Keys)</h2>
+        <div class="intro">
+            <p>畫面最下方的黑色按鈕區對應鍵盤上的 F1 ~ F12 鍵。以下為各功能鍵的詳細操作說明：</p>
+
+            <h3 style="margin-top: 20px;">F1 / F2：排程優先順序調整</h3>
+            <p>
+                當生產排程需要變更時，請先點選下方佇列中的目標工單。
+                按一下 <strong>F1 (上移)</strong> 可將該工單的優先順序提高一位（往上移動）；
+                按一下 <strong>F2 (下移)</strong> 則將其延後一位。此功能僅適用於「黃色排程區」的等待中工單。
+            </p>
+
+            <h3>F3：開始生產 (Start Production)</h3>
+            <p>
+                當您準備好開始下一筆工單時，請確認機台已完成換單準備。
+                選取目標工單後按下 <strong>F3</strong>，系統會將該工單鎖定並移入「綠色生產區」，此時機台開始計數，且無法再移動該工單順序。
+            </p>
+
+            <h3>F4：完工結算 (Job Complete)</h3>
+            <p>
+                當生產達到目標數量或工單結束時，請務必按下 <strong>F4</strong>。
+                系統會執行以下動作：1. 將目前的生產數據（數量、平均車速）寫入資料庫存檔；2. 清除生產區資訊；3. 若開啟自動換單，將自動載入下一筆工單。
+            </p>
+
+            <h3>F7：工單明細與展開圖 (Details)</h3>
+            <p>
+                領班或操作員可隨時按下 <strong>F7</strong> 彈出詳細視窗。
+                視窗內將顯示該工單對應的紙箱<strong>平面展開圖 (Box Diagram)</strong>，包含長寬高、壓線位置與印刷設定，供首件與製程中自主檢查對照使用。
+            </p>
+
+            <h3>M / N：自動換單模式 (Auto Mode)</h3>
+            <p>
+                位於功能列右側的開關。啟動 <strong>自動模式</strong> 後，當您按下 F4 結算完工時，
+                系統會自動將排程列表中的第一筆工單「拉入」生產區並設為準備狀態，減少人工選單的操作時間。
+            </p>
+
+            <h3>F10：退回與取消 (Rollback)</h3>
+            <p>
+                若不小心誤按 F3 開始生產，或因機台故障需要更換工單，請按下 <strong>F10</strong>。
+                系統會將目前「綠色生產區」的工單強制<strong>退回</strong>至下方的「黃色排程區」，
+                使其恢復為「等待中 (Pending)」狀態，您即可對其進行刪除或重新排序。
+            </p>
+        </div>
+
+        <h2>三、燈號與異常排除</h2>
+
+        <h3>1. 車速燈號</h3>
+        <ul style="list-style: none; padding: 0;">
+            <li style="margin-bottom: 10px;">
+                <span class="status-indicator status-red"><span class="color-dot red"></span> 紅色 (偏慢)</span>
+                <span style="margin-left: 10px;">機台速度低於標準。請檢查是否有卡紙或機台異常。</span>
+            </li>
+            <li style="margin-bottom: 10px;">
+                <span class="status-indicator status-yellow"><span class="color-dot yellow"></span> 黃色 (正常)</span>
+                <span style="margin-left: 10px;">機台運轉中，速度介於標準範圍。</span>
+            </li>
+            <li>
+                <span class="status-indicator status-green"><span class="color-dot green"></span> 綠色 (高速)</span>
+                <span style="margin-left: 10px;">機台達到極佳生產效率。</span>
+            </li>
+        </ul>
+
+        <h3>2. 準備時間 (換單效率)</h3>
+        <p>畫面中央的綠色框框會根據您的換單速度變色：</p>
+        <div class="note">
+            <ul>
+                <li><strong>🟢 綠框</strong>: 換單很快！在標準時間內完成。</li>
+                <li><strong>🟡 黃框</strong>: 還可以，稍微超出預計時間。</li>
+                <li><strong>🔴 紅框</strong>: 換單過久。請確認是否要回報「停機原因」。</li>
+            </ul>
+        </div>
+
+        <h3>3. 停車原因登錄 (Stop Reason)</h3>
+        <p>當機台停機超過 3 分鐘（系統可設定），系統會跳出 <strong>「停機原因選擇」</strong> 視窗。</p>
+        <ol class="step-list">
+            <li>若未自動跳出，可手動點擊 F8。</li>
+            <li>選擇類別（如：待料、機械故障、換版、吃飯）。</li>
+            <li>確認後，該段停機時間會被歸類統計，用於計算稼動率 (OEE)。</li>
+        </ol>
+
+        <h2>四、機台連線故障排除 SOP (Troubleshooting)</h2>
+        <p>當監控畫面數據不跳動，或右上角顯示 <strong>「斷線 (Disconnected)」</strong> 時，請依序檢查：</p>
+
+        <div class="warning">
+            <h3>步驟 1: 檢查 PLC 狀態</h3>
+            <ul>
+                <li>確認機台 PLC 電源是否開啟。</li>
+                <li>確認 PLC 網路線插孔燈號是否恆亮或閃爍（橘/綠燈）。</li>
+            </ul>
+
+            <h3>步驟 2: 檢查網路連線</h3>
+            <ul>
+                <li>確認工廠內網 (Wi-Fi/LAN) 是否正常。</li>
+                <li>嘗試在瀏覽器重新整理頁面 (F5)。</li>
+            </ul>
+
+            <h3>步驟 3: 檢查後端服務 (Backend Worker)</h3>
+            <ul>
+                <li>若頁面可開啟但數據皆為 0：
+                    <ol>
+                        <li>聯繫 IT 人員或透過 Admin 權限進入 Docker 管理介面。</li>
+                        <li>檢查 <code>backend-worker</code> 容器是否執行中。</li>
+                        <li>查看日誌：確認是否有 <code>MQTT Connection Failed</code> 或 <code>Modbus Timeout</code> 錯誤。</li>
+                    </ol>
+                </li>
+            </ul>
+
+            <h3>步驟 4: 系統重啟 (最後手段)</h3>
+            <p>若上述無效，請依序重啟：</p>
+            <ol>
+                <li>關閉瀏覽器分頁。</li>
+                <li>重啟工控電腦 (IPC)。</li>
+                <li>待電腦開機完成後，重新執行 Desktop 上的 <strong>"Start Flexo System"</strong> 捷徑。</li>
+            </ol>
+        </div>
+
+        <h2>五、每日巡檢與確認 (Daily Inspection)</h2>
+        <p>為確保系統運作正常，請於每日開機或換班時執行以下檢查：</p>
+
+        <div class="note" style="border-left-color: #2e7d32; background: #e8f5e9;">
+            <h3>1. 數據穩定性檢查 (Data Stability)</h3>
+            <p><strong>情境</strong>：機台運轉中，車速顯示忽快忽慢？</p>
+            <ul>
+                <li>觀察車速顯示是否穩定（允許 ±5 m/min 跳動）。</li>
+                <li>若數值瘋狂跳動（如 0 -> 200 -> 0），請向領班回報「訊號干擾」。</li>
+            </ul>
+        </div>
+
+        <div class="note" style="border-left-color: #1565c0; background: #e3f2fd;">
+            <h3>2. 自動歸零確認 (Zero Count Check)</h3>
+            <p><strong>情境</strong>：開始新工單時，數量不是 0？</p>
+            <ul>
+                <li>確認每次按下 <strong>F3 開始生產</strong> 時，中間綠色生產區的「生產數量」是否從 <strong>0</strong> 開始累計。</li>
+                <li>系統應自動扣除機台目前的累計值 (Auto-Tare)。若未歸零，請使用 F10 退回後重試。</li>
+            </ul>
+        </div>
+
+
+        <!-- Admin Only Technical Section (SASD Perspective) -->
+        <div id="admin-section"
+            style="display: none; border-top: 3px dashed #bbdefb; margin-top: 50px; padding-top: 30px;">
+            <h2 style="color: #d32f2f; border-left-color: #d32f2f;">🛠️ 系統架構與技術說明 (System Architecture - SASD)</h2>
+            <div class="warning" style="background: #fff3e0; border-left-color: #ef6c00;">
+                此區域僅顯示給 <strong>Admin</strong> 權限使用者。本節內容基於 SASD 規格書撰寫。
+            </div>
+
+            <h3>1. 系統架構概觀 (System Architecture)</h3>
+            <p>本系統採用 <strong>前後端分離</strong> 與 <strong>雙軌制資料流 (Dual-Path)</strong> 設計：</p>
+            <ul class="step-list">
+                <li><strong>Frontend</strong>: React (Vite), 負責 UI 呈現與 Simulated MQTT 發送。</li>
+                <li><strong>Backend</strong>: .NET 8 (Worker Service + API), 負責 MQTT 訂閱、處邏輯運算 (車速/計米) 與 Redis 快取。</li>
+                <li><strong>Infrastructure</strong>: Redis (Cache), PostgreSQL (DB), MQTT Broker (Mosquitto).</li>
+            </ul>
+
+            <h3>2. 資料流向 (Data Flow Diagram)</h3>
+            <div
+                style="display: flex; gap: 20px; align-items: center; justify-content: center; margin: 30px 0; font-size: 0.9rem;">
+                <div style="text-align: center;">
+                    <div style="background: #e3f2fd; padding: 15px; border: 2px solid #1976d2; border-radius: 8px;">
+                        <strong>Device / Simulator</strong><br>Topic: Advantech/+/data
+                    </div>
+                </div>
+                <div style="font-size: 20px;">➡</div>
+                <div style="text-align: center;">
+                    <div style="background: #f3e5f5; padding: 15px; border: 2px solid #7b1fa2; border-radius: 8px;">
+                        <strong>Backend Worker</strong><br>Device Locking & Calculation
+                    </div>
+                </div>
+                <div style="font-size: 20px;">➡</div>
+                <div style="text-align: center;">
+                    <div style="background: #e8f5e9; padding: 15px; border: 2px solid #2e7d32; border-radius: 8px;">
+                        <strong>Redis Cache</strong><br>Key: factory/monitor
+                    </div>
+                </div>
+                <div style="font-size: 20px;">➡</div>
+                <div style="text-align: center;">
+                    <div style="background: #ffffff; padding: 15px; border: 2px solid #333; border-radius: 8px;">
+                        <strong>Frontend UI</strong><br>GET /monitor/realtime
+                    </div>
+                </div>
+            </div>
+
+            <h3>3. 核心邏輯說明 (Key Logic)</h3>
+
+            <h4>A. 設備鎖定機制 (Device Locking)</h4>
+            <p>為了解決多設備/模擬器同時發送數據造成的 Race Condition，Backend Worker 實作了以下鎖定策略：</p>
+            <ul>
+                <li><strong>優先級 (Priority)</strong>: 硬體設備 MAC Address (12碼) > 軟體模擬器 (ORDER-MODE-XXX)。</li>
+                <li><strong>鎖定 (Lock)</strong>: 一旦收到硬體訊號，系統鎖定該 DeviceID，無視其他訊號來源。</li>
+                <li><strong>解鎖 (Unlock)</strong>: 硬體靜默超過 30 秒 (Timeout) 自動釋放鎖定。</li>
+            </ul>
+
+            <h4>B. 車速計算 (Speed Calculation)</h4>
+            <p>由於 PLC 僅回傳累積數量 (DI1)，系統透過後端計算即時車速：</p>
+            <ul>
+                <li><strong>公式</strong>: <code>Speed = (CurrentQty - LastQty) / TimeDelta</code></li>
+                <li><strong>平滑化</strong>: 採用 EMA (指數移動平均) 消除訊號抖動，Alpha = 0.1。</li>
+            </ul>
+
+            <h3>4. API 介面 (API References)</h3>
+            <table class="fkey-table">
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Endpoint</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="status-indicator status-green">GET</span></td>
+                        <td><code>/monitor/realtime</code></td>
+                        <td>取得即時生產數據 (Redis Cache)。</td>
+                    </tr>
+                    <tr>
+                        <td><span class="status-indicator status-green">POST</span></td>
+                        <td><code>/production/orders</code></td>
+                        <td>建立新工單。</td>
+                    </tr>
+                    <tr>
+                        <td><span class="status-indicator status-green">POST</span></td>
+                        <td><code>/production/complete</code></td>
+                        <td>完工結算 (寫入 DB)。</td>
+                    </tr>
+                </tbody>
+            </table>
+
+        </div>
+
+        <script>
+            // Admin View Toggle Logic
+            document.addEventListener('DOMContentLoaded', () => {
+                try {
+                    const userStr = localStorage.getItem('currentUser');
+                    if (userStr) {
+                        const user = JSON.parse(userStr);
+                        // Check if role is ADMIN
+                        if (user && user.role === 'ADMIN') {
+                            const adminSection = document.getElementById('admin-section');
+                            if (adminSection) {
+                                adminSection.style.display = 'block';
+                                console.log('Admin Access Detected: Showing Technical Documentation');
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error checking user role:', e);
+                }
+            });
+        </script>
+</body>
+
+</html>

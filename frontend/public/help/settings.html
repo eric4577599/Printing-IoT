@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>標準設定操作說明 - Flexo IoT</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', sans-serif;
+            line-height: 1.8;
+            color: #333;
+            background: #f5f5f5;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #673ab7;
+            font-size: 2rem;
+            border-bottom: 3px solid #673ab7;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #5e35b1;
+            font-size: 1.4rem;
+            margin: 25px 0 15px;
+            padding-left: 12px;
+            border-left: 4px solid #9575cd;
+        }
+
+        p {
+            margin: 10px 0;
+        }
+
+        .intro {
+            background: #ede7f6;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+
+        .step-list {
+            counter-reset: step;
+            list-style: none;
+            padding: 0;
+        }
+
+        .step-list li {
+            counter-increment: step;
+            padding: 15px 15px 15px 60px;
+            margin: 10px 0;
+            background: #fafafa;
+            border-radius: 8px;
+            position: relative;
+            border-left: 3px solid #673ab7;
+        }
+
+        .step-list li::before {
+            content: counter(step);
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 30px;
+            background: #673ab7;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .btn {
+            display: inline-block;
+            background: #673ab7;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin: 0 3px;
+        }
+
+        .btn.blue {
+            background: #1976d2;
+        }
+
+        .btn.green {
+            background: #4caf50;
+        }
+
+        .card {
+            background: #f3e5f5;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #673ab7;
+        }
+
+        .note {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .warning {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th {
+            background: #673ab7;
+            color: white;
+            padding: 12px 15px;
+            text-align: left;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f3e5f5;
+        }
+
+        ul {
+            margin: 10px 0 10px 25px;
+        }
+
+        li {
+            margin: 8px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>⚙️ 標準設定操作說明</h1>
+        <div class="intro">
+            <p><strong>系統設定 (Settings)</strong> 頁面用於配置系統參數、管理使用者帳號、設定紙箱型式及公式閾值等。</p>
+            <p style="color:#c62828;font-weight:bold;">⚠️ 此功能通常需要管理者 (ADMIN) 或工程師 (ENGINEER) 權限才可操作。</p>
+        </div>
+
+        <h2>一、進入設定頁面</h2>
+        <ol class="step-list">
+            <li>使用管理者帳號登入系統</li>
+            <li>點擊導覽列的<strong>「系統設定 (Settings)」</strong></li>
+        </ol>
+
+        <h2>二、設定功能分頁</h2>
+        <div class="card">
+            <h3 style="color:#4a148c;margin:0 0 10px">📋 紙箱型式設定</h3>
+            <p>管理紙箱類型定義、尺寸段落、ERP 別名對照等</p>
+        </div>
+        <div class="card">
+            <h3 style="color:#4a148c;margin:0 0 10px">👥 使用者管理</h3>
+            <p>新增/編輯/刪除操作員帳號、設定角色與權限</p>
+        </div>
+        <div class="card">
+            <h3 style="color:#4a148c;margin:0 0 10px">📊 公式與閾值</h3>
+            <p>設定車速閾值、準備時間標準、欠量警示值等</p>
+        </div>
+        <div class="card">
+            <h3 style="color:#4a148c;margin:0 0 10px">🔧 機台參數</h3>
+            <p>設定機台極速、生產單位等基本參數</p>
+        </div>
+        <div class="card">
+            <h3 style="color:#4a148c;margin:0 0 10px">⏱️ 停車原因</h3>
+            <p>自訂停車原因選項，用於生產中記錄停車事由</p>
+        </div>
+
+        <h2>三、紙箱型式設定</h2>
+        <ol class="step-list">
+            <li>切換至「紙箱型式設定」分頁</li>
+            <li>可查看現有紙箱類型清單</li>
+            <li>點擊<span class="btn">新增</span>建立新型式</li>
+            <li>填寫：型式代碼、名稱、結構圖、尺寸段落定義</li>
+            <li>點擊<span class="btn green">儲存</span>完成設定</li>
+        </ol>
+
+        <h2>四、公式與閾值設定</h2>
+        <table>
+            <tr>
+                <th>參數</th>
+                <th>說明</th>
+                <th>預設值</th>
+            </tr>
+            <tr>
+                <td>機台極速</td>
+                <td>機台最高運轉速度（張/分）</td>
+                <td>350</td>
+            </tr>
+            <tr>
+                <td>標準車速基準</td>
+                <td>標準車速佔極速的百分比</td>
+                <td>80%</td>
+            </tr>
+            <tr>
+                <td>標準準備時間</td>
+                <td>換單準備的標準時間（分鐘）</td>
+                <td>10</td>
+            </tr>
+            <tr>
+                <td>準備時間黃色閾值</td>
+                <td>超過標準多少%顯示黃色</td>
+                <td>120%</td>
+            </tr>
+            <tr>
+                <td>欠量閾值</td>
+                <td>剩餘數量低於此值變綠色</td>
+                <td>50</td>
+            </tr>
+        </table>
+        <div class="note">💡 調整閾值會影響即時監控頁面的顏色指示，請謹慎設定。</div>
+
+        <h2>五、使用者管理</h2>
+        <ol class="step-list">
+            <li>切換至「使用者管理」分頁</li>
+            <li>可查看所有使用者帳號</li>
+            <li>點擊<span class="btn">新增使用者</span></li>
+            <li>填寫：帳號、姓名、密碼、角色、預設班別</li>
+            <li>點擊<span class="btn green">儲存</span></li>
+        </ol>
+
+        <h2>六、角色權限說明</h2>
+        <table>
+            <tr>
+                <th>角色</th>
+                <th>說明</th>
+                <th>權限範圍</th>
+            </tr>
+            <tr>
+                <td>OPERATOR</td>
+                <td>操作員</td>
+                <td>生產操作、保養執行</td>
+            </tr>
+            <tr>
+                <td>ENGINEER</td>
+                <td>工程師</td>
+                <td>進階設定、除錯功能</td>
+            </tr>
+            <tr>
+                <td>ADMIN</td>
+                <td>管理者</td>
+                <td>所有功能、使用者管理</td>
+            </tr>
+        </table>
+
+        <h2>七、停車原因設定</h2>
+        <ol class="step-list">
+            <li>切換至「停車原因」分頁</li>
+            <li>查看現有停車原因清單</li>
+            <li>可新增自訂停車原因選項</li>
+            <li>設定是否為「常用」以優先顯示</li>
+        </ol>
+
+        <h2>八、故障排除 (Troubleshooting)</h2>
+        <table>
+            <tr>
+                <th>問題</th>
+                <th>可能原因</th>
+                <th>解決方式</th>
+            </tr>
+            <tr>
+                <td>無法進入設定頁面</td>
+                <td>權限不足</td>
+                <td>使用 ADMIN 或 ENGINEER 帳號登入</td>
+            </tr>
+            <tr>
+                <td>儲存設定失敗</td>
+                <td>欄位驗證錯誤</td>
+                <td>檢查必填欄位是否皆已填寫</td>
+            </tr>
+            <tr>
+                <td>設定變更無效果</td>
+                <td>未重新整理頁面</td>
+                <td>按 F5 重新整理後再檢查</td>
+            </tr>
+            <tr>
+                <td>使用者帳號無法刪除</td>
+                <td>該帳號有關聯的生產紀錄</td>
+                <td>改為停用帳號而非刪除</td>
+            </tr>
+            <tr>
+                <td>極速設定後車速顯示異常</td>
+                <td>閾值設定不合理</td>
+                <td>確認標準車速 < 機台極速</td>
+            </tr>
+            <tr>
+                <td>停車原因清單無法新增</td>
+                <td>代碼重複</td>
+                <td>使用不同的停車代碼</td>
+            </tr>
+        </table>
+
+        <div class="warning">⚠️ 設定變更後建議重新整理頁面以確保生效。重要參數修改前請先記錄原始值。</div>
+
+        <div class="note">
+            如需進階設定協助，請聯繫系統管理員或資訊部門。
+        </div>
+    </div>
+</body>
+
+</html>

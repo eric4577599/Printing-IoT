@@ -1,0 +1,90 @@
+services:
+  # Frontend Application (Vite/React)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5600:80" # Map container port 80 to host port 5600 (as per user preference in docs)
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:5200
+    depends_on:
+      - backend-api
+
+  # Backend Web API (.NET 8)
+  backend-api:
+    build:
+      context: ./backend
+      dockerfile: PrintingIoT.API/Dockerfile
+    ports:
+      - "5200:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=FlexoDB;Username=postgres;Password=password
+      - Redis__ConnectionString=redis:6379
+    depends_on:
+      - postgres
+      - redis
+
+  # Backend Worker Service (MQTT & Background Tasks)
+  backend-worker:
+    build:
+      context: ./backend
+      dockerfile: PrintingIoT.Worker/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=FlexoDB;Username=postgres;Password=password
+      - Mqtt__BrokerAddress=mqtt-broker
+      - Mqtt__Port=1883
+      - Redis__ConnectionString=redis:6379
+    depends_on:
+      - mqtt-broker
+      - postgres
+      - redis
+
+  # Database (PostgreSQL)
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=FlexoDB
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Cache (Redis)
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6380:6379"
+
+  # IoT Message Broker (Mosquitto)
+  mqtt-broker:
+    image: eclipse-mosquitto:2
+    restart: always
+    ports:
+      - "1884:1883"
+      - "9001:9001" # WebSocket port
+    volumes:
+      - ./backend/mosquitto/config:/mosquitto/config
+      - ./backend/mosquitto/data:/mosquitto/data
+      - ./backend/mosquitto/log:/mosquitto/log
+
+  # Cloudflare Tunnel
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: always
+    command: tunnel --no-autoupdate run --token eyJhIjoiMWE4YjczNmQwYzk5NTAwMTBlM2NiOTBlOTZlOTkyZDYiLCJ0IjoiNjBiOGQ1MWItN2Y1ZS00YTIxLTk5OTQtYzA4MzNmMWFlNjJmIiwicyI6Ik0yUXdObVF6TXpZdFptRXlOUzAwTURZeUxXSXlaR0l0Wm1WaU1EVTBZalJqTkRNeCJ9
+    depends_on:
+      - frontend
+      - backend-api
+
+volumes:
+  postgres_data:

@@ -1,0 +1,179 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.header {
+    height: 50px;
+    background-color: var(--bg-panel);
+    border-bottom: 2px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    box-shadow: var(--shadow-sm);
+}
+
+.appTitle {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--primary-blue);
+    /* Default Blue Title per request */
+    margin-right: 32px;
+}
+
+.nav {
+    display: flex;
+    gap: 8px;
+    height: 100%;
+}
+
+.navItem {
+    text-decoration: none;
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 0.95rem;
+    padding: 0 12px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+}
+
+.navItem:hover {
+    color: var(--primary-blue);
+    background-color: var(--primary-bg);
+}
+
+.active {
+    color: var(--primary-blue);
+    border-bottom-color: var(--primary-blue);
+}
+
+.systemStatus {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.mainContent {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    background-color: var(--bg-main);
+}
+
+/* Pink Button for Manual */
+.pinkBtn {
+    background-color: #f48fb1 !important;
+    border-color: #c2185b !important;
+    color: white !important;
+}
+
+/* Nav Link fallback if needed */
+.navLink {
+    text-decoration: none;
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 0.95rem;
+    padding: 0 12px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+}
+
+/* Bottom Footer */
+.footer {
+    background-color: var(--status-idle-bg);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+}
+
+.fKeyGrid {
+    display: flex;
+    width: 100%;
+    background-color: #333;
+    /* F-Keys keep dark theme */
+    padding: 0;
+    margin: 0;
+    gap: 1px;
+}
+
+.fKeyBtn {
+    flex: 1;
+    background: linear-gradient(to bottom, #444, #222);
+    color: white;
+    border: none;
+    border-right: 1px solid #555;
+    padding: 8px 0;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 55px;
+    border-radius: 0;
+}
+
+.fKeyBtn:active,
+.fKeyBtn.active {
+    background: #555;
+    transform: translateY(2px);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+    border-top: 2px solid #222;
+}
+
+.fKeyBtn.active .fKeyLabel {
+    color: #fff;
+}
+
+.pinkBtn {
+    background: linear-gradient(to bottom, #d81b60, #ad1457);
+}
+
+.fKeyLabel {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #ffeb3b;
+    margin-bottom: 2px;
+}
+
+.fKeyAction {
+    font-size: 0.9em;
+    color: #fff;
+    white-space: nowrap;
+}
+
+.statusBar {
+    background-color: #e0e0e0;
+    color: #333;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid #ccc;
+    width: 100%;
+    box-sizing: border-box;
+    /* Ensure padding doesn't overflow */
+}
+
+.statusItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+}
+
+.statusIndicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+}

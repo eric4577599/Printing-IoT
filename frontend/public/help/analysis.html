@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生產分析操作說明 - Printing IoT</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Tahoma, sans-serif;
+            line-height: 1.8;
+            color: #333;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #1976d2;
+            font-size: 2rem;
+            border-bottom: 3px solid #1976d2;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #1565c0;
+            font-size: 1.4rem;
+            margin: 25px 0 15px;
+            padding-left: 12px;
+            border-left: 4px solid #42a5f5;
+        }
+
+        h3 {
+            color: #1e88e5;
+            font-size: 1.1rem;
+            margin: 15px 0 10px;
+        }
+
+        p {
+            margin: 10px 0;
+            text-align: justify;
+        }
+
+        .intro {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+
+        .step-list {
+            counter-reset: step-counter;
+            list-style: none;
+            padding: 0;
+        }
+
+        .step-list li {
+            counter-increment: step-counter;
+            padding: 15px 15px 15px 60px;
+            margin: 10px 0;
+            background: #fafafa;
+            border-radius: 8px;
+            position: relative;
+            border-left: 3px solid #66bb6a;
+        }
+
+        .step-list li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, #43a047 0%, #2e7d32 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .note {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .note::before {
+            content: "📈 說明：";
+            font-weight: bold;
+            color: #2e7d32;
+        }
+
+        .warning {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .warning::before {
+            content: "💡 提示：";
+            font-weight: bold;
+            color: #e65100;
+        }
+
+        .fkey-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .fkey-table th {
+            background: linear-gradient(135deg, #43a047 0%, #2e7d32 100%);
+            color: white;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .fkey-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .fkey-table tr:nth-child(even) {
+            background-color: #f5f5f5;
+        }
+
+        .fkey-table tr:hover {
+            background-color: #e8f5e9;
+        }
+
+        .metric-card {
+            display: inline-block;
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            padding: 15px 25px;
+            border-radius: 8px;
+            margin: 5px;
+            text-align: center;
+        }
+
+        .metric-card strong {
+            font-size: 1.2rem;
+            color: #1565c0;
+        }
+
+        .chart-desc {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: #fafafa;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .chart-icon {
+            font-size: 2rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>📈 生產分析操作說明 (Analysis)</h1>
+
+        <div class="intro">
+            <p><strong>生產分析</strong>提供進階的效能指標與視覺化圖表，協助主管與操作員掌握生產效率與改善方向。</p>
+        </div>
+
+        <h2>一、核心指標說明</h2>
+        <p>系統提供以下關鍵績效指標 (KPI)：</p>
+
+        <table class="fkey-table">
+            <thead>
+                <tr>
+                    <th>指標名稱</th>
+                    <th>計算公式</th>
+                    <th>意義說明</th>
+                    <th>目標值</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>OEE</strong></td>
+                    <td>時間稼動率 × 性能稼動率 × 良品率</td>
+                    <td>整體設備效率，綜合評估指標</td>
+                    <td>≥ 85%</td>
+                </tr>
+                <tr>
+                    <td><strong>時間稼動率</strong></td>
+                    <td>實際運轉時間 ÷ 計劃運轉時間</td>
+                    <td>設備可用性，停機影響程度</td>
+                    <td>≥ 90%</td>
+                </tr>
+                <tr>
+                    <td><strong>性能稼動率</strong></td>
+                    <td>實際產量 ÷ 理論產量</td>
+                    <td>設備產能發揮程度</td>
+                    <td>≥ 95%</td>
+                </tr>
+                <tr>
+                    <td><strong>良品率</strong></td>
+                    <td>良品數 ÷ 總生產數</td>
+                    <td>品質水準</td>
+                    <td>≥ 98%</td>
+                </tr>
+                <tr>
+                    <td><strong>平均車速</strong></td>
+                    <td>總生產長度 ÷ 總生產時間</td>
+                    <td>生產效率</td>
+                    <td>依產品而異</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="note">
+            OEE (Overall Equipment Effectiveness) 是製造業最重要的綜合效率指標，世界級標準為 85% 以上。
+        </div>
+
+        <h2>二、圖表類型</h2>
+
+        <div class="chart-desc">
+            <div class="chart-icon">📊</div>
+            <div>
+                <strong>OEE 趨勢圖</strong><br>
+                顯示一段時間內 OEE 的變化趨勢，可快速識別效率下降的時間點。
+            </div>
+        </div>
+
+        <div class="chart-desc">
+            <div class="chart-icon">📉</div>
+            <div>
+                <strong>車速趨勢圖</strong><br>
+                追蹤機台車速變化，識別減速模式與瓶頸。
+            </div>
+        </div>
+
+        <div class="chart-desc">
+            <div class="chart-icon">🔴</div>
+            <div>
+                <strong>不良率分析</strong><br>
+                依時間顯示不良品比例，用於品質追蹤。
+            </div>
+        </div>
+
+        <div class="chart-desc">
+            <div class="chart-icon">🥧</div>
+            <div>
+                <strong>停車原因分析</strong><br>
+                圓餅圖顯示各類停車原因的時間占比，優先改善佔比高的項目。
+            </div>
+        </div>
+
+        <h2>三、操作步驟</h2>
+        <ol class="step-list">
+            <li>從導航列點選「<strong>生產分析</strong>」進入分析畫面。</li>
+            <li>選擇時間區間：
+                <ul>
+                    <li><strong>今日</strong>：當天即時數據</li>
+                    <li><strong>本週</strong>：近 7 天統計</li>
+                    <li><strong>本月</strong>：當月統計</li>
+                    <li><strong>自訂</strong>：指定日期範圍</li>
+                </ul>
+            </li>
+            <li>系統自動計算並顯示指標數值與圖表。</li>
+            <li>滑鼠移至圖表上可查看詳細數據點。</li>
+            <li>點擊圖例可切換顯示/隱藏特定資料系列。</li>
+        </ol>
+
+        <h2>四、指標解讀與改善建議</h2>
+
+        <table class="fkey-table">
+            <thead>
+                <tr>
+                    <th>情境</th>
+                    <th>可能原因</th>
+                    <th>改善方向</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>OEE 突然下降</td>
+                    <td>設備故障或換單過久</td>
+                    <td>檢查停車原因報表，找出主因</td>
+                </tr>
+                <tr>
+                    <td>時間稼動率低</td>
+                    <td>頻繁停機</td>
+                    <td>分析停車原因，規劃預防保養</td>
+                </tr>
+                <tr>
+                    <td>性能稼動率低</td>
+                    <td>車速偏慢或空轉</td>
+                    <td>檢查設備狀態、操作員訓練</td>
+                </tr>
+                <tr>
+                    <td>良品率低</td>
+                    <td>首件不良或製程異常</td>
+                    <td>加強首件檢查、調整參數</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>五、故障排除</h2>
+
+        <table class="fkey-table">
+            <thead>
+                <tr>
+                    <th>問題</th>
+                    <th>可能原因</th>
+                    <th>解決方式</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>圖表不顯示</td>
+                    <td>無生產資料</td>
+                    <td>確認時間區間內有生產記錄</td>
+                </tr>
+                <tr>
+                    <td>OEE 顯示 0%</td>
+                    <td>缺少必要數據</td>
+                    <td>確認運轉時間與產量有記錄</td>
+                </tr>
+                <tr>
+                    <td>數值異常偏高 (>100%)</td>
+                    <td>參數設定問題</td>
+                    <td>聯繫管理員檢查計算參數</td>
+                </tr>
+                <tr>
+                    <td>頁面載入緩慢</td>
+                    <td>時間範圍太長</td>
+                    <td>縮小時間區間重試</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="warning">
+            分析數據需累積足夠的生產記錄才能顯示有意義的趨勢。建議至少累積一週以上的資料。
+        </div>
+    </div>
+</body>
+
+</html>

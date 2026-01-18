@@ -1,0 +1,170 @@
+.container {
+    display: flex;
+    height: 100%;
+    padding: 10px;
+    gap: 10px;
+    background-color: var(--bg-color, #f0f2f5);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--text-primary, #333);
+}
+
+.leftColumn,
+.rightColumn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    border: none;
+}
+
+/* Toolbar (Blue Gradient) - Replaces Green */
+.toolbar,
+.toolbarRight,
+.greenToolbar,
+.greenToolbarRight {
+    background: linear-gradient(135deg, #2196f3, #1976d2);
+    padding: 10px;
+    display: flex;
+    /* Ensures flex behavior */
+    gap: 8px;
+    align-items: center;
+    color: white;
+}
+
+.toolbarRight,
+.greenToolbarRight {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.toolbar button,
+.toolbarRight button,
+.greenToolbar button,
+.greenToolbarRight button {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 6px 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.toolbar button:hover,
+.toolbarRight button:hover,
+.greenToolbar button:hover,
+.greenToolbarRight button:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Specific Buttons */
+.redBtn {
+    background-color: #ef5350 !important;
+    border-color: #e53935 !important;
+}
+
+.brightGreenBtn {
+    background-color: #66bb6a !important;
+    border-color: #43a047 !important;
+    color: white !important;
+}
+
+.darkGreenBtn {
+    background-color: #42a5f5 !important;
+    /* Light Blue */
+    border-color: #2196f3 !important;
+}
+
+.searchInput {
+    flex: 1;
+    padding: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #333;
+}
+
+.iconBtn {
+    padding: 4px 8px !important;
+    min-width: 30px;
+}
+
+/* Tables */
+.scheduleTableContainer,
+.productTableContainer {
+    flex: 1;
+    overflow-y: auto;
+    border-bottom: none;
+    background: white;
+    /* Changed from Yellow */
+}
+
+.scheduleTable,
+.productTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.scheduleTable th,
+.productTable th {
+    background: #e3f2fd;
+    /* Light Blue Header */
+    color: #1565c0;
+    font-weight: 600;
+    padding: 8px;
+    font-size: 0.9rem;
+    position: sticky;
+    top: 0;
+    text-align: center;
+    border-bottom: 2px solid #bbdefb;
+}
+
+.scheduleTable td,
+.productTable td {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+    text-align: center;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+/* Rows */
+.gridRow,
+.productTable tr {
+    transition: background 0.1s;
+}
+
+.gridRow:hover,
+.productTable tr:hover {
+    background-color: #f5f5f5;
+}
+
+.selectedRow,
+.selectedProductRow {
+    background-color: #bbdefb !important;
+    color: #0d47a1;
+    font-weight: 600;
+}
+
+.runningRow {
+    background-color: #e8f5e9 !important;
+    color: #2e7d32;
+    border-left: 4px solid #4caf50;
+    font-weight: bold;
+}
+
+/* Diagram */
+.diagramArea {
+    height: 35%;
+    background: #fcfcfc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border-top: 1px solid #ddd;
+}

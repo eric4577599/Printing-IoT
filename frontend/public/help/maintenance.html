@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>保養維修操作手冊 - Flexo IoT</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Tahoma, sans-serif;
+            line-height: 1.8;
+            color: #333;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #1976d2;
+            font-size: 2rem;
+            border-bottom: 3px solid #1976d2;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #1565c0;
+            font-size: 1.4rem;
+            margin: 25px 0 15px;
+            padding-left: 12px;
+            border-left: 4px solid #42a5f5;
+        }
+
+        h3 {
+            color: #1e88e5;
+            font-size: 1.1rem;
+            margin: 15px 0 10px;
+        }
+
+        p {
+            margin: 10px 0;
+            text-align: justify;
+        }
+
+        .intro {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+
+        .step-list {
+            counter-reset: step-counter;
+            list-style: none;
+            padding: 0;
+        }
+
+        .step-list li {
+            counter-increment: step-counter;
+            padding: 15px 15px 15px 60px;
+            margin: 10px 0;
+            background: #fafafa;
+            border-radius: 8px;
+            position: relative;
+            border-left: 3px solid #42a5f5;
+        }
+
+        .step-list li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        /* Narrative paragraph style */
+        .step-text {
+            background: #fafafa;
+            padding: 15px;
+            border-left: 3px solid #42a5f5;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        .note {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .note::before {
+            content: "💡 提示：";
+            font-weight: bold;
+            color: #e65100;
+        }
+
+        code {
+            background: #e3f2fd;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #0d47a1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔧 保養維修 (Smart Maintenance)</h1>
+        <div class="intro">
+            <p>本模組提供機台的預防性保養排程、備品庫存管理及維修履歷追蹤功能，協助工廠達成設備零停機目標。</p>
+        </div>
+
+        <div class="note">
+            <strong>💡 核心功能：</strong>
+            <ul>
+                <li><strong>零件庫存 (Inventory)</strong>: 管理備品數量與安全庫存。</li>
+                <li><strong>保養排程 (Schedules)</strong>: 設定週期性的保養規則。</li>
+                <li><strong>維修清單 (Tasks)</strong>: 執行每日/每週待辦的保養任務。</li>
+                <li><strong>維修履歷 (History)</strong>: 查詢歷史維修紀錄與故障回報。</li>
+            </ul>
+        </div>
+
+        <h2>1. 零件庫存管理 (Spare Parts)</h2>
+        <div class="intro">
+            <p>在開始設定保養排程前，建議先建立零件基本資料。</p>
+            <h3>新增零件</h3>
+            <ol class="step-list">
+                <li>點擊上方 <strong>🔩 零件庫存</strong> 頁籤。</li>
+                <li>點擊下方的 <strong>+ 新增零件 (快速)</strong> 按鈕。</li>
+                <li>輸入零件名稱 (如: <code>主馬達軸承</code>)。</li>
+                <li>系統將自動建立該零件，預設庫存為 10，安全庫存為 5。</li>
+            </ol>
+            <h3 style="margin-top:20px;">修改庫存</h3>
+            <p>目前版本若需調整庫存，請直接透過「執行維修」來扣除庫存，或等待後續版本開放直接編輯功能。</p>
+        </div>
+
+        <h2>2. 設定保養排程 (Configuration)</h2>
+        <p>設定系統自動產生保養任務的規則。</p>
+        <div class="note">
+            <strong>⚙️ 保養參數設定詳解 (Configuration Details)：</strong>
+            <p>建立保養排程時，請詳細確認以下 11 項設定，以確保保養任務能正確執行：</p>
+            <ol class="step-list" style="margin-top: 20px;">
+                <li><strong>保養名稱 (Task Name)</strong>: 清晰描述任務內容，例如「主馬達潤滑」。</li>
+                <li><strong>保養類型 (Maint. Type)</strong>:
+                    <ul>
+                        <li><strong>零件保養 (Part-Based)</strong>: 針對特定零件 (如皮帶、軸承)，會扣除庫存。</li>
+                        <li><strong>一般保養 (General)</strong>: 針對區域 (如機台清潔)，不涉及零件消耗。</li>
+                    </ul>
+                </li>
+                <li><strong>目標零件 (Target Part)</strong>: 從零件庫中選擇對應的備品，系統將自動連結庫存資訊。</li>
+                <li><strong>觸發週期 (Frequency)</strong>: 設定任務頻率 (每日/每週/每月/每季/每年)。</li>
+                <li><strong>執行單位 (Support Unit)</strong>: 指定負責單位。
+                    <ul>
+                        <li><strong>❌ 無/自行 (Self)</strong>: 操作員自行處理。</li>
+                        <li><strong>🔧 工務 (Maintenance)</strong>: 需通知廠務維修組。</li>
+                        <li><strong>🏢 廠商 (Vendor)</strong>: 需聯繫外部原廠或供應商。</li>
+                    </ul>
+                </li>
+                <li><strong>所需工具 (Tools)</strong>: 列出執行此任務需要的工具 (如: 14mm 板手、黃油槍)。</li>
+                <li><strong>SOP 連結 (SOP Link)</strong>: 可貼上內部標準作業程序的文件網址。</li>
+                <li><strong>拍照要求 (Photo Req.)</strong>: 勾選後，執行保養時強制要求上傳現場照片。</li>
+                <li><strong>數值記錄 (Value Req.)</strong>: 勾選後，需輸入檢測數值 (如皮帶張力、溫度)，以便追蹤趨勢。</li>
+                <li><strong>驗收人員 (Acceptance)</strong>: 是否需要領班或主管進行二次確認 (Sign-off)。</li>
+                <li><strong>提前預警 (Lead Time)</strong>: 設定在到期前幾天開始顯示於待辦清單 (預設 3 天)。</li>
+            </ol>
+        </div>
+
+        <h2>3. 執行保養任務 (Execution)</h2>
+        <p class="step-text">
+            操作員應於每日開班時檢查本頁面的 <strong>「📋 維修清單」</strong>。
+            系統會自動列出今日需執行的項目，並以燈號標示急迫性：<span style="color:#f57c00;">黃色</span>代表即將到期，<span
+                style="color:#c62828;">紅色</span>代表已逾期。
+            請點擊項目旁邊綠色的 <strong>「執行」</strong> 按鈕，系統會彈出確認視窗。
+            您可以選擇上傳維修後的現場照片或是填寫備註（如：更換後的皮帶張力數值），
+            最後按下提交，系統將自動記錄執行時間、人員，並同步扣除對應的零件庫存。
+        </p>
+
+        <h2>4. 故障回報 (Breakdown Reporting)</h2>
+        <p class="step-text">
+            當機台發生非預期故障（如馬達異音、皮帶斷裂）時，請立即使用本功能進行記錄。
+            在維修清單頁面的左上角，點擊紅色的 <strong>「⚠️ 故障回報」</strong> 按鈕。
+            在表單中，請選擇發生故障的相關零件（或選擇「其他」），並詳細描述故障現象與處理方式。
+            提交後，這筆紀錄會被標記為「故障維修 (Repair)」，並存入歷史履歷供日後分析設備妥善率。
+        </p>
+
+        <h2>5. 查看履歷 (History Query)</h2>
+        <p class="step-text">
+            所有已完成的例行保養與故障維修紀錄，皆會完整保存於 <strong>「📜 歷史紀錄」</strong> 頁籤中。
+            您可以透過上方的搜尋列，輸入操作員姓名、零件名稱或日期範圍來快速尋找特定紀錄。
+            點擊列表中的任一筆資料，可展開查看當時的詳細執行狀況，包含備註說明與上傳的照片證據，這對於釐清責任歸屬與追蹤設備健康度至關重要。
+        </p>
+
+        <h2>6. 故障排除 (Troubleshooting)</h2>
+        <table style="width:100%; border-collapse:collapse; margin:20px 0; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+            <thead>
+                <tr style="background:linear-gradient(135deg,#1976d2 0%,#1565c0 100%);color:white;">
+                    <th style="padding:12px 15px;text-align:left;">問題</th>
+                    <th style="padding:12px 15px;text-align:left;">可能原因</th>
+                    <th style="padding:12px 15px;text-align:left;">解決方式</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="border-bottom:1px solid #e0e0e0;">
+                    <td style="padding:12px 15px;">看不到保養項目</td>
+                    <td style="padding:12px 15px;">權限不足</td>
+                    <td style="padding:12px 15px;">聯繫管理員開通權限</td>
+                </tr>
+                <tr style="background:#f5f5f5;border-bottom:1px solid #e0e0e0;">
+                    <td style="padding:12px 15px;">無法上傳照片</td>
+                    <td style="padding:12px 15px;">檔案太大 (>5MB)</td>
+                    <td style="padding:12px 15px;">壓縮照片後重試，建議 2MB 以下</td>
+                </tr>
+                <tr style="border-bottom:1px solid #e0e0e0;">
+                    <td style="padding:12px 15px;">零件庫存未扣除</td>
+                    <td style="padding:12px 15px;">保養類型設定為「一般保養」</td>
+                    <td style="padding:12px 15px;">僅「零件保養」會自動扣庫存</td>
+                </tr>
+                <tr style="background:#f5f5f5;border-bottom:1px solid #e0e0e0;">
+                    <td style="padding:12px 15px;">清單未顯示待執行項目</td>
+                    <td style="padding:12px 15px;">尚未設定保養排程</td>
+                    <td style="padding:12px 15px;">先到「保養排程」頁籤新增規則</td>
+                </tr>
+                <tr style="border-bottom:1px solid #e0e0e0;">
+                    <td style="padding:12px 15px;">歷史紀錄找不到資料</td>
+                    <td style="padding:12px 15px;">日期範圍設定錯誤</td>
+                    <td style="padding:12px 15px;">調整搜尋條件，擴大日期範圍</td>
+                </tr>
+                <tr style="background:#f5f5f5;">
+                    <td style="padding:12px 15px;">故障回報無法提交</td>
+                    <td style="padding:12px 15px;">必填欄位未填寫</td>
+                    <td style="padding:12px 15px;">確認零件選擇與故障描述已填寫</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="note">
+            如持續發生問題，請聯繫資訊人員或廠務主管協助處理。
+        </div>
+    </div>
+</body>
+
+</html>

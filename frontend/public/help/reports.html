@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生產報表操作說明 - Printing IoT</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Tahoma, sans-serif;
+            line-height: 1.8;
+            color: #333;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #1976d2;
+            font-size: 2rem;
+            border-bottom: 3px solid #1976d2;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #1565c0;
+            font-size: 1.4rem;
+            margin: 25px 0 15px;
+            padding-left: 12px;
+            border-left: 4px solid #42a5f5;
+        }
+
+        h3 {
+            color: #1e88e5;
+            font-size: 1.1rem;
+            margin: 15px 0 10px;
+        }
+
+        p {
+            margin: 10px 0;
+            text-align: justify;
+        }
+
+        .intro {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+
+        .step-list {
+            counter-reset: step-counter;
+            list-style: none;
+            padding: 0;
+        }
+
+        .step-list li {
+            counter-increment: step-counter;
+            padding: 15px 15px 15px 60px;
+            margin: 10px 0;
+            background: #fafafa;
+            border-radius: 8px;
+            position: relative;
+            border-left: 3px solid #42a5f5;
+        }
+
+        .step-list li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .note {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .note::before {
+            content: "💡 提示：";
+            font-weight: bold;
+            color: #e65100;
+        }
+
+        .warning {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .warning::before {
+            content: "⚠️ 注意：";
+            font-weight: bold;
+            color: #c62828;
+        }
+
+        .fkey-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .fkey-table th {
+            background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+            color: white;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .fkey-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .fkey-table tr:nth-child(even) {
+            background-color: #f5f5f5;
+        }
+
+        .fkey-table tr:hover {
+            background-color: #e3f2fd;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>📊 生產報表操作說明 (Reports)</h1>
+
+        <div class="intro">
+            <p><strong>生產報表</strong>功能讓您查詢、分析與匯出生產記錄。系統提供四種報表類型，滿足不同的分析需求。</p>
+        </div>
+
+        <h2>一、報表類型總覽</h2>
+        <table class="fkey-table">
+            <thead>
+                <tr>
+                    <th>報表名稱</th>
+                    <th>功能說明</th>
+                    <th>適用情境</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>生產明細</strong></td>
+                    <td>逐筆顯示每張工單的詳細資料</td>
+                    <td>追查特定工單問題</td>
+                </tr>
+                <tr>
+                    <td><strong>生產日報表</strong></td>
+                    <td>彙總當日所有工單的統計數據</td>
+                    <td>每日結算與交接</td>
+                </tr>
+                <tr>
+                    <td><strong>生產月報表</strong></td>
+                    <td>按日彙總整月生產數據</td>
+                    <td>月度績效評估</td>
+                </tr>
+                <tr>
+                    <td><strong>停車原因</strong></td>
+                    <td>分析停車時間與原因分布</td>
+                    <td>改善生產效率</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>二、生產明細操作</h2>
+        <ol class="step-list">
+            <li>點選左側選單的「<strong>生產明細</strong>」。</li>
+            <li>設定查詢日期範圍（開始日期～結束日期）。</li>
+            <li>點擊「<strong>確認</strong>」載入資料。</li>
+            <li>上方表格顯示工單清單，點選任一列可在下方查看<strong>停車明細</strong>。</li>
+            <li>點擊「<strong>匯出</strong>」可下載 Excel 檔案。</li>
+        </ol>
+
+        <h2>三、生產日報表操作</h2>
+        <ol class="step-list">
+            <li>點選「<strong>生產日報表</strong>」頁籤。</li>
+            <li>選擇日期與班別（可選「全部」）。</li>
+            <li>系統自動彙總顯示該日的統計數據。</li>
+            <li>表格包含：序號、客戶、訂單號、產品、班別、車速、數量、良品、不良、開始時間等欄位。</li>
+        </ol>
+
+        <div class="note">
+            日報表下方會顯示統計摘要：總筆數、總良品、總不良、平均車速等。
+        </div>
+
+        <h2>四、生產月報表操作</h2>
+        <ol class="step-list">
+            <li>點選「<strong>生產月報表</strong>」頁籤。</li>
+            <li>使用下拉選單選擇<strong>年份</strong>與<strong>月份</strong>。</li>
+            <li>系統顯示該月份的每日統計表格。</li>
+            <li>表格欄位包含：日期、筆數、生產量、良品、不良、良率、平均車速、生產時間、停車時間、稼動率。</li>
+            <li>最下方顯示<strong>月度總計</strong>行。</li>
+        </ol>
+
+        <div class="note">
+            月報表可用於評估整月生產效率，與目標進行對照。
+        </div>
+
+        <h2>五、停車原因分析</h2>
+        <ol class="step-list">
+            <li>點選「<strong>停車原因</strong>」頁籤。</li>
+            <li>設定時間區間（開始日期～結束日期）。</li>
+            <li>系統按原因分類彙總，顯示：原因名稱、停車次數、占比、總時長。</li>
+            <li><strong>點擊任一原因列</strong>，可<strong>展開</strong>查看該原因下所有工單的停車細節。</li>
+            <li>展開後顯示：日期、訂單編號、客戶、品名、時間、時長。</li>
+        </ol>
+
+        <div class="note">
+            點擊「全部展開」按鈕可一次展開所有原因的細節。
+        </div>
+
+        <h2>六、故障排除</h2>
+        <table class="fkey-table">
+            <thead>
+                <tr>
+                    <th>問題</th>
+                    <th>可能原因</th>
+                    <th>解決方式</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>報表無資料</td>
+                    <td>日期範圍設定錯誤</td>
+                    <td>確認日期區間是否包含生產記錄</td>
+                </tr>
+                <tr>
+                    <td>匯出失敗</td>
+                    <td>瀏覽器封鎖下載</td>
+                    <td>檢查瀏覽器下載設定，允許下載檔案</td>
+                </tr>
+                <tr>
+                    <td>數據與實際不符</td>
+                    <td>資料尚未同步</td>
+                    <td>重新整理頁面 (按 F5)</td>
+                </tr>
+                <tr>
+                    <td>月報表顯示空白</td>
+                    <td>該月無生產記錄</td>
+                    <td>確認選取的年/月是否有生產活動</td>
+                </tr>
+                <tr>
+                    <td>停車原因無法展開</td>
+                    <td>瀏覽器相容性問題</td>
+                    <td>嘗試使用 Chrome 或 Edge 瀏覽器</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="warning">
+            如持續發生問題，請聯繫資訊人員協助處理。
+        </div>
+    </div>
+</body>
+
+</html>

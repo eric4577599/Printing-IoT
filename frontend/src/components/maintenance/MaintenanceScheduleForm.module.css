@@ -1,0 +1,436 @@
+/* MaintenanceScheduleForm.module.css */
+
+.formContainer {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 24px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.header {
+    background: linear-gradient(135deg, #1565c0, #2196f3);
+    color: white;
+    padding: 16px 24px;
+    border-radius: 8px 8px 0 0;
+    margin: -24px -24px 24px -24px;
+}
+
+.header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+/* Section Styles */
+.section {
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.sectionTitle {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+/* Part Info */
+.partInfo {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+.partInfoItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.partInfoItem label {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.partInfoItem span {
+    font-weight: 600;
+    color: #333;
+}
+
+/* Trigger Type Selector */
+.triggerSelector {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.triggerOption {
+    flex: 1;
+    min-width: 140px;
+    padding: 16px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.triggerOption:hover {
+    border-color: #2196f3;
+    background: #f3f8ff;
+}
+
+.triggerOption.active {
+    border-color: #2196f3;
+    background: #e3f2fd;
+}
+
+.triggerIcon {
+    font-size: 1.5rem;
+}
+
+.triggerLabel {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #333;
+    text-align: center;
+}
+
+.triggerSubLabel {
+    font-size: 0.75rem;
+    color: #666;
+}
+
+/* Config Panel */
+.configPanel {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 16px;
+}
+
+.configTitle {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1565c0;
+    margin: 0 0 16px 0;
+}
+
+/* Input Row */
+.inputRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.inputRow label {
+    font-size: 0.85rem;
+    color: #333;
+    min-width: 120px;
+}
+
+.inputRow input,
+.inputRow select {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.inputRow input:focus,
+.inputRow select:focus {
+    outline: none;
+    border-color: #2196f3;
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+.inputRow span {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+/* Frequency Buttons */
+.frequencyButtons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.frequencyBtn {
+    padding: 8px 16px;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    background: white;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.frequencyBtn:hover {
+    border-color: #2196f3;
+}
+
+.frequencyBtn.active {
+    background: #2196f3;
+    color: white;
+    border-color: #2196f3;
+}
+
+/* Status Display */
+.statusDisplay {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    margin-top: 16px;
+}
+
+.statusDisplay.normal {
+    background: #e8f5e9;
+}
+
+.statusDisplay.warning {
+    background: #fff3e0;
+}
+
+.statusDisplay.danger {
+    background: #ffebee;
+}
+
+/* Progress Bar */
+.progressContainer {
+    margin-top: 16px;
+}
+
+.progressBar {
+    height: 24px;
+    background: #e0e0e0;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+}
+
+.progressFill {
+    height: 100%;
+    background: linear-gradient(90deg, #4caf50, #8bc34a);
+    transition: width 0.3s ease;
+    border-radius: 12px;
+}
+
+.progressFill.warning {
+    background: linear-gradient(90deg, #ff9800, #ffc107);
+}
+
+.progressFill.danger {
+    background: linear-gradient(90deg, #f44336, #e91e63);
+}
+
+.progressText {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Gauge Chart Container */
+.gaugeContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    background: #fafafa;
+    border-radius: 8px;
+    margin-top: 16px;
+}
+
+/* PLC Status */
+.plcStatus {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    margin-top: 16px;
+}
+
+.plcStatus.connected {
+    background: #e8f5e9;
+}
+
+.plcStatus.disconnected {
+    background: #ffebee;
+}
+
+.statusDot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #4caf50;
+}
+
+.statusDot.disconnected {
+    background: #f44336;
+}
+
+/* Hybrid Conditions */
+.conditionCard {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    background: white;
+    position: relative;
+}
+
+.conditionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.conditionTitle {
+    font-weight: 600;
+    color: #1565c0;
+}
+
+.deleteBtn {
+    background: none;
+    border: none;
+    color: #f44336;
+    cursor: pointer;
+    font-size: 1.2rem;
+}
+
+.addConditionBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    color: #666;
+    width: 100%;
+    justify-content: center;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.addConditionBtn:hover {
+    border-color: #2196f3;
+    color: #2196f3;
+}
+
+/* Logic Toggle */
+.logicToggle {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.logicBtn {
+    padding: 8px 24px;
+    border: 2px solid #e0e0e0;
+    border-radius: 20px;
+    background: white;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.logicBtn.active {
+    border-color: #2196f3;
+    background: #2196f3;
+    color: white;
+}
+
+/* SOP Section */
+.sopSection {
+    margin-top: 20px;
+}
+
+.checklistItems {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.checklistItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #f5f5f5;
+    border-radius: 4px;
+}
+
+.checklistItem input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+}
+
+/* Form Actions */
+.formActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.primaryBtn {
+    padding: 10px 24px;
+    background: #2196f3;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.primaryBtn:hover {
+    background: #1976d2;
+}
+
+.secondaryBtn {
+    padding: 10px 24px;
+    background: white;
+    color: #666;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.secondaryBtn:hover {
+    background: #f5f5f5;
+    border-color: #999;
+}

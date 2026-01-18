@@ -1,0 +1,111 @@
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 3000;
+}
+
+.window {
+    width: 500px;
+    background-color: #f0f0f0;
+    border: 2px solid #666;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+    font-family: sans-serif;
+}
+
+.titleBar {
+    background: linear-gradient(to right, #a0d4f7, #66a3cc);
+    padding: 5px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #999;
+}
+
+.closeBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.body {
+    display: flex;
+    padding: 10px;
+    gap: 10px;
+    height: 300px;
+}
+
+.listContainer {
+    flex: 1;
+    background-color: #fff;
+    border: 1px solid #999;
+    display: flex;
+    flex-direction: column;
+}
+
+.headerRow {
+    display: flex;
+    background-color: #e0e0e0;
+    border-bottom: 1px solid #ccc;
+    font-weight: bold;
+    padding: 5px;
+}
+
+.colCode {
+    width: 80px;
+    padding-left: 5px;
+    border-right: 1px solid #ccc;
+}
+
+.colReason {
+    flex: 1;
+    padding-left: 5px;
+}
+
+.list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.row {
+    display: flex;
+    padding: 4px 0;
+    cursor: pointer;
+}
+
+.row:hover {
+    background-color: #f0f8ff;
+}
+
+.selected {
+    background-color: #0078d7;
+    color: #fff;
+}
+
+.sideButtons {
+    width: 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sideButtons button {
+    padding: 8px;
+    cursor: pointer;
+    border: 1px solid #999;
+    background-color: #e1e1e1;
+}
+
+.sideButtons button:active {
+    background-color: #ccc;
+}

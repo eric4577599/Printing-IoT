@@ -1,0 +1,6 @@
+@PrintingIoT.API_HostAddress = http://localhost:5236
+
+GET {{PrintingIoT.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

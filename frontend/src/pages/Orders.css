@@ -1,0 +1,349 @@
+.orders-dashboard {
+    display: flex;
+    flex-direction: column;
+    /* Vertical Stack */
+    gap: 15px;
+    padding: 15px;
+    height: calc(100vh - 60px);
+    background-color: #f0f2f5;
+    box-sizing: border-box;
+}
+
+.top-section {
+    flex: 6;
+    /* 60% Height */
+    display: flex;
+    /* Existing Split View */
+    gap: 15px;
+    overflow: hidden;
+    /* Prevent scrollbar overlap */
+}
+
+.bottom-section {
+    flex: 4;
+    /* 40% Height */
+    display: flex;
+    flex-direction: column;
+}
+
+.panel {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.schedule-panel {
+    flex: 3;
+}
+
+.pool-panel {
+    flex: 2;
+}
+
+.panel-header {
+    background-color: #0056b3;
+    color: white;
+    padding: 8px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.panel-header h2 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.action-bar {
+    display: flex;
+    gap: 10px;
+}
+
+.action-bar button {
+    background-color: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: white;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.action-bar button.primary-btn {
+    background-color: #28a745;
+    border: none;
+    font-weight: bold;
+}
+
+.table-wrapper {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+    font-size: 0.85rem;
+}
+
+.data-table th {
+    background-color: #f8f9fa;
+    position: sticky;
+    top: 0;
+    font-weight: 600;
+    color: #495057;
+}
+
+.data-table tr:hover {
+    background-color: #f8f9fa;
+    cursor: pointer;
+}
+
+.selected-row {
+    background-color: #e2e6ea !important;
+    border-left: 4px solid #0056b3;
+}
+
+.data-table .empty-state {
+    text-align: center;
+    color: #999;
+    padding: 20px;
+}
+
+/* Pool Panel Specifics */
+.search-bar {
+    padding: 10px 15px;
+    border-bottom: 1px solid #eee;
+    flex-shrink: 0;
+}
+
+.search-bar input[type="text"] {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    margin-bottom: 5px;
+}
+
+.radio-group {
+    display: flex;
+    gap: 15px;
+    font-size: 0.85rem;
+}
+
+.pool-actions {
+    padding: 8px 15px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #eee;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.primary-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.sm-btn {
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    cursor: pointer;
+}
+
+.sm-btn.danger {
+    color: #dc3545;
+    border-color: #dc3545;
+    background: white;
+}
+
+/* Detail Diagram Section */
+.diagram-content {
+    flex: 1;
+    padding: 15px;
+    overflow: hidden;
+    background-color: #fafafa;
+}
+
+.detail-layout {
+    display: flex;
+    height: 100%;
+    gap: 20px;
+}
+
+.info-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-auto-rows: min-content;
+    gap: 15px;
+    background: white;
+    padding: 15px;
+    border-radius: 4px;
+    border: 1px solid #eee;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-item label {
+    font-size: 0.8rem;
+    color: #666;
+    margin-bottom: 2px;
+}
+
+.info-item span {
+    font-weight: 500;
+    font-size: 1rem;
+    color: #333;
+}
+
+.info-item.highlight span {
+    color: #0056b3;
+    font-weight: bold;
+}
+
+.visual-area {
+    flex: 2;
+    background: white;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.box-visual-placeholder {
+    text-align: center;
+    color: #999;
+}
+
+.empty-state-large {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #aaa;
+    text-align: center;
+}
+
+.empty-state-large p {
+    margin: 5px 0;
+    font-size: 1.1rem;
+}
+
+/* --- New Tabs & Toolbar Styles --- */
+.tab-header {
+    display: flex;
+    padding: 0;
+    align-items: flex-end;
+    background-color: #e9ecef;
+}
+
+.tabs {
+    display: flex;
+    width: 100%;
+}
+
+.tabs button {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 12px;
+    cursor: pointer;
+    font-weight: 500;
+    color: #495057;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+}
+
+.tabs button:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.tabs button.active {
+    background-color: white;
+    color: #0056b3;
+    border-bottom: 3px solid #0056b3;
+    font-weight: bold;
+}
+
+.toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 10px;
+    border-bottom: 1px solid #ddd;
+    background: #fdfdfd;
+}
+
+.spacer {
+    flex: 1;
+}
+
+/* Button Variants */
+.success-btn {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.2s;
+}
+
+.success-btn:hover {
+    background-color: #218838;
+}
+
+.info-btn {
+    background-color: #17a2b8;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.2s;
+}
+
+.info-btn:hover {
+    background-color: #138496;
+}
+
+.danger-btn {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.2s;
+}
+
+.danger-btn:hover {
+    background-color: #c82333;
+}

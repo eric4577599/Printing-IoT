@@ -1,0 +1,191 @@
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(44, 62, 80, 0.4);
+    /* Elegant dark blue overlay */
+    backdrop-filter: blur(4px);
+    /* Modern blur effect */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.windowContainer {
+    background-color: #ffffff;
+    padding: 24px;
+    border-radius: var(--radius-md);
+    width: 640px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    /* Soft, deep shadow */
+    font-family: inherit;
+    border: 1px solid var(--border-color);
+}
+
+/* Part 1: Top Buttons */
+.topBar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.largeBtn {
+    padding: 8px 20px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    border-radius: 4px;
+    color: var(--text-primary);
+    transition: all 0.2s;
+}
+
+.largeBtn:hover {
+    background: var(--bg-block);
+    color: var(--primary-blue);
+    border-color: var(--primary-blue);
+}
+
+/* Part 2: Info Bar */
+.infoBar {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    background: var(--bg-secondary);
+    padding: 16px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+}
+
+.infoField {
+    display: flex;
+    flex-direction: column;
+}
+
+.infoField label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.infoField input {
+    padding: 6px 10px;
+    border: 1px solid var(--border-color);
+    background: #fff;
+    border-radius: 4px;
+    width: 100px;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.infoField input:disabled {
+    background-color: #f9f9f9;
+    color: #999;
+}
+
+/* Part 3 & 4: Table Sections */
+.tableSection {
+    display: flex;
+    gap: 12px;
+    height: 180px;
+    /* Fixed height for scroll */
+}
+
+.tableWrapper {
+    flex: 1;
+    border: 1px solid var(--border-color);
+    background: #fff;
+    overflow-y: auto;
+    position: relative;
+    border-radius: 4px;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.th {
+    background: var(--bg-block);
+    /* Light Blue Header */
+    position: sticky;
+    top: 0;
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-label);
+}
+
+.td {
+    padding: 10px;
+    border-bottom: 1px solid var(--bg-secondary);
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+.selectedRow {
+    background-color: var(--primary-blue) !important;
+    color: white !important;
+}
+
+.selectedRow .td {
+    border-color: transparent;
+}
+
+/* Side Buttons */
+.sideButtons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    justify-content: flex-start;
+    width: 80px;
+}
+
+.sideBtn {
+    padding: 8px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    text-align: center;
+    font-size: 0.9rem;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.sideBtn:hover {
+    background: var(--bg-block);
+    color: var(--primary-blue);
+    border-color: var(--primary-blue);
+}
+
+/* Footer Bar */
+.footerBar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background: var(--bg-block);
+    /* Light Blue Footer */
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    /* Light Blue Border */
+    font-size: 0.9rem;
+}
+
+.footerBar select,
+.footerBar input {
+    padding: 4px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: #ffffff;
+}
