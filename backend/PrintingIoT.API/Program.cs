@@ -3,7 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
 using PrintingIoT.Infrastructure.Data;
-
+using PrintingIoT.Core.Interfaces;
+using PrintingIoT.Infrastructure.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -26,6 +27,12 @@ builder.Services.AddCors(options =>
 builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
     StackExchange.Redis.ConnectionMultiplexer.Connect(builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379"));
 
+// Register Services
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IMaintenanceService, MaintenanceService>();
+builder.Services.AddScoped<ISettingsService, SettingsService>();
+
 if (!builder.Environment.IsEnvironment("Testing"))
 {
     builder.Services.AddDbContext<PrintingIoT.Infrastructure.Data.PrintingContext>(options =>
@@ -41,40 +48,34 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Auto-create DB for MVP with Retry Policy
+// Auto-create DB for MVP with Async Retry Policy
 if (!app.Environment.IsEnvironment("Testing"))
 {
     using (var scope = app.Services.CreateScope())
     {
-    var services = scope.ServiceProvider;
-    var logger = services.GetRequiredService<ILogger<Program>>();
-    var context = services.GetRequiredService<PrintingIoT.Infrastructure.Data.PrintingContext>();
-    
-    // Simple Retry Logic
-    int maxRetries = 10;
-    int delaySeconds = 2;
-    for (int i = 0; i < maxRetries; i++)
-    {
-        try
+        var services = scope.ServiceProvider;
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        var context = services.GetRequiredService<PrintingContext>();
+        
+        int maxRetries = 10;
+        int delaySeconds = 2;
+        for (int i = 0; i < maxRetries; i++)
         {
-            logger.LogInformation($"Attempting to connect to database (Attempt {i+1}/{maxRetries})...");
-            if (context.Database.EnsureCreated())
+            try
             {
-                logger.LogInformation("Database created successfully.");
+                logger.LogInformation($"Attempting to connect to database (Attempt {i+1}/{maxRetries})...");
+                logger.LogInformation($"Attempting to apply migrations (Attempt {i+1}/{maxRetries})...");
+                await context.Database.MigrateAsync();
+                logger.LogInformation("Database migrated successfully.");
+                break;
             }
-            else 
+            catch (Exception ex)
             {
-                logger.LogInformation("Database already exists.");
+                logger.LogWarning($"Database connection failed: {ex.Message}. Retrying in {delaySeconds}s...");
+                if (i == maxRetries - 1) throw;
+                await Task.Delay(delaySeconds * 1000);
             }
-            break; // Success
         }
-        catch (Exception ex)
-        {
-            logger.LogWarning($"Database connection failed: {ex.Message}. Retrying in {delaySeconds}s...");
-            if (i == maxRetries - 1) throw;
-            Thread.Sleep(delaySeconds * 1000);
-        }
-    }
     }
 }
 

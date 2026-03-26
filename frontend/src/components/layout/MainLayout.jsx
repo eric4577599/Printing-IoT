@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import styles from './MainLayout.module.css';
+import { updateSimulationSpeed } from '../../services/api';
 
 import DebugPanel from '../debug/DebugPanel';
 import { useLanguage } from '../../modules/language/LanguageContext';
@@ -373,10 +374,7 @@ const MainLayout = () => {
                                     onChange={async (e) => {
                                         const newSpeedFactor = parseFloat(e.target.value);
                                         setSpeedFactor(newSpeedFactor);
-
-                                        // 呼叫 API 更新模擬速度
                                         try {
-                                            const { updateSimulationSpeed } = await import('../../services/api');
                                             await updateSimulationSpeed(newSpeedFactor);
                                         } catch (error) {
                                             console.error('Failed to update simulation speed:', error);

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PrintingIoT.Core.Entities.Maintenance;
-using PrintingIoT.Infrastructure.Data;
+using PrintingIoT.Core.Interfaces;
 
 namespace PrintingIoT.API.Controllers;
 
@@ -9,11 +9,11 @@ namespace PrintingIoT.API.Controllers;
 [Route("api/[controller]")]
 public class MaintenanceController : ControllerBase
 {
-    private readonly PrintingContext _context;
+    private readonly IMaintenanceService _maintenanceService;
 
-    public MaintenanceController(PrintingContext context)
+    public MaintenanceController(IMaintenanceService maintenanceService)
     {
-        _context = context;
+        _maintenanceService = maintenanceService;
     }
 
     // --- SCHEDULES ---
@@ -21,15 +21,15 @@ public class MaintenanceController : ControllerBase
     [HttpGet("schedules")]
     public async Task<ActionResult<IEnumerable<MaintenanceSchedule>>> GetSchedules()
     {
-        return await _context.MaintenanceSchedules.ToListAsync();
+        var schedules = await _maintenanceService.GetSchedulesAsync();
+        return Ok(schedules);
     }
 
     [HttpPost("schedules")]
     public async Task<ActionResult<MaintenanceSchedule>> CreateSchedule(MaintenanceSchedule schedule)
     {
-        _context.MaintenanceSchedules.Add(schedule);
-        await _context.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetSchedules), new { id = schedule.Id }, schedule);
+        var createdSchedule = await _maintenanceService.CreateScheduleAsync(schedule);
+        return CreatedAtAction(nameof(GetSchedules), new { id = createdSchedule.Id }, createdSchedule);
     }
 
     // --- PARTS ---
@@ -37,15 +37,15 @@ public class MaintenanceController : ControllerBase
     [HttpGet("parts")]
     public async Task<ActionResult<IEnumerable<SparePart>>> GetParts()
     {
-        return await _context.SpareParts.ToListAsync();
+        var parts = await _maintenanceService.GetPartsAsync();
+        return Ok(parts);
     }
 
     [HttpPost("parts")]
     public async Task<ActionResult<SparePart>> CreatePart(SparePart part)
     {
-        _context.SpareParts.Add(part);
-        await _context.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetParts), new { id = part.Id }, part);
+        var createdPart = await _maintenanceService.CreatePartAsync(part);
+        return CreatedAtAction(nameof(GetParts), new { id = createdPart.Id }, createdPart);
     }
 
     // --- RECORDS ---
@@ -53,28 +53,14 @@ public class MaintenanceController : ControllerBase
     [HttpGet("records")]
     public async Task<ActionResult<IEnumerable<MaintenanceRecord>>> GetRecords()
     {
-        return await _context.MaintenanceRecords
-            .Include(r => r.Schedule)
-            .Include(r => r.Part)
-            .OrderByDescending(r => r.ExecutionDate)
-            .ToListAsync();
+        var records = await _maintenanceService.GetRecordsAsync();
+        return Ok(records);
     }
 
     [HttpPost("records")]
     public async Task<ActionResult<MaintenanceRecord>> CreateRecord(MaintenanceRecord record)
     {
-        // Deduct stock if part used
-        if (record.PartId.HasValue && record.QuantityUsed > 0)
-        {
-            var part = await _context.SpareParts.FindAsync(record.PartId);
-            if (part != null)
-            {
-                part.StockQuantity -= record.QuantityUsed;
-            }
-        }
-
-        _context.MaintenanceRecords.Add(record);
-        await _context.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetRecords), new { id = record.Id }, record);
+        var createdRecord = await _maintenanceService.CreateRecordAsync(record);
+        return CreatedAtAction(nameof(GetRecords), new { id = createdRecord.Id }, createdRecord);
     }
 }

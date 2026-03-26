@@ -25,4 +25,13 @@ public class Order
     public string ProductCode { get; set; } = string.Empty;
     public decimal? OptPhase { get; set; }
     public decimal? OptGap { get; set; }
+
+    // Phase 8: Detailed Specs
+    public DateTime? DeliveryDate { get; set; }
+
+    // Traceability
+    [MaxLength(50)]
+    public string ProductionBatch { get; set; } = string.Empty;
+    [MaxLength(100)]
+    public string TraceCode { get; set; } = string.Empty;
 }

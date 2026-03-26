@@ -1,17 +1,25 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
+import { lazy, Suspense, useEffect } from 'react';
 import MainLayout from './components/layout/MainLayout';
 import Dashboard from './pages/Dashboard';
 import Schedule from './pages/Schedule';
-import DebugDashboard from './pages/DebugDashboard'; // Import DebugDashboard
-import MaintenancePage from './modules/maintenance/MaintenancePage';
-import MachineMaintenance from './pages/MachineMaintenance';
-import SettingsPage from './pages/SettingsPage';
-import AnalysisPage from './pages/AnalysisPage';
 import { LanguageProvider } from './modules/language/LanguageContext';
-import ReportsPage from './modules/reports/ReportsPage';
 import { AuthProvider } from './modules/auth/AuthContext';
 import './App.css';
-import { useEffect } from 'react'; // Import useEffect
+
+// 懶加載大型頁面（縮小首屏 Bundle 體積）
+const DebugDashboard = lazy(() => import('./pages/DebugDashboard'));
+const AnalysisPage = lazy(() => import('./pages/analysis/AnalysisPage'));
+const ReportsPage = lazy(() => import('./modules/reports/ReportsPage'));
+const MachineMaintenance = lazy(() => import('./pages/MachineMaintenance'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+
+// 通用 Loading Fallback
+const PageLoader = () => (
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '200px', fontSize: '1rem', color: '#888' }}>
+    載入中...
+  </div>
+);
 
 const App = () => {
   useEffect(() => {
@@ -22,16 +30,19 @@ const App = () => {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* Debug Route - Move to top to ensure priority */}
-            <Route path="/debug" element={<DebugDashboard />} />
+            {/* Debug Route */}
+            <Route path="/debug" element={<Suspense fallback={<PageLoader />}><DebugDashboard /></Suspense>} />
 
             <Route path="/" element={<MainLayout />}>
+              {/* 核心頁面：靜態載入（首屏必要） */}
               <Route index element={<Dashboard />} />
               <Route path="schedule" element={<Schedule />} />
-              <Route path="reports" element={<ReportsPage />} />
-              <Route path="analysis" element={<AnalysisPage />} />
-              <Route path="maintenance" element={<MachineMaintenance />} />
-              <Route path="settings" element={<SettingsPage />} />
+
+              {/* 大型頁面：懶加載（非首屏） */}
+              <Route path="reports" element={<Suspense fallback={<PageLoader />}><ReportsPage /></Suspense>} />
+              <Route path="analysis" element={<Suspense fallback={<PageLoader />}><AnalysisPage /></Suspense>} />
+              <Route path="maintenance" element={<Suspense fallback={<PageLoader />}><MachineMaintenance /></Suspense>} />
+              <Route path="settings" element={<Suspense fallback={<PageLoader />}><SettingsPage /></Suspense>} />
             </Route>
 
             {/* Fallback 404 */}

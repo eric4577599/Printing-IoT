@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import mqtt from 'mqtt'; // Added for MQTT Monitor Loop
+import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import styles from './Dashboard.module.css';
+import SchedulePanel from '../components/dashboard/SchedulePanel';
+import StatusPanel from '../components/dashboard/StatusPanel';
 import OrderDetailsModal from '../components/modals/OrderDetailsModal';
 import StopReasonModal from '../components/modals/StopReasonModal';
 import FinishOrderModal from '../components/modals/FinishOrderModal';
@@ -9,7 +10,6 @@ import ProductFormModal from '../components/modals/ProductFormModal';
 import {
     setCurrentOrder, clearCurrentOrder, getRealtimeData, getMachineSections // Imported
 } from '../services/api';
-import { withCooldown } from '../utils/debounce';
 import { useLanguage } from '../modules/language/LanguageContext';
 
 const Dashboard = () => {
@@ -45,7 +45,6 @@ const Dashboard = () => {
         setCurrentMonitorData: () => { },
         isPlcConnected: true
     };
-    const wsRef = useRef(null);
 
     const [currentData, setCurrentData] = useState({
         line_speed: 0,
@@ -79,7 +78,7 @@ const Dashboard = () => {
     const [stopStartTime, setStopStartTime] = useState(null);
 
     // 從設定頁面讀取機台極速 (Max Speed)
-    const [machineMaxSpeed, setMachineMaxSpeed] = useState(() => {
+    const [machineMaxSpeed] = useState(() => {
         const saved = localStorage.getItem('unitSettings');
         if (saved) {
             const settings = JSON.parse(saved);
@@ -89,7 +88,7 @@ const Dashboard = () => {
     });
 
     // 從設定頁面讀取閾值設定
-    const [thresholdSettings, setThresholdSettings] = useState(() => {
+    const [thresholdSettings] = useState(() => {
         const saved = localStorage.getItem('formulaSettings');
         if (saved) {
             const settings = JSON.parse(saved);
@@ -120,7 +119,6 @@ const Dashboard = () => {
     const [todayRunTime, setTodayRunTime] = useState(0);
     const [jobStopTime, setJobStopTime] = useState(0);
     const [todayStopTime, setTodayStopTime] = useState(0);
-    const [stopCount, setStopCount] = useState(0);
 
     // Machine Sections (Error/Run Status Configuration)
     const [machineSections, setMachineSections] = useState([]);
@@ -769,9 +767,8 @@ const Dashboard = () => {
 
     // Ref for Timer Access (Avoid re-render loop)
     const currentDataRef = useRef(currentData);
-    useEffect(() => {
-        currentDataRef.current = currentData;
-    }, [currentData]);
+    // eslint-disable-next-line react-hooks/immutability
+    currentDataRef.current = currentData; // Update ref directly in render to satisfy strict lint if needed
 
     // 同步即時資料到共享狀態 (供 Schedule 頁面使用)
     useEffect(() => {
@@ -897,245 +894,22 @@ const Dashboard = () => {
 
             {/* Split Section */}
             <div className={styles.splitSection}>
-                {/* Schedule Panel */}
-                {/* Schedule Panel */}
-                <div className={styles.schedulePanel} style={{ position: 'relative' }}>
-
-                    {/* Running Order Section (The Green Box) - Dynamic colors based on prep time */}
-                    <div style={{ padding: '8px 12px', borderBottom: '2px solid var(--bg-secondary)', marginBottom: '4px' }}>
-                        {(() => {
-                            // 計算動態背景色和邊框色
-                            let bgColor = 'var(--bg-primary)'; // 預設白色
-                            let borderColor = 'var(--status-ok)'; // 預設綠色邊框
-
-                            if (!isContinuousProduction && orders[0] && orders[0].id !== 'placeholder') {
-                                // 未達連續生產：根據準備時間變化顏色
-                                bgColor = getPrepTimeColor(prepTimeSeconds);
-                                const stdPrepTimeSec = thresholdSettings.stdPrepTime * 60;
-                                const yellowThresholdSec = stdPrepTimeSec * (thresholdSettings.prepTimeYellowThreshold / 100);
-
-                                if (prepTimeSeconds < stdPrepTimeSec) {
-                                    borderColor = 'var(--status-ok)'; // 綠色
-                                } else if (prepTimeSeconds <= yellowThresholdSec) {
-                                    borderColor = 'var(--status-warning)'; // 黃色
-                                } else {
-                                    borderColor = 'var(--status-error)'; // 紅色
-                                }
-                            }
-
-                            // 計算剩餘數量和字體顏色
-                            const currentQty = Math.floor(currentData.di1 - resetOffset);
-                            const orderQty = orders[0]?.qty || 0;
-                            const remaining = orderQty - currentQty;
-                            const isNearComplete = remaining > 0 && remaining <= thresholdSettings.shortageThreshold;
-                            const textColor = isNearComplete ? 'var(--status-ok)' : 'var(--text-primary)'; // 接近完成時字體變綠
-
-                            return (
-                                <div style={{
-                                    border: `3px solid ${borderColor}`,
-                                    borderRadius: '6px',
-                                    backgroundColor: bgColor,
-                                    minHeight: '60px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    padding: '0 10px',
-                                    boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
-                                    transition: 'background-color 0.5s, border-color 0.5s'
-                                }}>
-                                    {(!orders[0] || orders[0].id === 'placeholder') ? (
-                                        <div style={{ width: '100%', textAlign: 'center', color: '#999', fontSize: '1.1rem', fontWeight: 'bold' }}>
-                                            【 {t('dashboard.monitor.idle')} 】 - {t('dashboard.monitor.waitForF3')}
-                                        </div>
-                                    ) : (
-                                        <div style={{ display: 'flex', width: '100%', alignItems: 'center', fontSize: '1.1rem', fontWeight: 'bold', color: textColor }}>
-                                            {/* Using same flex ratios as header for alignment */}
-                                            <div style={{ flex: 0.8, color: borderColor }}>{t('dashboard.monitor.running')}</div>
-                                            <div style={{ flex: 2 }}>{orders[0].customer || '-'}</div>
-                                            <div style={{ flex: 1.5 }}>{orders[0].orderNo}</div>
-                                            <div style={{ flex: 1.5 }}>{orders[0].boxNo}</div>
-                                            <div style={{ flex: 1 }}>{orders[0].qty}</div>
-                                            <div style={{ flex: 1.5 }}>{orders[0].msg || orders[0].productName}</div>
-                                            <div style={{ flex: 1 }}>{orders[0].boxType || '-'}</div>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })()}
-                    </div>
-
-                    {/* Schedule List Header */}
-                    <div className={styles.gridHeaderRow}>
-                        <div style={{ flex: 0.8 }}>{t('dashboard.schedule.seqNo')}</div>
-                        <div style={{ flex: 2 }}>{t('dashboard.schedule.customer')}</div>
-                        <div style={{ flex: 1.5 }}>{t('dashboard.schedule.orderNo')}</div>
-                        <div style={{ flex: 1.5 }}>{t('dashboard.schedule.boxNo')}</div>
-                        <div style={{ flex: 1 }}>{t('dashboard.schedule.qty')}</div>
-                        <div style={{ flex: 1.5 }}>{t('dashboard.schedule.productName')}</div>
-                        <div style={{ flex: 1 }}>{t('dashboard.schedule.boxType')}</div>
-                    </div>
-
-                    {/* Render Order List (Queue Only - Index 1+) */}
-                    <div style={{ flex: 1, overflowY: 'auto' }}>
-                        {orders.slice(1).map((order, index) => {
-                            // original index = index + 1
-                            const displaySeq = (index + 1) * 10;
-
-                            return (
-                                <div
-                                    key={order.id}
-                                    className={styles.gridRow}
-                                    style={selectedOrderId === order.id ? { backgroundColor: '#e6f7ff' } : {}}
-                                    onClick={() => setSelectedOrderId(order.id)} // Allow selecting queued items
-                                >
-                                    <div style={{ flex: 0.8 }}>{displaySeq}</div>
-                                    <div style={{ flex: 2 }}>{order.customer || '-'}</div>
-                                    <div style={{ flex: 1.5 }}>{order.orderNo}</div>
-                                    <div style={{ flex: 1.5 }}>{order.boxNo}</div>
-                                    <div style={{ flex: 1 }}>{order.qty}</div>
-                                    <div style={{ flex: 1.5 }}>{order.msg || order.productName}</div>
-                                    <div style={{ flex: 1 }}>{order.boxType || '-'}</div>
-                                </div>
-                            );
-                        })}
-                        {orders.length <= 1 && (
-                            <div style={{ padding: '20px', textAlign: 'center', color: '#aaa' }}>
-                                {t('dashboard.schedule.noQueuedOrders')}
-                            </div>
-                        )}
-                        <div className={styles.gridFill}></div>
-                    </div>
-                </div>
-
-                {/* Status Panel (with Auto Next Toggle) */}
-                <div className={styles.machineStatusPanel}>
-                    {/* Auto Next Indicator */}
-                    <div style={{
-                        backgroundColor: autoNext ? 'var(--bg-block)' : 'var(--bg-secondary)',
-                        color: autoNext ? 'var(--primary-blue)' : 'var(--text-secondary)',
-                        padding: '8px',
-                        textAlign: 'center',
-                        fontWeight: 'bold',
-                        borderBottom: '1px solid var(--border-color)'
-                    }}>
-                        {autoNext ? t('dashboard.schedule.autoNextOn') : t('dashboard.schedule.autoNextOff')}
-                    </div>
-
-                    {/* Tabs */}
-                    <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)' }}>
-                        <div
-                            style={{
-                                flex: 1,
-                                padding: '8px',
-                                textAlign: 'center',
-                                cursor: 'pointer',
-                                backgroundColor: activeTab === 'status' ? 'var(--bg-panel)' : 'var(--bg-secondary)',
-                                color: activeTab === 'status' ? 'var(--primary-blue)' : 'var(--text-secondary)',
-                                fontWeight: activeTab === 'status' ? '600' : 'normal',
-                                borderBottom: activeTab === 'status' ? '2px solid var(--primary-blue)' : 'none'
-                            }}
-                            onClick={() => setActiveTab('status')}
-                        >
-                            {t('dashboard.machineStatus.title')}
-                        </div>
-                        <div
-                            style={{
-                                flex: 1,
-                                padding: '8px',
-                                textAlign: 'center',
-                                cursor: 'pointer',
-                                backgroundColor: activeTab === 'reason' ? 'var(--bg-panel)' : 'var(--bg-secondary)',
-                                color: activeTab === 'reason' ? 'var(--primary-blue)' : 'var(--text-secondary)',
-                                fontWeight: activeTab === 'reason' ? '600' : 'normal',
-                                borderBottom: activeTab === 'reason' ? '2px solid var(--primary-blue)' : 'none'
-                            }}
-                            onClick={() => setActiveTab('reason')}
-                        >
-                            {t('dashboard.machineStatus.stopReason')}
-                        </div>
-                    </div>
-
-                    {/* Machine Status - Dynamic Sections */}
-                    {activeTab === 'status' ? (
-                        <div className={styles.errorList} style={{ padding: '10px' }}>
-                            {machineSections && machineSections.length > 0 ? (
-                                machineSections.map((section, i) => {
-                                    // Status Logic
-                                    // 1. Fault maps to Red
-                                    let isFault = false;
-                                    if (section.errorSignal && currentData) {
-                                        const signalVal = currentData[section.errorSignal];
-                                        // Compare loosely (string/number)
-                                        // eslint-disable-next-line eqeqeq
-                                        if (signalVal != undefined && signalVal == section.errorValue) {
-                                            isFault = true;
-                                        }
-                                    }
-
-                                    // 2. Run maps to Green
-                                    let isRun = false;
-                                    if (section.runSignal && currentData) {
-                                        const signalVal = currentData[section.runSignal];
-                                        // eslint-disable-next-line eqeqeq
-                                        if (signalVal != undefined && signalVal == section.runValue) {
-                                            isRun = true;
-                                        }
-                                    }
-
-                                    // 3. Fallback (Global Motor)
-                                    // If no specific signals configured, use global IsMotorOn
-                                    if (!section.errorSignal && !section.runSignal) {
-                                        isFault = !(isPlcConnected && isMotorOn);
-                                        isRun = !isFault;
-                                    }
-
-                                    // Determine Color
-                                    let color = 'var(--text-secondary)'; // Grey
-                                    if (isFault) color = 'var(--digital-text-red)';
-                                    else if (isRun) color = 'var(--digital-text)'; // Green
-
-                                    return (
-                                        <div key={section.id || i} className={styles.errorItem}>
-                                            <div className={styles.errorBox} style={{ backgroundColor: color }}></div>
-                                            <span>{section.name}</span>
-                                            <span style={{ marginLeft: 'auto', fontWeight: 'bold', color: color }}>
-                                                {isFault ? 'ERR' : (isRun ? 'RUN' : 'OFF')}
-                                            </span>
-                                        </div>
-                                    );
-                                })
-                            ) : (
-                                <div style={{ color: '#888', textAlign: 'center' }}>{t('ui.messages.loading')}</div>
-                            )}
-                        </div>
-                    ) : (
-                        // Reason Tab
-                        <div className={styles.errorList} style={{ display: 'flex', flexDirection: 'column' }}>
-                            <div className={styles.statusHeaderRow} style={{ background: 'transparent', borderBottom: '1px solid var(--border-color)' }}>
-                                <div style={{ flex: 1 }}>{t('dashboard.stopReasons.startTime')}</div>
-                                <div style={{ flex: 1 }}>{t('dashboard.stopReasons.duration')}</div>
-                                <div style={{ flex: 2 }}>{t('dashboard.stopReasons.reason')}</div>
-                            </div>
-                            <div style={{ flex: 1, overflowY: 'auto' }}>
-                                {stopReasons.length === 0 ? (
-                                    <div style={{ padding: '16px', color: 'var(--text-secondary)', textAlign: 'center' }}>{t('ui.messages.noData')}</div>
-                                ) : (
-                                    stopReasons.map((stop, i) => (
-                                        <div key={i} style={{ display: 'flex', borderBottom: '1px solid var(--bg-secondary)', padding: '8px 4px', fontSize: '0.9rem' }}>
-                                            <div style={{ flex: 1, color: 'var(--text-primary)' }}>{stop.time}</div>
-                                            <div style={{ flex: 1, color: 'var(--primary-blue)' }}>{stop.duration}</div>
-                                            <div style={{ flex: 2, color: 'var(--digital-text-red)' }}>{stop.reason}</div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
+                                <SchedulePanel 
+                    orders={orders} selectedOrderId={selectedOrderId} setSelectedOrderId={setSelectedOrderId}
+                    isContinuousProduction={isContinuousProduction} prepTimeSeconds={prepTimeSeconds} 
+                    thresholdSettings={thresholdSettings} getPrepTimeColor={getPrepTimeColor}
+                    currentData={currentData} resetOffset={resetOffset} 
+                    handleAddOrder={handleAddOrder} handleEditOrder={handleEditOrder}
+                    handleDeleteOrder={handleDeleteOrder} handleReorder={handleReorder}
+                />
+                
+                <StatusPanel 
+                    autoNext={autoNext} activeTab={activeTab} setActiveTab={setActiveTab} 
+                    machineSections={machineSections} currentData={currentData} 
+                    isPlcConnected={isPlcConnected} isMotorOn={isMotorOn} stopReasons={stopReasons} 
+                />
             </div>
-
-
-
-            <OrderDetailsModal
+<OrderDetailsModal
                 isOpen={showOrderModal}
                 onClose={() => setShowOrderModal(false)}
                 order={

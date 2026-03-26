@@ -11,6 +11,7 @@ services:
       - /app/node_modules
     environment:
       - VITE_API_URL=http://localhost:5200
+    restart: always
     depends_on:
       - backend-api
 
@@ -25,6 +26,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=FlexoDB;Username=postgres;Password=password
       - Redis__ConnectionString=redis:6379
+    restart: always
     depends_on:
       - postgres
       - redis
@@ -40,6 +42,7 @@ services:
       - Mqtt__BrokerAddress=mqtt-broker
       - Mqtt__Port=1883
       - Redis__ConnectionString=redis:6379
+    restart: always
     depends_on:
       - mqtt-broker
       - postgres
@@ -53,10 +56,12 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=password
       - POSTGRES_DB=FlexoDB
+      - POSTGRES_MULTIPLE_DATABASES=SmartPartsDB
     ports:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./backend/postgres/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh
 
   # Cache (Redis)
   redis:
@@ -81,10 +86,45 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: always
-    command: tunnel --no-autoupdate run --token eyJhIjoiMWE4YjczNmQwYzk5NTAwMTBlM2NiOTBlOTZlOTkyZDYiLCJ0IjoiNjBiOGQ1MWItN2Y1ZS00YTIxLTk5OTQtYzA4MzNmMWFlNjJmIiwicyI6Ik0yUXdObVF6TXpZdFptRXlOUzAwTURZeUxXSXlaR0l0Wm1WaU1EVTBZalJqTkRNeCJ9
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     depends_on:
       - frontend
       - backend-api
+
+  # Smart Parts Frontend
+  sm-frontend:
+    build:
+      context: ./smart-parts-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5100:80"
+    depends_on:
+      - sm-backend
+
+  # Smart Parts Backend
+  sm-backend:
+    build:
+      context: ./backend
+      dockerfile: SmartParts.API/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=SmartPartsDB;Username=postgres;Password=password
+      # - Redis__ConnectionString=redis:6379 (Enable if needed)
+    depends_on:
+      - postgres
+
+  # Maintenance System (MMS) Backend
+  mms-backend:
+    build:
+      context: ./Maintenance-System
+      dockerfile: backend/MMS.API/Dockerfile
+    ports:
+      - "5300:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=MmsDB;Username=postgres;Password=password
+    depends_on:
+      - postgres
 
 volumes:
   postgres_data:
