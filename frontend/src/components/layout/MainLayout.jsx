@@ -266,6 +266,7 @@ const MainLayout = () => {
         { path: '/analysis', label: '生產分析 (Analysis)' },
         { path: '/maintenance', label: '保養維修 (Maintenance)' },
         { path: '/settings', label: '系統設定 (Settings)' },
+        { path: '/docs', label: '📖 文件 (Docs)' },
     ];
 
     // F-Keys (Dynamic)

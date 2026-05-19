@@ -13,6 +13,7 @@ const AnalysisPage = lazy(() => import('./pages/analysis/AnalysisPage'));
 const ReportsPage = lazy(() => import('./modules/reports/ReportsPage'));
 const MachineMaintenance = lazy(() => import('./pages/MachineMaintenance'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const DocsPortal = lazy(() => import('./pages/DocsPortal'));
 
 // 通用 Loading Fallback
 const PageLoader = () => (
@@ -23,7 +24,8 @@ const PageLoader = () => (
 
 const App = () => {
   useEffect(() => {
-    console.log('🚀 Frontend Version: 2026-01-17-Fix-Connectivity-v2 (WSS+RelAPI)');
+    const version = __APP_VERSION__ || '0.0.0';
+    console.log(`🚀 Frontend Version: ${version}`);
   }, []);
   return (
     <LanguageProvider>
@@ -43,6 +45,7 @@ const App = () => {
               <Route path="analysis" element={<Suspense fallback={<PageLoader />}><AnalysisPage /></Suspense>} />
               <Route path="maintenance" element={<Suspense fallback={<PageLoader />}><MachineMaintenance /></Suspense>} />
               <Route path="settings" element={<Suspense fallback={<PageLoader />}><SettingsPage /></Suspense>} />
+              <Route path="docs" element={<Suspense fallback={<PageLoader />}><DocsPortal /></Suspense>} />
             </Route>
 
             {/* Fallback 404 */}

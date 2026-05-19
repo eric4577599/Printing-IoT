@@ -40,14 +40,15 @@ export const getProductionHistory = async (page = 1, pageSize = 50) => {
     return response.data;
 };
 
-// Stubs for Current Order (To be implemented if Backend requires dedicated state)
+// TODO(Phase3): Implement real CurrentOrder endpoints after backend unification
+// Tracked in: doc/REFACTORING_LOG.md#1.4
 export const setCurrentOrder = async (orderData) => {
-    console.log('API: Set Current Order (Stub)', orderData);
+    console.warn('[STUB] setCurrentOrder — not yet connected to backend', orderData);
     return Promise.resolve({ success: true });
 };
 
 export const clearCurrentOrder = async () => {
-    console.log('API: Clear Current Order (Stub)');
+    console.warn('[STUB] clearCurrentOrder — not yet connected to backend');
     return Promise.resolve({ success: true });
 };
 
