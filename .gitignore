@@ -27,3 +27,9 @@ obj/
 
 # Agent
 .agent/
+
+# macOS resource fork files
+._*
+
+# Mosquitto runtime persistence
+backend/mosquitto/data/*.db
