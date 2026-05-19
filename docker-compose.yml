@@ -24,7 +24,7 @@ services:
       - "5200:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=FlexoDB;Username=postgres;Password=password
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=FlexoDB;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-password}
       - Redis__ConnectionString=redis:6379
     restart: always
     depends_on:
@@ -38,7 +38,7 @@ services:
       dockerfile: PrintingIoT.Worker/Dockerfile
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=FlexoDB;Username=postgres;Password=password
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=FlexoDB;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-password}
       - Mqtt__BrokerAddress=mqtt-broker
       - Mqtt__Port=1883
       - Redis__ConnectionString=redis:6379
@@ -53,15 +53,14 @@ services:
     image: postgres:15-alpine
     restart: always
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=FlexoDB
-      - POSTGRES_MULTIPLE_DATABASES=SmartPartsDB
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_DB=${POSTGRES_DB:-FlexoDB}
+      # Phase 3.9: SmartPartsDB and MmsDB removed — all tables now in FlexoDB
     ports:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend/postgres/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh
 
   # Cache (Redis)
   redis:
@@ -91,7 +90,7 @@ services:
       - frontend
       - backend-api
 
-  # Smart Parts Frontend
+  # Smart Parts Frontend (now uses unified backend-api at /api/v1/parts)
   sm-frontend:
     build:
       context: ./smart-parts-frontend
@@ -99,32 +98,16 @@ services:
     ports:
       - "5100:80"
     depends_on:
-      - sm-backend
+      - backend-api  # Phase 3.9: Changed from sm-backend → backend-api
 
-  # Smart Parts Backend
-  sm-backend:
-    build:
-      context: ./backend
-      dockerfile: SmartParts.API/Dockerfile
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=SmartPartsDB;Username=postgres;Password=password
-      # - Redis__ConnectionString=redis:6379 (Enable if needed)
-    depends_on:
-      - postgres
-
-  # Maintenance System (MMS) Backend
-  mms-backend:
-    build:
-      context: ./Maintenance-System
-      dockerfile: backend/MMS.API/Dockerfile
-    ports:
-      - "5300:8080"
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=MmsDB;Username=postgres;Password=password
-    depends_on:
-      - postgres
+  # ======================================================================
+  # DEPRECATED: The following services have been merged into backend-api
+  # sm-backend  → PrintingIoT.API/Controllers/PartsController (Phase 3.3)
+  # mms-backend → PrintingIoT.API/Controllers/MaintenanceController (existing)
+  # SmartPartsDB → FlexoDB (Parts/Suppliers/SupplierParts tables)
+  # MmsDB → FlexoDB (MaintenanceSchedules/SpareParts/MaintenanceRecords tables)
+  # ======================================================================
 
 volumes:
   postgres_data:
+

@@ -5,6 +5,14 @@ using Microsoft.EntityFrameworkCore;
 using PrintingIoT.Infrastructure.Data;
 using PrintingIoT.Core.Interfaces;
 using PrintingIoT.Infrastructure.Services;
+using PrintingIoT.Infrastructure.Extensions;
+using PrintingIoT.API.Middleware;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -12,15 +20,52 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Phase 4.1: CORS Hardening
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend",
         policy =>
         {
-            policy.AllowAnyOrigin()
+            policy.WithOrigins(allowedOrigins)
                   .AllowAnyHeader()
-                  .AllowAnyMethod();
+                  .AllowAnyMethod()
+                  .AllowCredentials(); // Often needed with strict origins
         });
+});
+
+// Phase 4.4: JWT Authentication
+var jwtSecret = builder.Configuration["Jwt:Secret"] ?? throw new InvalidOperationException("JWT Secret is missing");
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
+        };
+    });
+builder.Services.AddAuthorization();
+
+// Phase 4.5: Rate Limiting
+builder.Services.AddRateLimiter(options =>
+{
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: partition => new FixedWindowRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                PermitLimit = 100,
+                QueueLimit = 0,
+                Window = TimeSpan.FromMinutes(1)
+            }));
+    options.RejectionStatusCode = 429;
 });
 
 // Redis
@@ -32,6 +77,7 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IMaintenanceService, MaintenanceService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
+builder.Services.AddScoped<IPartService, PartService>(); // Phase 3.3: Migrated from SmartParts.API
 
 if (!builder.Environment.IsEnvironment("Testing"))
 {
@@ -42,48 +88,33 @@ if (!builder.Environment.IsEnvironment("Testing"))
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// Auto-create DB for MVP with Async Retry Policy
+// Phase 3.8: Global Exception Handler (must be before routing)
+app.UseGlobalExceptionHandler();
+
+app.UseRateLimiter(); // Apply Rate Limiting
+
+// Phase 3.7: Shared Migration Retry
 if (!app.Environment.IsEnvironment("Testing"))
 {
-    using (var scope = app.Services.CreateScope())
-    {
-        var services = scope.ServiceProvider;
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        var context = services.GetRequiredService<PrintingContext>();
-        
-        int maxRetries = 10;
-        int delaySeconds = 2;
-        for (int i = 0; i < maxRetries; i++)
-        {
-            try
-            {
-                logger.LogInformation($"Attempting to connect to database (Attempt {i+1}/{maxRetries})...");
-                logger.LogInformation($"Attempting to apply migrations (Attempt {i+1}/{maxRetries})...");
-                await context.Database.MigrateAsync();
-                logger.LogInformation("Database migrated successfully.");
-                break;
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning($"Database connection failed: {ex.Message}. Retrying in {delaySeconds}s...");
-                if (i == maxRetries - 1) throw;
-                await Task.Delay(delaySeconds * 1000);
-            }
-        }
-    }
+    using var scope = app.Services.CreateScope();
+    await scope.ServiceProvider.MigrateWithRetryAsync<PrintingContext>();
 }
 
 app.UseCors("AllowFrontend");
 
+// Add Authentication before Authorization
+app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();
 
 public partial class Program { }
+
