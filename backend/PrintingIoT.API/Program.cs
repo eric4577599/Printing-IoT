@@ -35,7 +35,9 @@ builder.Services.AddCors(options =>
 });
 
 // Phase 4.4: JWT Authentication
-var jwtSecret = builder.Configuration["Jwt:Secret"] ?? throw new InvalidOperationException("JWT Secret is missing");
+var jwtSecret = builder.Configuration["Jwt:Secret"];
+if (string.IsNullOrEmpty(jwtSecret))
+    throw new InvalidOperationException("JWT Secret missing. Set env var Jwt__Secret (or Jwt:Secret in appsettings.{Environment}.json).");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {

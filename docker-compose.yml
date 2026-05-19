@@ -26,6 +26,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=FlexoDB;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-password}
       - Redis__ConnectionString=redis:6379
+      - Jwt__Secret=${JWT_SECRET:?JWT_SECRET is required}
     restart: always
     depends_on:
       - postgres
