@@ -97,9 +97,10 @@ public class MqttWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // BackgroundService guarantees StartAsync completes (and assigns _mqttClient) before ExecuteAsync runs.
         while (!stoppingToken.IsCancellationRequested)
         {
-            if (!_mqttClient.IsConnected)
+            if (!_mqttClient!.IsConnected)
             {
                 _logger.LogWarning("MQTT Client disconnected. Reconnecting...");
             }
