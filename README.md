@@ -64,6 +64,42 @@ Printing IoT/
 └── scripts/                # 工具腳本
 ```
 
+## 跨平台開發注意事項 (Mac / Windows)
+
+本專案可於 macOS 與 Windows 雙環境並行開發,整套技術選型(.NET、React + Vite、Docker Compose)都是跨平台。實務上要留意:
+
+### 1. Git 行尾正規化
+- repo `.editorconfig` 已設 LF
+- Windows 那台請額外設定:`git config --global core.autocrlf=input`
+  (避免簽出時被自動換成 CRLF,污染 diff)
+
+### 2. 大小寫
+- macOS / Windows 預設 case-insensitive,**Linux 容器 case-sensitive**
+- `import './Foo'` 與 `./foo` 在本機跑得起來,進 Docker 直接炸
+- 養成檔名 / import 完全照大小寫拼字的習慣
+
+### 3. 工具版本對齊
+| 工具 | 版本 |
+|---|---|
+| .NET SDK | 9.0.x(net9.0 target) |
+| Node | 22.x |
+| Docker Desktop | 最新穩定版 |
+
+兩台機器 major version 一致,避免 lockfile / 編譯結果分歧。
+
+### 4. 隱形地雷
+- **macOS dot-underscore (`._*`)**:外接 SSD 容易產生,已在 `.gitignore`。若 `dotnet build` 異常,執行 `find . -name "._*" -delete`
+- **路徑分隔符號**:程式內統一用 `Path.Combine`(.NET) 或 `path.join`(Node),不要硬寫 `\` 或 `/`
+- **`.env` 內 secret 不可 commit**;`JWT_SECRET` 兩台機器各自填,不要共用
+
+### 5. 路徑慣例
+| 環境 | 工作目錄 |
+|---|---|
+| macOS(外接 X10 Pro SSD) | `/Volumes/X10Pro/...` |
+| Windows | `d:\MyGitHub\...` |
+
+操作前先確認外接 SSD 已掛載。
+
 ## 相關文件
 
 - `INSTRUCTIONS.md` — 部署操作指南
