@@ -292,7 +292,7 @@ const MainLayout = () => {
         <div className={styles.container}>
             {/* Top Menu Bar */}
             <header className={styles.header}>
-                <div className={styles.appTitle}>Flexo IoT <span style={{ fontSize: '0.8em', fontWeight: 'normal' }}>({user.role})</span></div>
+                <div className={styles.appTitle}>PRIIOT <span style={{ fontSize: '0.8em', fontWeight: 'normal' }}>({user.role})</span></div>
                 <nav className={styles.nav}>
                     {navItems.map((item) => (
                         <Link
