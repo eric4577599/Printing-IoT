@@ -6,9 +6,12 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 
-// Database
-builder.Services.AddDbContext<MmsDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Database(測試環境不註冊 Npgsql,改由測試 factory 注入 InMemory,避免雙 provider 衝突)
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddDbContext<MmsDbContext>(options =>
+        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+}
 
 // CORS
 builder.Services.AddCors(options =>
@@ -35,7 +38,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Auto-create DB with Async Retry Policy
+// Auto-create DB with Async Retry Policy (測試環境用 InMemory,跳過 migration)
+if (!app.Environment.IsEnvironment("Testing"))
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -66,3 +70,6 @@ app.UseCors("AllowFrontend");
 app.MapControllers();
 
 app.Run();
+
+// 供整合測試的 WebApplicationFactory<Program> 取用
+public partial class Program { }
