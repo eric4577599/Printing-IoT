@@ -38,23 +38,24 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Auto-create DB with Async Retry Policy (測試環境用 InMemory,跳過 migration)
+// 建立 DB schema(附重試)。MMS 目前無 EF migration,改用 EnsureCreated 依模型直接建庫建表。
+// 測試環境用 InMemory,跳過此段。
 if (!app.Environment.IsEnvironment("Testing"))
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     var logger = services.GetRequiredService<ILogger<Program>>();
     var context = services.GetRequiredService<MmsDbContext>();
-    
+
     int maxRetries = 10;
     int delaySeconds = 2;
     for (int i = 0; i < maxRetries; i++)
     {
         try
         {
-            logger.LogInformation($"Attempting to apply migrations to MmsDB (Attempt {i+1}/{maxRetries})...");
-            await context.Database.MigrateAsync();
-            logger.LogInformation("MmsDB migrated successfully.");
+            logger.LogInformation($"Ensuring MmsDB schema (Attempt {i+1}/{maxRetries})...");
+            await context.Database.EnsureCreatedAsync();
+            logger.LogInformation("MmsDB schema ready.");
             break;
         }
         catch (Exception ex)

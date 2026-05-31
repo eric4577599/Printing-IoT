@@ -91,6 +91,23 @@ services:
       - frontend
       - backend-api
 
+  # Maintenance Management System — Standalone MMS API (.NET 9)
+  # 對應 cloudflared 的 mms-api.ericchh.work -> mms-backend:5300
+  # 採獨立資料庫 MmsDB(同台 postgres),維持「真分離」。無 EF migration,靠 EnsureCreated 建 schema。
+  mms-backend:
+    build:
+      context: ./Maintenance-System
+      dockerfile: backend/MMS.API/Dockerfile
+    ports:
+      - "5300:5300"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=5300
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=MmsDB;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-password}
+    restart: always
+    depends_on:
+      - postgres
+
   # Smart Parts Frontend (now uses unified backend-api at /api/v1/parts)
   sm-frontend:
     build:
