@@ -9,6 +9,19 @@ import {
     getCommunicationSettings, updateCommunicationSettings
 } from '../../services/api';
 
+// 預設機台部位:四色瓦楞印刷線(送止步 → 第1-4色 → 開槽 → 摺貼 → 計數)。
+// 用於機台狀態顯示與保養維修的部位選項;首次無部位時種入,亦為「重置為預設」的內容。
+const DEFAULT_SECTIONS = [
+    { name: '送止步 (Feed-stop)', displayOrder: 1, errorSignal: 'di3', errorValue: '1' },
+    { name: '第1色 (Color 1)', displayOrder: 2, errorSignal: 'di4', errorValue: '1' },
+    { name: '第2色 (Color 2)', displayOrder: 3, errorSignal: 'di5', errorValue: '1' },
+    { name: '第3色 (Color 3)', displayOrder: 4, errorSignal: 'di6', errorValue: '1' },
+    { name: '第4色 (Color 4)', displayOrder: 5, errorSignal: 'di7', errorValue: '1' },
+    { name: '開槽部 (Slotter)', displayOrder: 6, errorSignal: 'di8', errorValue: '1' },
+    { name: '摺貼部 (Folder-Gluer)', displayOrder: 7, errorSignal: 'di9', errorValue: '1' },
+    { name: '計數部 (Counter)', displayOrder: 8, errorSignal: 'di10', errorValue: '1' },
+];
+
 const MachineTab = () => {
     const { t } = useLanguage();
     // --- Machine Settings State ---
@@ -25,7 +38,16 @@ const MachineTab = () => {
     useEffect(() => {
         const fetchSections = async () => {
             try {
-                const sections = await getMachineSections();
+                let sections = await getMachineSections();
+                // 首次無部位時種入預設 8 部位(以旗標確保只種一次,避免刪除後又被塞回)
+                if ((!sections || sections.length === 0) && !localStorage.getItem('machineSectionsSeeded')) {
+                    const created = [];
+                    for (const d of DEFAULT_SECTIONS) {
+                        created.push(await createMachineSection({ ...d, isActive: true }));
+                    }
+                    sections = created;
+                    localStorage.setItem('machineSectionsSeeded', '1');
+                }
                 setMachineSettings(prev => ({
                     ...prev,
                     sections: sections || []
@@ -177,14 +199,6 @@ const MachineTab = () => {
     const handleResetDefaults = async () => {
         if (!confirm('確定重置? 這將刪除現有部位並建立預設值。 (Reset to Defaults?)')) return;
 
-        const defaultSections = [
-            { name: '送紙部 (Feeder)', displayOrder: 1, errorSignal: 'di3', errorValue: '1' },
-            { name: '印刷1部 (Print 1)', displayOrder: 2, errorSignal: 'di4', errorValue: '1' },
-            { name: '印刷2部 (Print 2)', displayOrder: 3, errorSignal: 'di5', errorValue: '1' },
-            { name: '印刷3部 (Print 3)', displayOrder: 4, errorSignal: 'di6', errorValue: '1' },
-            { name: '模切部 (Die-cut)', displayOrder: 5, errorSignal: 'di7', errorValue: '1' }
-        ];
-
         try {
             // Delete all existing
             for (const s of machineSettings.sections) {
@@ -193,7 +207,7 @@ const MachineTab = () => {
 
             // Create defaults
             const created = [];
-            for (const d of defaultSections) {
+            for (const d of DEFAULT_SECTIONS) {
                 const res = await createMachineSection({ ...d, isActive: true });
                 created.push(res);
             }

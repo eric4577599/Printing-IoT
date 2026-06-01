@@ -2,6 +2,31 @@ import React, { useState, useEffect } from 'react';
 import styles from '../../pages/SettingsPage.module.css';
 import { getBoxTypes, updateBoxTypes } from '../../services/api';
 
+/**
+ * 建立一筆盒型(沿用 handleAddBoxType 的完整欄位結構)。
+ * @param {string} id - 穩定 id
+ * @param {string} name - 盒型顯示名稱(含代碼,例 "RSC(A1)")
+ * @param {string} erpAlias - ERP 對應代碼(例 "A1")
+ */
+function makeBoxType(id, name, erpAlias) {
+    return {
+        id, name, erpAlias, image: null,
+        useS1: false, labelS1: 'S1', useS2: false, labelS2: 'S2',
+        useS3: false, labelS3: 'S3', useS4: false, labelS4: 'S4',
+        useS5: false, labelS5: 'S5', lenCorrection: 0,
+        useLeading: false, labelLeading: 'Leading', useBody: false, labelBody: 'Body',
+        useTail: false, labelTail: 'Tail', widCorrection: 0,
+        lengthEq: '', widthEq: '', heightEq: 'Body', quantityEq: '',
+        fields: []
+    };
+}
+
+// 預設盒型:RSC(A1) 常規開槽箱、HSC(A2) 半槽箱。首次無盒型時種入。
+const DEFAULT_BOX_TYPES = [
+    makeBoxType('box_rsc_a1', 'RSC(A1)', 'A1'),
+    makeBoxType('box_hsc_a2', 'HSC(A2)', 'A2'),
+];
+
 const BoxTypeTab = () => {
 
     // --- Box Type State ---
@@ -16,15 +41,15 @@ const BoxTypeTab = () => {
                 setBoxTypes(types);
                 // Select first default
                 setSelectedBoxTypeId(types[0].id);
+            } else if (!localStorage.getItem('boxTypesSeeded')) {
+                // 首次無盒型時種入預設 RSC(A1)/HSC(A2);以旗標確保只種一次,
+                // 避免使用者日後全部刪除又被重新塞回。
+                setBoxTypes(DEFAULT_BOX_TYPES);
+                setSelectedBoxTypeId(DEFAULT_BOX_TYPES[0].id);
+                updateBoxTypes(DEFAULT_BOX_TYPES).catch(console.error);
+                localStorage.setItem('boxTypesSeeded', '1');
             } else {
-                // Determine defaults if empty? Or let user create?
-                // For now, if empty API, maybe load defaults?
-                // Let's keep existing default logic but trigger save
-                // Actually, let's just leave it empty if API is empty to avoid overwriting user deletions
-                // UNLESS it's truly the first run.
-                // Assuming API returns empty list on first run.
-                // I'll stick to simple "setBoxTypes(types)"
-                setBoxTypes(types || []);
+                setBoxTypes([]);
             }
         }).catch(console.error);
     }, []);
