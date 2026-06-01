@@ -27,7 +27,8 @@ describe('Dashboard E2E', () => {
     it('should load dashboard and display critical elements', async () => {
         // Skip if server is not running (avoiding CI crash for external dependencies)
         try {
-            const response = await page.goto('http://localhost:5100', { waitUntil: 'networkidle0', timeout: 5000 });
+            // 主系統前端在 5600(5100 為 smart-parts-frontend,非此處目標)
+            const response = await page.goto('http://localhost:5600', { waitUntil: 'networkidle0', timeout: 5000 });
             if (!response.ok()) {
                 console.warn('Frontend server is not accessible, skipping E2E assert.');
                 return;
@@ -38,7 +39,7 @@ describe('Dashboard E2E', () => {
         }
 
         const titleText = await page.title();
-        expect(titleText).toContain('Printing IoT');
+        expect(titleText).toContain('PRIIOT');
         
         // Wait for main layout
         await page.waitForSelector('.dashboard-container', { timeout: 3000 }).catch(() => null);

@@ -9,6 +9,7 @@ import LanguageSwitcher from '../../modules/language/LanguageSwitcher';
 import { useAuth } from '../../modules/auth/AuthContext';
 import LoginModal from '../../modules/auth/LoginModal';
 import HelpModal from '../modals/HelpModal';
+import { createSeedProducts } from '../../data/seedProducts';
 
 const MainLayout = () => {
     const location = useLocation();
@@ -162,13 +163,15 @@ const MainLayout = () => {
     }, [orders]);
 
     // Shared Product Data (Lifted from Maintenance)
+    // 產品檔為空時種入 RSC/HSC 測試料號(供生產排程右側顯示 + 加入排程生成工單)。
     const [products, setProducts] = useState(() => {
         try {
             const saved = localStorage.getItem('products');
-            return saved ? JSON.parse(saved) : [];
+            const initial = saved ? JSON.parse(saved) : [];
+            return initial.length === 0 ? createSeedProducts() : initial;
         } catch (e) {
             console.error("Failed to load products", e);
-            return [];
+            return createSeedProducts();
         }
     });
 
