@@ -162,7 +162,7 @@ const MainLayout = () => {
         localStorage.setItem('orders', JSON.stringify(orders));
     }, [orders]);
 
-    // Shared Product Data (Lifted from Maintenance)
+    // Shared Product Data(供生產排程與產品庫共用)
     // 產品檔為空時種入 RSC/HSC 測試料號(供生產排程右側顯示 + 加入排程生成工單)。
     const [products, setProducts] = useState(() => {
         try {

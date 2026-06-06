@@ -974,7 +974,7 @@ export const translations = {
         },
         common: { orderNo: 'Số đơn', customer: 'Khách hàng', qty: 'Số lượng', speed: 'Tốc độ' },
         settings: {
-            tabs: { general: 'Chung', unit: 'Đơn vị', machine: 'Máy móc', communication: 'Giao tiếp', formula: 'Công thức', boxType: 'Loại hộp', report: 'Báo cáo', maintenance: 'Bảo trì' },
+            tabs: { general: 'Chung', unit: 'Đơn vị', machine: 'Máy móc', communication: 'Giao tiếp', formula: 'Công thức', boxType: 'Loại hộp', report: 'Báo cáo' },
             comm: {
                 title: 'Cài đặt Giao tiếp',
                 desc: 'Cấu hình kết nối PLC và trao đổi dữ liệu ERP',
@@ -1008,7 +1008,7 @@ export const translations = {
         },
         common: { orderNo: 'เลขที่คำสั่ง', customer: 'ลูกค้า', qty: 'จำนวน', speed: 'ความเร็ว' },
         settings: {
-            tabs: { general: 'ทั่วไป', unit: 'หน่วย', machine: 'เครื่องจักร', communication: 'การสื่อสาร', formula: 'สูตร', boxType: 'ประเภทกล่อง', report: 'รายงาน', maintenance: 'การบำรุงรักษา' },
+            tabs: { general: 'ทั่วไป', unit: 'หน่วย', machine: 'เครื่องจักร', communication: 'การสื่อสาร', formula: 'สูตร', boxType: 'ประเภทกล่อง', report: 'รายงาน' },
             comm: {
                 title: 'การตั้งค่าการสื่อสาร',
                 desc: 'กำหนดค่าการเชื่อมต่อ PLC และการแลกเปลี่ยนข้อมูล ERP',
