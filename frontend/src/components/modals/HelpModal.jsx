@@ -16,8 +16,7 @@ const HelpModal = ({ isOpen, onClose }) => {
         { id: 'schedule', label: '2. 生產排程', src: '/help/schedule.html' },
         { id: 'reports', label: '3. 生產報表', src: '/help/reports.html' },
         { id: 'analysis', label: '4. 生產分析', src: '/help/analysis.html' },
-        { id: 'maintenance', label: '5. 保養維修', src: '/help/maintenance.html' },
-        { id: 'settings', label: '6. 系統設定', src: '/help/settings.html' },
+        { id: 'settings', label: '5. 系統設定', src: '/help/settings.html' },
     ];
 
     // 當前選中的說明項目索引

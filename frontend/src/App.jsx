@@ -11,7 +11,6 @@ import './App.css';
 const DebugDashboard = lazy(() => import('./pages/DebugDashboard'));
 const AnalysisPage = lazy(() => import('./pages/analysis/AnalysisPage'));
 const ReportsPage = lazy(() => import('./modules/reports/ReportsPage'));
-const MachineMaintenance = lazy(() => import('./pages/MachineMaintenance'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const DocsPortal = lazy(() => import('./pages/DocsPortal'));
 
@@ -43,7 +42,6 @@ const App = () => {
               {/* 大型頁面：懶加載（非首屏） */}
               <Route path="reports" element={<Suspense fallback={<PageLoader />}><ReportsPage /></Suspense>} />
               <Route path="analysis" element={<Suspense fallback={<PageLoader />}><AnalysisPage /></Suspense>} />
-              <Route path="maintenance" element={<Suspense fallback={<PageLoader />}><MachineMaintenance /></Suspense>} />
               <Route path="settings" element={<Suspense fallback={<PageLoader />}><SettingsPage /></Suspense>} />
               <Route path="docs" element={<Suspense fallback={<PageLoader />}><DocsPortal /></Suspense>} />
             </Route>

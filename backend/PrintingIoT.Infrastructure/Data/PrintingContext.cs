@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using PrintingIoT.Core.Entities;
-using PrintingIoT.Core.Entities.Maintenance;
 using PrintingIoT.Core.Entities.Parts;
 
 namespace PrintingIoT.Infrastructure.Data;
@@ -16,11 +15,6 @@ public class PrintingContext : DbContext
     public DbSet<Order> Orders { get; set; }
     public DbSet<MachineSection> MachineSections { get; set; }
     public DbSet<Product> Products { get; set; }
-
-    // Maintenance
-    public DbSet<MaintenanceSchedule> MaintenanceSchedules { get; set; }
-    public DbSet<SparePart> SpareParts { get; set; }
-    public DbSet<MaintenanceRecord> MaintenanceRecords { get; set; }
 
     // Parts (Migrated from SmartParts.API — Phase 3.5)
     public DbSet<Part> Parts { get; set; }

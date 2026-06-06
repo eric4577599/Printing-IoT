@@ -4,7 +4,7 @@ const LanguageContext = createContext();
 
 export const translations = {
     tw: {
-        nav: { monitor: '即時監控', schedule: '排程', reports: '報表', settings: '設定', maintenance: '保養維修' },
+        nav: { monitor: '即時監控', schedule: '排程', reports: '報表', settings: '設定' },
         fkeys: {
             f1: '上移', f2: '下移', f3: '送單', f4: '完工', f5: '良品', f6: '不良',
             f7: '訂單', f8: '下一筆', f9: '班別', f10: '退回', f12: '離開'
@@ -66,11 +66,6 @@ export const translations = {
                 smallBatch: '小量產定義',
                 exceptionFilters: '異常過濾'
             }
-        },
-        maintenance: {
-            tabs: { taskList: '維修清單', parts: '零件庫存', schedule: '保養排程', history: '歷史紀錄', photos: '照片管理' },
-            buttons: { execute: '執行', detail: '詳情', reportBreakdown: '故障回報', addPart: '新增零件', saveSchedule: '儲存排程' },
-            labels: { partName: '零件名稱', stock: '庫存', status: '狀態', technician: '執行人員' }
         },
         dashboard: {
             monitor: {
@@ -394,11 +389,6 @@ export const translations = {
                 exceptionFilters: '异常过滤'
             }
         },
-        maintenance: {
-            tabs: { taskList: '维修清单', parts: '零件库存', schedule: '保养排程', history: '历史记录', photos: '照片管理' },
-            buttons: { execute: '执行', detail: '详情', reportBreakdown: '故障回报', addPart: '新增零件', saveSchedule: '保存排程' },
-            labels: { partName: '零件名称', stock: '库存', status: '状态', technician: '执行人员' }
-        },
         dashboard: {
             monitor: {
                 productionQty: '生产数量',
@@ -657,7 +647,7 @@ export const translations = {
         }
     },
     en: {
-        nav: { monitor: 'Monitor', schedule: 'Schedule', reports: 'Reports', settings: 'Settings', maintenance: 'Maintenance' },
+        nav: { monitor: 'Monitor', schedule: 'Schedule', reports: 'Reports', settings: 'Settings' },
         fkeys: {
             f1: 'Up', f2: 'Down', f3: 'Start', f4: 'Finish', f5: 'Good', f6: 'Bad',
             f7: 'Order', f8: 'Next', f9: 'Shift', f10: 'Return', f12: 'Exit'
@@ -718,11 +708,6 @@ export const translations = {
                 smallBatch: 'Small Batch',
                 exceptionFilters: 'Exception Filters'
             }
-        },
-        maintenance: {
-            tabs: { taskList: 'Tasks', parts: 'Spare Parts', schedule: 'Schedules', history: 'History', photos: 'Photos' },
-            buttons: { execute: 'Execute', detail: 'Detail', reportBreakdown: 'Report Breakdown', addPart: 'Add Part', saveSchedule: 'Save Schedule' },
-            labels: { partName: 'Part Name', stock: 'Stock', status: 'Status', technician: 'Technician' }
         },
         dashboard: {
             monitor: {
@@ -982,7 +967,7 @@ export const translations = {
         }
     },
     vn: {
-        nav: { monitor: 'Giám sát', schedule: 'Lịch trình', reports: 'Báo cáo', settings: 'Cài đặt', maintenance: 'Bảo trì' },
+        nav: { monitor: 'Giám sát', schedule: 'Lịch trình', reports: 'Báo cáo', settings: 'Cài đặt' },
         fkeys: {
             f1: 'Lên', f2: 'Xuống', f3: 'Bắt đầu', f4: 'Hoàn thành', f5: 'Tốt', f6: 'Xấu',
             f7: 'Đơn hàng', f8: 'Tiếp', f9: 'Ca', f10: 'Trở lại', f12: 'Thoát'
@@ -1014,14 +999,9 @@ export const translations = {
                 delete: 'Xóa'
             }
         },
-        maintenance: {
-            tabs: { taskList: 'Danh sách', parts: 'Phụ tùng', schedule: 'Lịch trình', history: 'Lịch sử', photos: 'Hình ảnh' },
-            buttons: { execute: 'Thực hiện', detail: 'Chi tiết', reportBreakdown: 'Báo hỏng', addPart: 'Thêm phụ tùng', saveSchedule: 'Lưu lịch' },
-            labels: { partName: 'Tên phụ tùng', stock: 'Kho', status: 'Trạng thái', technician: 'Kỹ thuật viên' }
-        }
     },
     th: {
-        nav: { monitor: 'จอภาพ', schedule: 'กำหนดการ', reports: 'รายงาน', settings: 'การตั้งค่า', maintenance: 'การบำรุงรักษา' },
+        nav: { monitor: 'จอภาพ', schedule: 'กำหนดการ', reports: 'รายงาน', settings: 'การตั้งค่า' },
         fkeys: {
             f1: 'ขึ้น', f2: 'ลง', f3: 'เริ่ม', f4: 'เสร็จสิ้น', f5: 'ดี', f6: 'เสีย',
             f7: 'คำสั่ง', f8: 'ถัดไป', f9: 'กะ', f10: 'กลับ', f12: 'ออก'
@@ -1053,11 +1033,6 @@ export const translations = {
                 delete: 'ลบ'
             }
         },
-        maintenance: {
-            tabs: { taskList: 'รายการงาน', parts: 'อะไหล่', schedule: 'กำหนดการ', history: 'ประวัติ', photos: 'รูปภาพ' },
-            buttons: { execute: 'ดำเนินการ', detail: 'รายละเอียด', reportBreakdown: 'แจ้งซ่อม', addPart: 'เพิ่มอะไหล่', saveSchedule: 'บันทึก' },
-            labels: { partName: 'ชื่ออะไหล่', stock: 'สต็อก', status: 'สถานะ', technician: 'ช่างเทคนิค' }
-        }
     }
 };
 

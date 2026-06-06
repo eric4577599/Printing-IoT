@@ -267,7 +267,6 @@ const MainLayout = () => {
         { path: '/schedule', label: '生產排程 (Schedule)' },
         { path: '/reports', label: '生產報表 (Report)' },
         { path: '/analysis', label: '生產分析 (Analysis)' },
-        { path: '/maintenance', label: '保養維修 (Maintenance)' },
         { path: '/settings', label: '系統設定 (Settings)' },
         { path: '/docs', label: '📖 文件 (Docs)' },
     ];

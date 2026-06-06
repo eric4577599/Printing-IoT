@@ -1,7 +1,7 @@
 // Auto-extracted from LanguageContext.jsx — Task 2.5
 // Traditional Chinese translations
 export default {
-  nav: { monitor: '即時監控', schedule: '排程', reports: '報表', settings: '設定', maintenance: '保養維修', docs: '文件' },
+  nav: { monitor: '即時監控', schedule: '排程', reports: '報表', settings: '設定', docs: '文件' },
   fkeys: {
     f1: '上移', f2: '下移', f3: '送單', f4: '完工', f5: '良品', f6: '不良',
     f7: '訂單', f8: '下一筆', f9: '班別', f10: '退回', f12: '離開'
@@ -14,11 +14,6 @@ export default {
     unit: { title: '單位設定', select: '單位選擇', mm: '公厘 (mm)', inch: '英吋 (inch)', fluteSettings: '楞別設定', flute: '楞別', thickness: '厚度', addFlute: '新增楞別', flute_single: '楞' },
     formula: { title: '計算公式參數設定', desc: '依據文件設定之標準參數', coreEff: '核心生產效率', timeAvail: '時間利用率', continuous: '連續生產定義', targets: '目標設定', stdAvgSpeed: '標準平均車速', stdPrepTime: '標準準備時間', splitPrintCredit: '分印作業補償', targetOEE: 'OEE 目標', targetPrepSuccess: '試車成功率目標' },
     report: { title: '報表參數設定', desc: '設定後端報表生成邏輯參數', timeBoundary: '時間邊界', smallBatch: '小量產定義', exceptionFilters: '異常過濾' }
-  },
-  maintenance: {
-    tabs: { taskList: '維修清單', parts: '零件庫存', schedule: '保養排程', history: '歷史紀錄', photos: '照片管理' },
-    buttons: { execute: '執行', detail: '詳情', reportBreakdown: '故障回報', addPart: '新增零件', saveSchedule: '儲存排程' },
-    labels: { partName: '零件名稱', stock: '庫存', status: '狀態', technician: '執行人員' }
   },
   dashboard: {
     monitor: { productionQty: '生產數量', qty: 'Qty', speed: '車速', standard: '標準', maxSpeed: '極速', idle: '待機中 (Idle)', waitForF3: '等待 F3 開始生產', running: 'Running' },

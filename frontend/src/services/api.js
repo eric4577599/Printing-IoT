@@ -104,34 +104,3 @@ export const updateBoxTypes = async (types) => {
     const response = await api.put('/settings/box-types', types);
     return response.data;
 };
-
-// --- Maintenance ---
-export const getMaintenanceSchedules = async () => {
-    const response = await api.get('/maintenance/schedules');
-    return response.data;
-};
-
-export const createMaintenanceSchedule = async (schedule) => {
-    const response = await api.post('/maintenance/schedules', schedule);
-    return response.data;
-};
-
-export const getSpareParts = async () => {
-    const response = await api.get('/maintenance/parts');
-    return response.data;
-};
-
-export const createSparePart = async (part) => {
-    const response = await api.post('/maintenance/parts', part);
-    return response.data;
-};
-
-export const getMaintenanceRecords = async () => {
-    const response = await api.get('/maintenance/records');
-    return response.data;
-};
-
-export const createMaintenanceRecord = async (record) => {
-    const response = await api.post('/maintenance/records', record);
-    return response.data;
-};

@@ -58,7 +58,6 @@ Printing IoT/
 │   └── SmartParts.API/     # 零件管理 API
 ├── frontend/               # 主系統 React 前端
 ├── smart-parts-frontend/   # 零件管理前端
-├── Maintenance-System/     # 維護排程模組
 ├── doc/                    # 系統設計文件（可透過 /docs 路由在線檢視）
 ├── tests/                  # 整合測試腳本
 └── scripts/                # 工具腳本
