@@ -86,7 +86,8 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: always
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    # --protocol http2:改走 TCP,避開本地網路 QUIC(UDP)不穩造成的反覆斷線(2026-06-11)
+    command: tunnel --no-autoupdate --protocol http2 run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     depends_on:
       - frontend
       - backend-api
