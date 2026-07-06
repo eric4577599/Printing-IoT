@@ -1,10 +1,12 @@
 # Printing IoT — 印刷機台物聯網管理系統
 
-> 設備監控 × 預測維護 × 智慧零件管理
+> 設備監控 × 生產排程 × 生產分析
 
 ## 專案簡介
 
-針對印刷機台的完整 IoT 解決方案，整合 MQTT 即時監控、Modbus 協議通訊、OCR 零件辨識與 AI 視覺，提供設備健康管理與智慧備料建議。
+針對印刷機台的完整 IoT 解決方案，整合 MQTT 即時監控、Modbus 協議通訊與 AI 視覺，提供瓦楞生產監控、排程與報表分析。
+
+> 零件管理與保養維修功能已於 2026-07 隨 C′ 遷移移入獨立外掛 MM（`/Volumes/G70Pro/cusor pool/MM/`，mms.ericchh.work）。
 
 ## 技術架構
 
@@ -17,7 +19,6 @@
 | AI 視覺 | PaddleOCR + PaddlePaddle + OpenCV |
 | 生成式 AI | Google Gemini |
 | 前端（主系統） | React 19 + Vite + Leaflet |
-| 前端（零件管理） | React + Vite + TailwindCSS（smart-parts-frontend） |
 | 物件儲存 | MinIO (S3) |
 | 資料庫 | PostgreSQL 15 |
 | 容器化 | Docker Compose |
@@ -27,9 +28,6 @@
 
 - **即時監控**：MQTT 訂閱機台狀態與感測器數據
 - **Modbus 整合**：工業設備 PLC 數據讀取
-- **OCR 零件辨識**：拍照自動辨識零件型號
-- **預測維護**：異常偵測 + 維護排程提醒
-- **智慧零件管理**（Smart Parts）：庫存追蹤、備料建議
 - **地圖視覺化**：Leaflet 廠區設備分佈圖
 - **內建文件入口**：`/docs` 路由提供作業流程、設計文件、操作紀錄在線檢查
 
@@ -41,7 +39,6 @@ cp .env.example .env
 # 啟動所有服務
 docker compose up -d --build
 # 主系統前端：http://localhost:5600
-# 零件管理前端：http://localhost:5100
 # API (Swagger)：http://localhost:5200/swagger
 ```
 
@@ -54,10 +51,8 @@ Printing IoT/
 │   ├── PrintingIoT.Core/   # 領域模型 (Entities, Interfaces, DTOs)
 │   ├── PrintingIoT.Infrastructure/ # 資料存取 (EF Core, Redis, Services)
 │   ├── PrintingIoT.Worker/ # MQTT 背景服務
-│   ├── PrintingIoT.Tests/  # 單元測試與整合測試
-│   └── SmartParts.API/     # 零件管理 API
+│   └── PrintingIoT.Tests/  # 單元測試與整合測試
 ├── frontend/               # 主系統 React 前端
-├── smart-parts-frontend/   # 零件管理前端
 ├── doc/                    # 系統設計文件（可透過 /docs 路由在線檢視）
 ├── tests/                  # 整合測試腳本
 └── scripts/                # 工具腳本

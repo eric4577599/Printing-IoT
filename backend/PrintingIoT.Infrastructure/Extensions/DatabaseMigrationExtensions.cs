@@ -7,8 +7,7 @@ namespace PrintingIoT.Infrastructure.Extensions;
 /// <summary>
 /// DatabaseMigrationExtensions — 共用資料庫遷移重試邏輯
 /// 
-/// 抽取自 PrintingIoT.API/Program.cs 和 SmartParts.API/Program.cs 中
-/// 完全相同的 migration retry 代碼 (Phase 3.7)
+/// 抽取自各服務 Program.cs 中完全相同的 migration retry 程式碼 (Phase 3.7)
 /// </summary>
 public static class DatabaseMigrationExtensions
 {
