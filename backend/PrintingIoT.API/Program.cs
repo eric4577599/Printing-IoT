@@ -78,7 +78,6 @@ builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
-builder.Services.AddScoped<IPartService, PartService>(); // Phase 3.3: Migrated from SmartParts.API
 
 if (!builder.Environment.IsEnvironment("Testing"))
 {

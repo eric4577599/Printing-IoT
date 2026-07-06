@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using PrintingIoT.Core.Entities;
-using PrintingIoT.Core.Entities.Parts;
 
 namespace PrintingIoT.Infrastructure.Data;
 
@@ -16,11 +15,6 @@ public class PrintingContext : DbContext
     public DbSet<MachineSection> MachineSections { get; set; }
     public DbSet<Product> Products { get; set; }
 
-    // Parts (Migrated from SmartParts.API — Phase 3.5)
-    public DbSet<Part> Parts { get; set; }
-    public DbSet<Supplier> Suppliers { get; set; }
-    public DbSet<SupplierPart> SupplierParts { get; set; }
-
     // Auth (Phase 4.2)
     public DbSet<PrintingIoT.Core.Entities.Auth.User> Users { get; set; }
     public DbSet<PrintingIoT.Core.Entities.Auth.Role> Roles { get; set; }
@@ -33,30 +27,6 @@ public class PrintingContext : DbContext
         modelBuilder.Entity<ProductionLog>()
             .HasIndex(p => p.Timestamp)
             .IsDescending();
-
-        // Parts — Unique Index for InternalPN
-        modelBuilder.Entity<Part>()
-            .HasIndex(p => p.InternalPN)
-            .IsUnique();
-
-        // Parts — One-to-Many: Part -> SupplierParts
-        modelBuilder.Entity<Part>()
-            .HasMany(p => p.SupplierParts)
-            .WithOne(sp => sp.Part)
-            .HasForeignKey(sp => sp.PartId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        // Parts — One-to-Many: Supplier -> SupplierParts
-        modelBuilder.Entity<Supplier>()
-            .HasMany(s => s.SupplierParts)
-            .WithOne(sp => sp.Supplier)
-            .HasForeignKey(sp => sp.SupplierId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        // Parts — Precision for Price
-        modelBuilder.Entity<SupplierPart>()
-            .Property(sp => sp.Price)
-            .HasPrecision(18, 2);
 
         // Auth — Unique Username
         modelBuilder.Entity<PrintingIoT.Core.Entities.Auth.User>()
