@@ -92,26 +92,20 @@ services:
       - frontend
       - backend-api
 
-  # Smart Parts Frontend (now uses unified backend-api at /api/v1/parts)
-  sm-frontend:
-    build:
-      context: ./smart-parts-frontend
-      dockerfile: Dockerfile
-    restart: always
-    ports:
-      - "5100:80"
-    depends_on:
-      - backend-api  # Phase 3.9: Changed from sm-backend → backend-api
-
   # ======================================================================
-  # DEPRECATED: The following services have been merged into backend-api
-  # sm-backend  → PrintingIoT.API/Controllers/PartsController (Phase 3.3)
-  # SmartPartsDB → FlexoDB (Parts/Suppliers/SupplierParts tables)
+  # DEPRECATED / EXTRACTED 歷史紀錄
   #
   # EXTRACTED: 保養維修模組已移出主系統(2026-06-06)
-  # mms-backend → 獨立程式,位於 /Volumes/X10Pro/cusor pool/MM/(客戶需要時外掛部署)
+  # mms-backend → 獨立程式,位於 /Volumes/G70Pro/cusor pool/MM/(客戶需要時外掛部署)
   # MaintenanceSchedules/SpareParts/MaintenanceRecords 資料表已由
   # migration RemoveMaintenanceModule 自 FlexoDB 移除
+  #
+  # EXTRACTED: 零件管理(Smart Parts)已隨 C′ 遷移移入 MM(2026-07)
+  # sm-frontend(原 port 5100)服務移除、smart-parts-frontend/ 目錄刪除
+  # Parts/Suppliers/SupplierParts 三表已由 migration RemoveSmartPartsModule
+  # 自 FlexoDB 移除;資料與功能改由 MM 承接:
+  #   /Volumes/G70Pro/cusor pool/MM/(mms.ericchh.work,/api/v1/parts)
+  # 舊網址 smartparts.ericchh.work 已停用並轉址至 mms.ericchh.work
   # ======================================================================
 
 volumes:
