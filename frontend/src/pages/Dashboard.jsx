@@ -6,7 +6,6 @@ import StatusPanel from '../components/dashboard/StatusPanel';
 import OrderDetailsModal from '../components/modals/OrderDetailsModal';
 import StopReasonModal from '../components/modals/StopReasonModal';
 import FinishOrderModal from '../components/modals/FinishOrderModal';
-import ProductFormModal from '../components/modals/ProductFormModal';
 import {
     setCurrentOrder, clearCurrentOrder, getRealtimeData, getMachineSections // Imported
 } from '../services/api';
@@ -25,10 +24,7 @@ const Dashboard = () => {
         orders,
         setOrders,
         moveOrder,       // From Context
-        deleteOrder,     // From Context
-        saveOrder,       // From Context
         saveProduct,     // From Context (New)
-        reorderOrders,   // From Context
         setShowLoginModal, // From Context
         setCurrentMonitorData, // 共享即時監控資料
         isPlcConnected, // New: Disconnection state
@@ -344,53 +340,6 @@ const Dashboard = () => {
             });
 
             setIsMotorOn(true);
-        }
-    };
-
-    // Product Form Modal State
-    const [showProductModal, setShowProductModal] = useState(false);
-    const [editingOrder, setEditingOrder] = useState(null); // null = Add, obj = Edit
-
-    const handleAddOrder = () => {
-        setEditingOrder(null);
-        setShowProductModal(true);
-    };
-
-    const handleEditOrder = () => {
-        if (!selectedOrderId) {
-            alert(t('dashboard.alerts.selectOrderFirst'));
-            return;
-        }
-        const order = orders.find(o => o.id === selectedOrderId);
-        if (order) {
-            setEditingOrder(order);
-            setShowProductModal(true);
-        }
-    };
-
-    const handleSaveOrder = (formData) => {
-        if (editingOrder) {
-            saveOrder(formData, true, editingOrder.id);
-        } else {
-            saveOrder(formData, false);
-        }
-        setShowProductModal(false);
-    };
-
-    const handleDeleteOrder = () => {
-        if (!selectedOrderId) {
-            alert(t('dashboard.alerts.selectOrderFirst'));
-            return;
-        }
-        if (confirm(`${t('dashboard.alerts.confirmDelete')} ${selectedOrderId}?`)) {
-            deleteOrder(selectedOrderId);
-            setSelectedOrderId(null);
-        }
-    };
-
-    const handleReorder = () => {
-        if (confirm(t('dashboard.alerts.confirmReorder'))) {
-            reorderOrders();
         }
     };
 
@@ -898,9 +847,7 @@ const Dashboard = () => {
                     orders={orders} selectedOrderId={selectedOrderId} setSelectedOrderId={setSelectedOrderId}
                     isContinuousProduction={isContinuousProduction} prepTimeSeconds={prepTimeSeconds} 
                     thresholdSettings={thresholdSettings} getPrepTimeColor={getPrepTimeColor}
-                    currentData={currentData} resetOffset={resetOffset} 
-                    handleAddOrder={handleAddOrder} handleEditOrder={handleEditOrder}
-                    handleDeleteOrder={handleDeleteOrder} handleReorder={handleReorder}
+                    currentData={currentData} resetOffset={resetOffset}
                 />
                 
                 <StatusPanel 
@@ -935,12 +882,6 @@ const Dashboard = () => {
                     qty: Math.floor(currentData.di1 - resetOffset),
                     targetQty: orders[0]?.qty || 0
                 }}
-            />
-            <ProductFormModal
-                isOpen={showProductModal}
-                onClose={() => setShowProductModal(false)}
-                onSave={handleSaveOrder}
-                initialData={editingOrder}
             />
         </div >
     );

@@ -2,23 +2,15 @@ import React from 'react';
 import { useLanguage } from '../../modules/language/LanguageContext';
 import styles from '../../pages/Dashboard.module.css';
 
-const SchedulePanel = ({ 
-    orders, selectedOrderId, setSelectedOrderId, 
+const SchedulePanel = ({
+    orders, selectedOrderId, setSelectedOrderId,
     isContinuousProduction, prepTimeSeconds, thresholdSettings, getPrepTimeColor,
-    currentData, resetOffset,
-    handleAddOrder, handleEditOrder, handleDeleteOrder, handleReorder 
+    currentData, resetOffset
 }) => {
     const { t } = useLanguage();
 
     return (
         <div className={styles.schedulePanel} style={{ position: 'relative' }}>
-            <div style={{ display: 'flex', gap: '10px', padding: '10px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)' }}>
-                <button onClick={handleAddOrder} className={styles.actionButton}>{t('dashboard.schedule.addOrder')}</button>
-                <button onClick={handleEditOrder} className={styles.actionButton}>{t('dashboard.schedule.editOrder')}</button>
-                <button onClick={handleDeleteOrder} className={styles.actionButton} style={{ color: 'var(--status-error)' }}>{t('dashboard.schedule.deleteOrder')}</button>
-                <button onClick={handleReorder} className={styles.actionButton} style={{ marginLeft: 'auto' }}>{t('dashboard.schedule.reorder')}</button>
-            </div>
-
                     {/* Running Order Section (The Green Box) - Dynamic colors based on prep time */}
                     <div style={{ padding: '8px 12px', borderBottom: '2px solid var(--bg-secondary)', marginBottom: '4px' }}>
                         {(() => {

@@ -55,6 +55,13 @@ const BoxDiagram = ({ data = {} }) => {
     const boxType = (data.boxType ?? data.dieCutType ?? '').toString();
     const isHSC = /HSC/i.test(boxType);
 
+    // 面數:RSC/HSC 標準展開為 4 面(長寬長寬)+ 左側黏合舌片;
+    // 僅當箱型啟用 S5 且訂單第 5 段有值時才畫第 5 面,避免多畫一面。
+    const segValues = [l1, w1, l2, w2, l3];
+    const segCount = Number(l3) > 0 ? 5 : 4;
+    const segs = segValues.slice(0, segCount);
+    const colW = 500 / segCount; // SVG 座標:箱身 x 60~560,均分為 segCount 面
+
     // 無資料時顯示空狀態
     if (!hasData) {
         return (
@@ -82,12 +89,16 @@ const BoxDiagram = ({ data = {} }) => {
 
     return (
         <div className={styles.diagramWrapper}>
-            {/* Top Inputs (L1-L3) - 使用 value 而非 defaultValue 以確保資料更新 */}
-            <div className={styles.absInput} style={{ top: '15%', left: '8%' }}><input value={l1} readOnly /></div>
-            <div className={styles.absInput} style={{ top: '15%', left: '26%' }}><input value={w1} readOnly /></div>
-            <div className={styles.absInput} style={{ top: '15%', left: '46%' }}><input value={l2} readOnly /></div>
-            <div className={styles.absInput} style={{ top: '15%', left: '66%' }}><input value={w2} readOnly /></div>
-            <div className={styles.absInput} style={{ top: '15%', left: '86%' }}><input value={l3} readOnly /></div>
+            {/* Top Inputs - 依面數置中於各面上方;使用 value 而非 defaultValue 以確保資料更新 */}
+            {segs.map((v, i) => (
+                <div
+                    key={i}
+                    className={styles.absInput}
+                    style={{ top: '15%', left: `${((60 + (i + 0.5) * colW) / 600) * 100}%`, transform: 'translateX(-50%)' }}
+                >
+                    <input value={v} readOnly />
+                </div>
+            ))}
 
             {/* Right Side Heights (H1-H3);HSC 無上蓋,不顯示 H1 上蓋高度 */}
             {!isHSC && <div className={styles.absInput} style={{ top: '28%', right: '2%' }}><input value={h1} readOnly /></div>}
@@ -112,8 +123,8 @@ const BoxDiagram = ({ data = {} }) => {
                             {/* Main Box Grid */}
                             <rect x="60" y={topY} width="500" height={270 - topY} fill="#f3e5ab" stroke="black" strokeWidth="2" />
 
-                            {/* Vertical Lines */}
-                            {[160, 260, 360, 460].map(x => (
+                            {/* Vertical Lines - 依面數均分箱身 */}
+                            {Array.from({ length: segCount - 1 }, (_, k) => 60 + (k + 1) * colW).map(x => (
                                 <line key={x} x1={x} y1={topY} x2={x} y2="270" stroke="black" strokeWidth="2" />
                             ))}
 
