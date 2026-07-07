@@ -247,6 +247,9 @@ export const translations = {
                 confirm: '確認完工',
                 cancel: '取消'
             },
+            productDetail: {
+                title: '產品規格詳情'
+            },
             orderDetails: {
                 title: '訂單詳情',
                 orderNo: '訂單號碼',
@@ -567,6 +570,9 @@ export const translations = {
                 confirm: '确认完工',
                 cancel: '取消'
             },
+            productDetail: {
+                title: '产品规格详情'
+            },
             orderDetails: {
                 title: '订单详情',
                 orderNo: '订单号码',
@@ -886,6 +892,9 @@ export const translations = {
                 notes: 'Notes',
                 confirm: 'Confirm Finish',
                 cancel: 'Cancel'
+            },
+            productDetail: {
+                title: 'Product Specification'
             },
             orderDetails: {
                 title: 'Order Details',

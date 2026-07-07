@@ -3,6 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import { useLanguage } from '../modules/language/LanguageContext';
 import BoxDiagram from '../components/common/BoxDiagram';
 import ProductFormModal from '../components/modals/ProductFormModal';
+import ProductDetailModal from '../components/modals/ProductDetailModal';
 import AddScheduleModal from '../modules/maintenance/AddScheduleModal';
 import styles from './Schedule.module.css';
 
@@ -34,6 +35,7 @@ const Schedule = () => {
     const [pendingProduct, setPendingProduct] = useState(null); // [新增] 待新增的產品
     const [modalMode, setModalMode] = useState('add_product');
     const [editingProduct, setEditingProduct] = useState(null);
+    const [detailProduct, setDetailProduct] = useState(null); // 點選產品列時顯示的唯讀詳情
 
     // --- Schedule Controls (Left) ---
     const handleMoveOrder = (direction) => {
@@ -306,6 +308,7 @@ const Schedule = () => {
                                     onClick={() => {
                                         setSelectedProductIndex(i);
                                         setLastClickedSection('product');
+                                        setDetailProduct(prod); // 點選即彈出規格詳情與圖面
                                     }}
                                     className={selectedProductIndex === i ? styles.selectedProductRow : ''}
                                 >
@@ -328,6 +331,12 @@ const Schedule = () => {
                     onClose={() => setShowProductModal(false)}
                     onSave={handleModalSave}
                     initialData={editingProduct}
+                />
+
+                <ProductDetailModal
+                    isOpen={detailProduct !== null}
+                    onClose={() => setDetailProduct(null)}
+                    product={detailProduct}
                 />
 
                 <AddScheduleModal
