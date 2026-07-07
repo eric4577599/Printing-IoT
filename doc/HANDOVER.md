@@ -1,5 +1,17 @@
 # 專案結案狀態與交接清單 (Project Status & Handover)
 
+> **⚠ 2026-07 現況更新（正文為 2026-04-12 結案總結，已凍結，閱讀前必看）**
+>
+> 本文「三套後端收攏為單一 API、統一存 FlexoDB」之敘述已與現狀相反，2026-06／07 已依方案 C′ 重新拆分：
+>
+> - **保養維修**（2026-06）與**零件管理**（2026-07）已移出主系統，併入獨立外掛 **MM**（`/Volumes/G70Pro/cusor pool/MM/`，設備資產管理外掛，兩元件並立），與主系統真分離、無程式碼相互依賴。
+> - MM 對外入口 `mms.ericchh.work` **待 Cloudflare 設定生效（待 Eric 手動執行）**；生效前請使用 MM 本機入口 `http://localhost:5301`。
+> - `sm-frontend` 與 :5100 已退役；主系統 compose 為 7 服務（backend-api / backend-worker / cloudflared / frontend / mqtt-broker / postgres / redis）。
+> - FlexoDB 已無 `Parts` / `Suppliers` / `SupplierParts` 三表（`RemoveSmartPartsModule` migration），資料已搬移至 MmsDB。
+> - 正文「後端測試包含 Part CRUD」等描述屬結案當時快照，現行測試以 `dotnet test` 實跑為準。
+>
+> 最新現況請見 `doc/PROJECT_STATUS.md` 與 `README.md`。
+
 本文件紀錄了 Printing IoT 系統經歷 5 個階段重構後的最終技術狀態與接手工程師注意事項。
 
 ## 系統現況 (Current State)

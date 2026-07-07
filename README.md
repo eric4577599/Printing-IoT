@@ -6,7 +6,7 @@
 
 針對印刷機台的完整 IoT 解決方案，整合 MQTT 即時監控、Modbus 協議通訊與 AI 視覺，提供瓦楞生產監控、排程與報表分析。
 
-> 零件管理與保養維修功能已於 2026-07 隨 C′ 遷移移入獨立外掛 MM（`/Volumes/G70Pro/cusor pool/MM/`，mms.ericchh.work）。
+> 零件管理與保養維修功能已於 2026-07 隨 C′ 遷移移入獨立外掛 MM（`/Volumes/G70Pro/cusor pool/MM/`）。MM 對外入口 `mms.ericchh.work` 待 Cloudflare 設定生效（待 Eric 手動執行）；生效前請使用 MM 本機入口 `http://localhost:5301`。
 
 ## 技術架構
 
@@ -97,6 +97,7 @@ Printing IoT/
 ## 相關文件
 
 - `INSTRUCTIONS.md` — 部署操作指南
-- `doc/DEPLOYMENT_GUIDE_v1.md` — 完整部署說明
-- `doc/REFACTORING_LOG.md` — 重構變更紀錄
+- `doc/操作說明文件.html` — 操作說明書 v3.0（定稿）
+- `doc/DEPLOYMENT_GUIDE_v1.md` — ⚠ 已廢止（原 Smart Parts 部署指南，零件管理已移至 MM 外掛）
+- `doc/REFACTORING_LOG.md` — 重構變更紀錄（歷史）
 - `doc/ERROR_TEST_MATRIX.md` — 錯誤-測試追溯矩陣
