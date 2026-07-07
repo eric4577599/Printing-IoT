@@ -1,0 +1,1606 @@
+<title>印刷 IoT 系統操作說明書 v3.0(定稿)</title>
+<style>
+  :root{
+    --ink:#1d2833;
+    --ink-soft:#4a5866;
+    --ground:#f5f7f9;
+    --paper:#ffffff;
+    --line:#dbe2e9;
+    --core:#1e5fa8;         /* 主系統:鋼藍 */
+    --core-soft:#e8f0f9;
+    --mm:#b25a0e;           /* MM:琥珀 */
+    --mm-soft:#faf0e2;
+    --warn-bg:#fdf6e3;
+    --warn-line:#e3c96b;
+    --bad:#c62828;
+    --ok:#2e7d32;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+  body{
+    margin:0;background:var(--ground);color:var(--ink);
+    font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
+    font-size:16px;line-height:1.75;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px 80px}
+  header.doc{padding:44px 0 24px;border-bottom:3px solid var(--ink);margin-bottom:8px}
+  .doc-id{font-size:.78rem;letter-spacing:.14em;color:var(--ink-soft);text-transform:uppercase;margin:0 0 6px}
+  h1{font-size:1.85rem;line-height:1.35;margin:0 0 6px;font-weight:700;text-wrap:balance}
+  .doc-meta{font-size:.85rem;color:var(--ink-soft)}
+  .doc-meta code{background:#edf1f5;border:1px solid var(--line);border-radius:3px;padding:1px 5px;font-size:.82em}
+  section{margin:44px 0}
+  h2{font-size:1.3rem;margin:0 0 4px;font-weight:700;text-wrap:balance;scroll-margin-top:20px}
+  h3{font-size:1.05rem;margin:28px 0 8px;font-weight:700;scroll-margin-top:20px}
+  h4{font-size:.95rem;margin:20px 0 6px;font-weight:700}
+  .sec-sub{color:var(--ink-soft);font-size:.9rem;margin:0 0 16px}
+  p{max-width:44em;margin:.5em 0}
+  ul,ol{max-width:44em;padding-left:1.4em}
+  li{margin:.3em 0}
+  code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.85em;background:#edf1f5;border:1px solid var(--line);border-radius:3px;padding:1px 5px}
+  kbd{
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.82em;
+    background:#fff;border:1px solid #b7c1cb;border-bottom-width:3px;border-radius:4px;
+    padding:1px 8px;white-space:nowrap;font-weight:700;color:var(--ink);
+  }
+  .chip{font-size:.72rem;font-weight:700;letter-spacing:.06em;padding:2px 10px;border-radius:3px;white-space:nowrap}
+  .chip.core{background:var(--core-soft);color:var(--core);border:1px solid #b9d2ec}
+  .chip.mm{background:var(--mm-soft);color:var(--mm);border:1px solid #e8c99e}
+  .chip.new{background:#e9f5ea;color:var(--ok);border:1px solid #b5d8b8}
+  .chip.cur{background:#eef2f6;color:var(--ink-soft);border:1px solid var(--line)}
+  .tbl-scroll{overflow-x:auto;margin:14px 0}
+  table{border-collapse:collapse;width:100%;font-size:.9rem;background:var(--paper)}
+  th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+  th{background:#eef2f6;font-weight:700;white-space:nowrap}
+  tbody tr:nth-child(even){background:#fafbfc}
+  td{font-variant-numeric:tabular-nums}
+  .note,.warn{border:1px solid;border-left-width:5px;padding:14px 18px;margin:18px 0;font-size:.93rem;max-width:48em;background:var(--paper);border-radius:0 4px 4px 0}
+  .note{border-color:#b9d2ec;border-left-color:var(--core);background:var(--core-soft)}
+  .warn{border-color:var(--warn-line);border-left-color:#c9a227;background:var(--warn-bg)}
+  .note b:first-child,.warn b:first-child{display:block;font-size:.78rem;letter-spacing:.1em;margin-bottom:4px}
+  /* 目錄 */
+  nav.toc{background:var(--paper);border:1px solid var(--line);padding:18px 24px;margin:24px 0;font-size:.92rem}
+  nav.toc b{display:block;font-size:.78rem;letter-spacing:.12em;color:var(--ink-soft);margin-bottom:8px}
+  nav.toc ol{margin:0;columns:2;column-gap:36px}
+  nav.toc a{color:var(--core);text-decoration:none}
+  nav.toc a:hover,nav.toc a:focus{text-decoration:underline}
+  @media (max-width:640px){nav.toc ol{columns:1}}
+  /* 全景兩卡 */
+  .duo{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0}
+  @media (max-width:720px){.duo{grid-template-columns:1fr}}
+  .sysbox{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--core);border-radius:0 0 4px 4px;padding:14px 18px}
+  .sysbox.is-mm{border-top-color:var(--mm)}
+  .sysbox h4{margin:0 0 2px;font-size:1rem}
+  .sysbox .role{font-size:.78rem;color:var(--ink-soft);letter-spacing:.04em;margin-bottom:8px}
+  .sysbox ul{margin:0;padding-left:1.15em;font-size:.88rem}
+  .sysbox .url{display:inline-block;margin-top:10px;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.8rem;background:#edf1f5;border:1px solid var(--line);border-radius:3px;padding:2px 8px}
+  /* 線框圖(畫面示意) */
+  .wire{background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:16px;margin:16px 0;max-width:760px}
+  .wire.full{max-width:none}
+  .wire .wire-cap{font-size:.75rem;letter-spacing:.1em;color:var(--ink-soft);text-transform:uppercase;margin:0 0 10px;font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .wire .bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .wire .tab{font-size:.78rem;border:1px solid var(--line);border-radius:4px 4px 0 0;padding:3px 10px;background:#eef2f6;white-space:nowrap}
+  .wire .tab.on{background:var(--paper);border-bottom-color:var(--paper);font-weight:700;border-top:2px solid var(--mm)}
+  .wire .tab.core-on{border-top-color:var(--core)}
+  .wire .tab.is-new{outline:2px dashed var(--ok);outline-offset:1px}
+  .wire .row{display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap}
+  .wire .input{flex:1 1 160px;border:1px solid #b7c1cb;border-radius:3px;padding:3px 10px;font-size:.78rem;color:var(--ink-soft);background:#fff;min-width:120px}
+  .wire .input.sm{flex:0 1 130px;min-width:90px}
+  .wire .sel{border:1px solid #b7c1cb;border-radius:3px;padding:3px 10px;font-size:.78rem;color:var(--ink-soft);background:#fff;white-space:nowrap}
+  .wire .sel::after{content:" ▾"}
+  .wire .btn{font-size:.78rem;border:1px solid var(--core);border-radius:3px;padding:3px 12px;background:var(--core);color:#fff;font-weight:700;white-space:nowrap}
+  .wire .btn.ghost{background:#fff;color:var(--ink-soft);border-color:#b7c1cb}
+  .wire .btn.mmc{background:var(--mm);border-color:var(--mm)}
+  .wire .btn.ok{background:var(--ok);border-color:var(--ok)}
+  .wire .btn.danger{background:var(--bad);border-color:var(--bad)}
+  .wire table{font-size:.76rem;margin-top:8px}
+  .wire th,.wire td{padding:4px 8px}
+  .wire .pill{display:inline-block;font-size:.68rem;border-radius:10px;padding:0 8px;font-weight:700;white-space:nowrap}
+  .wire .pill.ok{background:#e9f5ea;color:var(--ok)}
+  .wire .pill.low{background:#fdecea;color:var(--bad)}
+  .wire .pill.mid{background:#fdf6e3;color:#b26a00}
+  .wire .pill.info{background:var(--core-soft);color:var(--core)}
+  .wire .modal{border:2px solid var(--ink);border-radius:4px;padding:12px 14px;margin-top:10px;background:#fbfcfd;max-width:560px}
+  .wire .modal .m-title{font-weight:700;font-size:.85rem;border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:8px}
+  .wire .modal .m-title.danger-t{color:var(--bad)}
+  .wire .field{display:flex;gap:8px;align-items:center;margin:5px 0;font-size:.78rem}
+  .wire .field label{flex:0 0 130px;color:var(--ink-soft)}
+  .wire .field .box{flex:1;border:1px solid #b7c1cb;border-radius:3px;min-height:20px;background:#fff}
+  .wire .field .box.ta{min-height:44px}
+  .wire .field .fixed{flex:1;font-size:.76rem;color:var(--ink-soft)}
+  .wire .subgrp{border:1px dashed var(--line);border-radius:4px;padding:8px 10px;margin-top:8px}
+  .wire .subgrp .sg-cap{font-size:.72rem;font-weight:700;color:var(--ink-soft);letter-spacing:.06em;margin-bottom:4px}
+  /* 線框分欄與統計卡 */
+  .wire .split{display:flex;gap:10px;align-items:stretch}
+  @media (max-width:720px){.wire .split{flex-wrap:wrap}}
+  .wire .pane{border:1px dashed #b7c1cb;border-radius:4px;padding:8px 10px;flex:1;min-width:180px;background:#fdfefe}
+  .wire .pane.narrow{flex:0 1 32%}
+  .wire .p-cap{font-size:.7rem;font-weight:700;color:var(--ink-soft);letter-spacing:.06em;margin:0 0 6px;text-transform:uppercase}
+  .wire .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0}
+  .wire .cards.two{grid-template-columns:repeat(2,1fr)}
+  .wire .cell{border:1px solid var(--line);border-radius:3px;padding:4px 8px;font-size:.7rem;background:#fff;color:var(--ink-soft)}
+  .wire .cell b{display:block;font-size:.82rem;color:var(--ink);font-variant-numeric:tabular-nums}
+  .wire .opt4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:6px 0}
+  @media (max-width:640px){.wire .opt4{grid-template-columns:repeat(2,1fr)}}
+  .wire .opt{border:1px solid var(--line);border-radius:4px;padding:6px 8px;font-size:.72rem;text-align:center;background:#fff}
+  .wire .opt.on{border-color:var(--mm);background:var(--mm-soft);font-weight:700}
+  .wire .keybar{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0}
+  .wire .keybar kbd{font-size:.7rem;padding:2px 6px}
+  .wire .statusrow{display:flex;gap:14px;flex-wrap:wrap;font-size:.72rem;color:var(--ink-soft);border-top:1px solid var(--line);padding-top:6px;margin-top:8px}
+  .wire .ph{border:1px dashed #b7c1cb;border-radius:4px;background:repeating-linear-gradient(45deg,#f4f7fa,#f4f7fa 8px,#eef2f6 8px,#eef2f6 16px);min-height:70px;display:flex;align-items:center;justify-content:center;font-size:.72rem;color:var(--ink-soft)}
+  .wire .thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .wire .thumb{width:52px;height:52px;border:1px solid var(--line);border-radius:3px;background:repeating-linear-gradient(45deg,#f4f7fa,#f4f7fa 6px,#e8eef4 6px,#e8eef4 12px)}
+  .wire .prog{height:10px;border:1px solid var(--line);border-radius:5px;background:#fff;overflow:hidden;margin:4px 0;max-width:280px}
+  .wire .prog i{display:block;height:100%;width:62%;background:var(--mm)}
+  /* 流程鏈 */
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0;max-width:60em}
+  .flow .step{background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:8px 14px;font-size:.85rem;line-height:1.5}
+  .flow .step b{display:block;font-size:.8rem}
+  .flow .step small{color:var(--ink-soft);font-size:.75rem}
+  .flow .step.mm-step{border-top:3px solid var(--mm)}
+  .flow .step.core-step{border-top:3px solid var(--core)}
+  .flow .step.auto{border-style:dashed;background:var(--mm-soft)}
+  .flow .go{color:var(--ink-soft);font-size:1.05rem;flex:0 0 auto}
+  /* 分辨指南對照卡 */
+  .vs{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+  @media (max-width:720px){.vs{grid-template-columns:1fr}}
+  .vs .vcard{background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:14px 18px}
+  .vs .vcard.a{border-top:4px solid var(--mm)}
+  .vs .vcard.b{border-top:4px solid var(--core)}
+  .vs .vcard h4{margin:0 0 4px}
+  .vs .vcard .q{font-size:.85rem;color:var(--ink-soft);margin-bottom:8px}
+  .vs .vcard ul{font-size:.88rem;margin:0;padding-left:1.2em}
+  .st-ok{color:var(--ok);font-weight:700}
+  .st-bad{color:var(--bad);font-weight:700}
+  .eval{white-space:nowrap;color:var(--ink-soft);font-size:.82rem}
+  /* 組織圖 */
+  .org{margin:18px 0}
+  .org .org-root{width:300px;margin:0 auto;text-align:center;background:var(--ink);color:#fff;border-radius:4px;padding:8px 14px;font-weight:700;font-size:.95rem}
+  .org .org-root small{display:block;font-weight:400;font-size:.72rem;opacity:.85}
+  .org .org-t{position:relative;height:26px;max-width:720px;margin:0 auto}
+  .org .org-t .v{position:absolute;border-left:2px solid #b7c1cb;height:13px}
+  .org .org-t .v.mid{left:50%;top:0}
+  .org .org-t .v.l{left:25%;top:13px}
+  .org .org-t .v.r{left:75%;top:13px}
+  .org .org-t .h{position:absolute;left:25%;right:25%;top:13px;border-top:2px solid #b7c1cb}
+  .org .org-branches{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:720px;margin:0 auto}
+  @media (max-width:720px){.org .org-t{display:none}.org .org-branches{grid-template-columns:1fr}}
+  .org .org-sys{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--core);border-radius:0 0 4px 4px;padding:8px 12px;font-weight:700;text-align:center;font-size:.92rem}
+  .org .org-branch.mm .org-sys{border-top-color:var(--mm)}
+  .org .org-sys small{display:block;font-weight:400;font-size:.72rem;color:var(--ink-soft);font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+  .org .org-list{list-style:none;margin:8px 0 0;padding-left:6px}
+  .org .org-list li{position:relative;padding:2px 0 2px 18px;font-size:.85rem}
+  .org .org-list li::before{content:"";position:absolute;left:4px;top:0;bottom:0;border-left:2px solid var(--line)}
+  .org .org-list li::after{content:"";position:absolute;left:4px;top:14px;width:10px;border-top:2px solid var(--line)}
+  .org .org-list li:last-child::before{bottom:auto;height:14px}
+  .org .org-list ul{list-style:none;padding-left:14px;margin:0}
+  .org .org-list b{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.76rem;color:var(--core)}
+  .org .org-branch.mm .org-list b{color:var(--mm)}
+  .org .org-list em{font-style:normal;font-size:.72rem;color:var(--ok);font-weight:700}
+  /* 流程圖(含判斷分支) */
+  .fc{display:flex;flex-direction:column;align-items:center;margin:16px 0;max-width:680px}
+  .fc .n{border:1px solid var(--line);background:var(--paper);border-radius:4px;padding:6px 16px;font-size:.83rem;text-align:center;min-width:200px;max-width:440px;line-height:1.5}
+  .fc .n small{display:block;color:var(--ink-soft);font-size:.72rem}
+  .fc .n.start{border-radius:999px;background:var(--ink);color:#fff;border-color:var(--ink)}
+  .fc .n.start small{color:#d8dee5}
+  .fc .n.end{border-radius:999px;background:#eef2f6;font-weight:700}
+  .fc .n.dec{background:var(--warn-bg);border-color:var(--warn-line);font-weight:700}
+  .fc .n.auto{border-style:dashed;background:var(--mm-soft)}
+  .fc .a{color:var(--ink-soft);line-height:1.2;padding:2px 0;font-size:1rem}
+  .fc .branch{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;margin:6px 0}
+  @media (max-width:640px){.fc .branch{grid-template-columns:1fr}}
+  .fc .lane{display:flex;flex-direction:column;align-items:center;gap:4px;border:1px dashed var(--line);border-radius:4px;padding:8px;background:#fbfcfd}
+  .fc .lane .n{min-width:0;width:100%}
+  .fc .tag{font-size:.7rem;font-weight:700;padding:0 10px;border-radius:10px}
+  .fc .tag.yes{background:#e9f5ea;color:var(--ok)}
+  .fc .tag.no{background:#fdecea;color:var(--bad)}
+  .fc .tag.alt{background:var(--core-soft);color:var(--core)}
+  .fc .loop{font-size:.72rem;color:var(--core);font-weight:700}
+  footer.doc{border-top:1px solid var(--line);margin-top:56px;padding-top:16px;font-size:.82rem;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+</style>
+
+<div class="wrap">
+  <header class="doc">
+    <p class="doc-id">Printing IoT · Operator's Guide</p>
+    <h1>印刷 IoT 系統操作說明書 v3.0(定稿)</h1>
+    <p class="doc-meta">2026-07-04 初版 · <b>2026-07-07 定稿</b> · 對應架構:方案 C′(零件管理併入 MM)· 含<b>全 UI 畫面線框</b> · 定稿:內容與 2026-07-07 實作現況一致</p>
+  </header>
+
+  <!-- ═══ 版本重點 ═══ -->
+  <section id="whatsnew">
+    <h2>本版重點(v3.0 有什麼不一樣)</h2>
+    <p class="sec-sub">先看這裡,一分鐘掌握畫面搬家與名稱變更</p>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>變更</th><th>v2.x 以前</th><th>v3.0 之後</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>零件管理搬家</b></td>
+          <td>獨立網站 <code>smartparts.ericchh.work</code></td>
+          <td>併入 MM,改用「📦 零件主檔」「🏢 供應商」頁籤</td>
+        </tr>
+        <tr>
+          <td><b>頁籤更名</b></td>
+          <td>MM 的「🔩 零件庫存」</td>
+          <td>更名「🔩 備品庫存」(內容不變,只改名以避免混淆)</td>
+        </tr>
+        <tr>
+          <td><b>系統入口</b></td>
+          <td>三個網址(主系統 / 零件 / MM)</td>
+          <td>兩個網址:主系統 + MM(見〈系統全景〉)</td>
+        </tr>
+        <tr>
+          <td><b>保養維修</b></td>
+          <td>v1.0 時在主系統選單內</td>
+          <td>維持在 MM(2026-06 起),主系統選單無此按鈕</td>
+        </tr>
+      </tbody>
+    </table></div>
+    <div class="warn"><b>⚠ 入口與轉址公告</b>
+      主系統的零件管理頁面與 <code>:5100</code> 已於 2026-07 退役,零件資料一筆不少,已全數搬入 MM。
+      <code>mms.ericchh.work</code> 入口與 <code>smartparts.ericchh.work</code> 的 301 轉址,
+      其 <b>Cloudflare 儀表板三步驟待 Eric 手動執行</b>(步驟見 <code>docs/report20260707-1.md</code> §6.3);
+      <b>生效前請使用 MM 本機入口 <code>http://localhost:5301</code></b>。</div>
+    <div class="note"><b>ℹ 線框圖標記說明</b>
+      每張畫面線框右上有標記:<span class="chip cur">現況</span> 表示照現有程式畫面繪製;
+      <span class="chip new">v3.0 新增</span> 表示 C′ 新增的畫面,均已於 2026-07(P0–P4)實作完成並照現況繪製。
+      各畫面定案結果見第 2 章的畫面清單。</div>
+  </section>
+
+  <!-- ═══ 目錄 ═══ -->
+  <nav class="toc" aria-label="目錄">
+    <b>目錄</b>
+    <ol>
+      <li><a href="#overview">系統全景、入口與組織圖</a></li>
+      <li><a href="#screens">UI 畫面總覽(定案)</a></li>
+      <li><a href="#core">主系統:即時監控</a></li>
+      <li><a href="#core-schedule">主系統:生產排程</a></li>
+      <li><a href="#core-report">主系統:生產報表</a></li>
+      <li><a href="#core-analysis">主系統:生產分析</a></li>
+      <li><a href="#core-settings">主系統:系統設定</a></li>
+      <li><a href="#core-docs">主系統:文件與線上說明</a></li>
+      <li><a href="#mm">MM 設備資產管理:總覽</a></li>
+      <li><a href="#mm-equipment">MM:設備台帳</a></li>
+      <li><a href="#mm-tasks">MM:維修清單</a></li>
+      <li><a href="#mm-spare">MM:備品庫存</a></li>
+      <li><a href="#mm-parts">MM:零件主檔(新)</a></li>
+      <li><a href="#mm-suppliers">MM:供應商(新)</a></li>
+      <li><a href="#mm-schedule">MM:保養排程</a></li>
+      <li><a href="#mm-history">MM:歷史紀錄與照片</a></li>
+      <li><a href="#mm-settings">MM:系統設定</a></li>
+      <li><a href="#two-parts">分辨指南:備品庫存 vs 零件主檔</a></li>
+      <li><a href="#flows">作業流程圖(含判斷分支)</a></li>
+      <li><a href="#trouble">故障排除總覽</a></li>
+    </ol>
+  </nav>
+
+  <!-- ═══ 1. 系統全景 ═══ -->
+  <section id="overview">
+    <h2>1. 系統全景、入口與組織圖</h2>
+    <p class="sec-sub">整個產品線只有兩個入口,依你要做的事選擇</p>
+    <div class="duo">
+      <div class="sysbox">
+        <h4><span class="chip core">主系統</span> Printing IoT 即時監控</h4>
+        <p class="role">生產現場每天用 · 操作員為主</p>
+        <ul>
+          <li>即時監控(F 功能鍵操作)</li>
+          <li>生產排程 / 生產報表 / 生產分析</li>
+          <li>系統設定(管理員)/ 文件門戶</li>
+        </ul>
+        <span class="url">priiot.ericchh.work</span>
+      </div>
+      <div class="sysbox is-mm">
+        <h4><span class="chip mm">MM</span> 設備資產管理</h4>
+        <p class="role">設備 · 保養 · 維修 · 備品 · 採購零件</p>
+        <ul>
+          <li>設備台帳 / 維修清單 / 保養排程</li>
+          <li>備品庫存(保養耗用)</li>
+          <li>零件主檔 / 供應商(採購資料)<span class="chip new">新</span></li>
+          <li>歷史紀錄 / 照片管理</li>
+        </ul>
+        <span class="url">mms.ericchh.work(待生效)· 本機 localhost:5301</span>
+      </div>
+    </div>
+    <div class="note"><b>ℹ 怎麼選入口</b>
+      跟「今天生產什麼、生產多少」有關 → 主系統;跟「機器保養維修、零件庫存、跟誰買零件」有關 → MM。
+      兩邊帳號各自獨立,MM 有自己的登入畫面。
+      MM 網域 <code>mms.ericchh.work</code> 待 Cloudflare 設定生效(待 Eric 手動執行),生效前請使用本機入口 <code>http://localhost:5301</code>。</div>
+
+    <h3 id="s-login">1.1 班別選擇視窗(S1)</h3>
+    <p>開啟主系統後首先出現。選班別/操作員後按「選取」進入;管理員由「管理者」按鈕另行登入。</p>
+    <div class="wire">
+      <p class="wire-cap">S1 · 班別選擇視窗 <span class="chip cur">現況</span></p>
+      <div class="row">
+        <span class="btn ghost">管理者</span><span class="btn ok">選取</span><span class="btn ghost">離開</span>
+        <span style="font-size:.72rem;color:var(--ink-soft)">當前班別:A班 · 操作員:王小明 · 代碼:OP01</span>
+      </div>
+      <div class="split">
+        <div class="pane">
+          <p class="p-cap">操作員列表</p>
+          <table>
+            <thead><tr><th>代碼</th><th>班別</th><th>操作員</th></tr></thead>
+            <tbody>
+              <tr><td>OP01</td><td>A班</td><td>王小明</td></tr>
+              <tr><td>OP02</td><td>B班</td><td>李大華</td></tr>
+            </tbody>
+          </table>
+          <div class="row"><span class="btn">新增</span><span class="btn danger">刪除</span></div>
+        </div>
+        <div class="pane">
+          <p class="p-cap">班別列表</p>
+          <table>
+            <thead><tr><th>開始時間</th><th>結束時間</th><th>人數</th></tr></thead>
+            <tbody>
+              <tr><td>08:00</td><td>16:00</td><td>3</td></tr>
+              <tr><td>16:00</td><td>24:00</td><td>2</td></tr>
+            </tbody>
+          </table>
+          <div class="row"><span class="btn danger">刪除</span></div>
+        </div>
+      </div>
+      <div class="row">
+        <span class="input sm">開始 08:00</span> ~ <span class="input sm">結束 16:00</span>
+        <span class="input sm">人數</span>
+        <span class="btn">新增時段</span><span class="btn ghost">自訂時段</span>
+      </div>
+      <div class="modal" style="max-width:300px">
+        <p class="m-title">管理者登入</p>
+        <div class="field"><label>帳號</label><span class="box"></span></div>
+        <div class="field"><label>密碼</label><span class="box"></span></div>
+        <div class="row" style="justify-content:flex-end"><span class="btn ghost">取消</span><span class="btn">登入</span></div>
+      </div>
+    </div>
+    <div class="warn"><b>⚠ 注意</b>
+      班別資訊會記錄在生產報表中,請確認選擇正確。生產中途換班請按 <kbd>F9</kbd> 重新選擇班別。</div>
+
+    <h3 id="s-nav">1.2 導航列、功能鍵列與狀態列(S2)</h3>
+    <div class="wire full">
+      <p class="wire-cap">S2 · 主系統頂部導航與底部狀態(功能鍵列僅即時監控頁顯示)<span class="chip cur">現況</span></p>
+      <div class="bar">
+        <span class="tab core-on on">📡 即時監控</span>
+        <span class="tab">📅 生產排程</span>
+        <span class="tab">📊 生產報表</span>
+        <span class="tab">📈 生產分析</span>
+        <span class="tab">⚙️ 系統設定</span>
+        <span class="tab">📖 文件</span>
+        <span style="margin-left:auto;font-size:.72rem;color:var(--ink-soft)">📖 說明 · 語言 ▾ · 王小明 · 登出 · Status: OK</span>
+      </div>
+      <div class="keybar">
+        <kbd>F1 上移</kbd><kbd>F2 下移</kbd><kbd>F3 送單</kbd><kbd>F4 完工</kbd><kbd>F5 良品+</kbd><kbd>F6 不良+</kbd><kbd>F7 訂單</kbd><kbd>F8 下一筆</kbd><kbd>F9 班別</kbd><kbd>F10 退回</kbd><kbd>F12 離開</kbd>
+      </div>
+      <div class="statusrow">
+        <span>狀態:Idle</span><span>PLC 🟢</span><span>ERP 🟢</span>
+        <span>Start Time:2026/07/04</span><span>Operator:王小明(A班)(OPERATOR)</span>
+      </div>
+    </div>
+    <p>管理員另有「模擬生產控制」工具(開關、Local/Remote 模式、Power、速度滑桿),僅在系統設定啟用時顯示於導航列右側。</p>
+
+    <h3 id="s-org">1.3 系統組織圖(畫面地圖)</h3>
+    <p>全系統畫面的階層關係。編號對應第 2 章畫面清單;縮排項目是該頁開出的彈窗/子畫面。</p>
+    <div class="org">
+      <div class="org-root">PriIoT 產品線<small>兩個入口 · 後端互不引用 · 資料庫各自獨立</small></div>
+      <div class="org-t" aria-hidden="true"><span class="v mid"></span><span class="h"></span><span class="v l"></span><span class="v r"></span></div>
+      <div class="org-branches">
+        <div class="org-branch">
+          <div class="org-sys">主系統 · 即時監控<small>priiot.ericchh.work · FlexoDB</small></div>
+          <ul class="org-list">
+            <li><b>S1</b> 班別選擇視窗
+              <ul><li>管理者登入彈窗</li></ul></li>
+            <li><b>S2</b> 導航列 / F 鍵列 / 狀態列</li>
+            <li><b>S3</b> 即時監控主畫面
+              <ul>
+                <li><b>S4</b> 訂單詳情(F7)</li>
+                <li><b>S5</b> 完工確認(F4)</li>
+                <li><b>S6</b> 停車原因</li>
+              </ul></li>
+            <li><b>S7</b> 生產排程
+              <ul>
+                <li><b>S8</b> 產品表單</li>
+                <li><b>S9</b> 新增排程</li>
+              </ul></li>
+            <li><b>S10</b> 生產報表(4 種報表)</li>
+            <li><b>S11</b> 生產分析</li>
+            <li><b>S12</b> 系統設定(7 分類)</li>
+            <li><b>S13</b> 文件門戶 / 操作說明</li>
+          </ul>
+        </div>
+        <div class="org-branch mm">
+          <div class="org-sys">MM · 設備資產管理<small>mms.ericchh.work · MmsDB</small></div>
+          <ul class="org-list">
+            <li><b>M1</b> 登入頁</li>
+            <li><b>M2</b> 頂部列與頁籤列(9 頁籤)</li>
+            <li><b>M3</b> 設備台帳(清單/表單/文件)</li>
+            <li><b>M4</b> 維修清單
+              <ul>
+                <li><b>M5</b> 故障回報</li>
+                <li><b>M6</b> 執行回報</li>
+              </ul></li>
+            <li><b>M7</b> 備品庫存(元件一)</li>
+            <li><b>M13</b> 零件主檔(元件二)<em>新</em>
+              <ul><li>新增零件視窗</li></ul></li>
+            <li><b>M14</b> 供應商 <em>新</em></li>
+            <li><b>M8</b> 保養排程(四種觸發)
+              <ul><li><b>M9</b> 保養計畫範本</li></ul></li>
+            <li><b>M10</b> 歷史紀錄(含照片彈窗)</li>
+            <li><b>M11</b> 照片管理</li>
+            <li><b>M12</b> 系統設定(ERP 級聯)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 2. 畫面總覽 ═══ -->
+  <section id="screens">
+    <h2>2. UI 畫面總覽(定案)</h2>
+    <p class="sec-sub">全系統共 27 個畫面/彈窗。2026-07-07 定案:全數照 v3.0 目標設計定案,並已與實作現況一致</p>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>編號</th><th>畫面</th><th>所屬</th><th>線框位置</th><th>狀態</th><th>定案</th></tr></thead>
+      <tbody>
+        <tr><td>S1</td><td>班別選擇視窗(含管理者登入)</td><td><span class="chip core">主系統</span></td><td><a href="#s-login">§1.1</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>S2</td><td>導航列 / 功能鍵列 / 狀態列</td><td><span class="chip core">主系統</span></td><td><a href="#s-nav">§1.2</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>S3</td><td>即時監控主畫面</td><td><span class="chip core">主系統</span></td><td><a href="#s-dash">§3.1</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>S4</td><td>訂單詳情視窗(F7)</td><td><span class="chip core">主系統</span></td><td><a href="#s-order">§3.4</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>S5</td><td>完工確認視窗(F4)</td><td><span class="chip core">主系統</span></td><td><a href="#s-finish">§3.5</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>S6</td><td>停車原因視窗</td><td><span class="chip core">主系統</span></td><td><a href="#s-stop">§3.6</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>S7</td><td>生產排程主畫面</td><td><span class="chip core">主系統</span></td><td><a href="#s-sched">§4.1</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>S8</td><td>產品表單視窗</td><td><span class="chip core">主系統</span></td><td><a href="#s-product">§4.3</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>S9</td><td>新增排程視窗</td><td><span class="chip core">主系統</span></td><td><a href="#s-addsched">§4.4</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>S10</td><td>生產報表</td><td><span class="chip core">主系統</span></td><td><a href="#s-report">§5.1</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>S11</td><td>生產分析</td><td><span class="chip core">主系統</span></td><td><a href="#s-analysis">§6.1</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>S12</td><td>系統設定(7 分類)</td><td><span class="chip core">主系統</span></td><td><a href="#s-settings">§7.1</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>S13</td><td>文件門戶 / 操作說明視窗</td><td><span class="chip core">主系統</span></td><td><a href="#s-docs">§8.1</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>M1</td><td>MM 登入頁</td><td><span class="chip mm">MM</span></td><td><a href="#m-login">§9.1</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>M2</td><td>MM 頂部列與頁籤列</td><td><span class="chip mm">MM</span></td><td><a href="#m-tabs">§9.2</a></td><td>現況(9 頁籤)</td><td class="eval">✔ 照 v3.0 設計定案(已實作)</td></tr>
+        <tr><td>M3</td><td>設備台帳(清單+表單+文件面板)</td><td><span class="chip mm">MM</span></td><td><a href="#m-equip">§10.1</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>M4</td><td>維修清單主表</td><td><span class="chip mm">MM</span></td><td><a href="#m-task">§11.1</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>M5</td><td>故障回報視窗</td><td><span class="chip mm">MM</span></td><td><a href="#m-breakdown">§11.2</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>M6</td><td>執行回報視窗(保養重點勾選)</td><td><span class="chip mm">MM</span></td><td><a href="#m-exec">§11.3</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>M7</td><td>備品庫存(原名「零件庫存」)</td><td><span class="chip mm">MM</span></td><td><a href="#m-spare">§12.1</a></td><td>現況(已更名)</td><td class="eval">✔ 照 v3.0 設計定案(更名已完成)</td></tr>
+        <tr><td>M8</td><td>保養排程(四種觸發設定)</td><td><span class="chip mm">MM</span></td><td><a href="#m-sched">§15.2</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>M9</td><td>保養計畫範本管理</td><td><span class="chip mm">MM</span></td><td><a href="#m-tpl">§15.4</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>M10</td><td>歷史紀錄(含展開詳情)</td><td><span class="chip mm">MM</span></td><td><a href="#m-history">§16.1</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>M11</td><td>照片管理</td><td><span class="chip mm">MM</span></td><td><a href="#m-photos">§16.2</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>M12</td><td>MM 系統設定(ERP 級聯)</td><td><span class="chip mm">MM</span></td><td><a href="#m-settings">§17.1</a></td><td>現況</td><td class="eval">✔ 保留現況</td></tr>
+        <tr><td>M13</td><td>零件主檔(含新增零件視窗)</td><td><span class="chip mm">MM</span></td><td><a href="#m-parts">§13.1</a></td><td><span class="chip cur">現況(已實作)</span></td><td class="eval">✔ 照 v3.0 設計定案(已實作)</td></tr>
+        <tr><td>M14</td><td>供應商</td><td><span class="chip mm">MM</span></td><td><a href="#m-suppliers">§14.1</a></td><td><span class="chip cur">現況(已實作)</span></td><td class="eval">✔ 照 v3.0 設計定案(已實作)</td></tr>
+        <tr><td>—</td><td>Smart Parts 獨立網站(整併來源)</td><td><span class="chip cur">已退役</span></td><td>§13 說明</td><td>P4 退役</td><td class="eval">✔ 已退役(P4 完成)</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- ═══ 3. 即時監控 ═══ -->
+  <section id="core">
+    <h2>3. 主系統:即時監控(Monitor)</h2>
+    <p class="sec-sub">操作員最常使用的畫面,監看當前生產狀態</p>
+
+    <h3 id="s-dash">3.1 主畫面配置(S3)</h3>
+    <div class="wire full">
+      <p class="wire-cap">S3 · 即時監控主畫面(三欄式)<span class="chip cur">現況</span></p>
+      <div class="split">
+        <div class="pane">
+          <p class="p-cap">左欄 · 生產狀況 + 排程佇列</p>
+          <div class="cell" style="border-left:4px solid var(--ok);margin-bottom:6px">
+            <b>Running · 當前工單</b>
+            序號 / 客戶名稱 / 訂單號碼 / 紙箱編號 / 數量 / 品名 / 盒型
+            <span class="pill info">邊框依準備時間 綠→黃→紅</span>
+          </div>
+          <table>
+            <thead><tr><th>序</th><th>客戶</th><th>訂單號碼</th><th>紙箱編號</th><th>數量</th><th>品名</th><th>盒型</th></tr></thead>
+            <tbody>
+              <tr><td>2</td><td>AA 紙業</td><td>2607040001</td><td>BX-102</td><td>5,000</td><td>外箱</td><td>RSC</td></tr>
+              <tr><td>3</td><td>BB 包裝</td><td>2607040002</td><td>BX-215</td><td>3,200</td><td>內襯</td><td>HSC</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pane">
+          <p class="p-cap">中欄 · 監控數據 + 機器狀態</p>
+          <div class="cards">
+            <span class="cell">生產數量<b>3,250 / 5,000</b></span>
+            <span class="cell">車速<b>182 m/min</b></span>
+            <span class="cell">剩餘數量<b>1,750</b></span>
+            <span class="cell">平均車速<b>160 m/min</b></span>
+            <span class="cell">生產時間<b>01:12:40</b></span>
+            <span class="cell">停車時間<b>00:08:15</b></span>
+          </div>
+          <div class="cards two">
+            <span class="cell">停次數(今日/本筆)<b>4 / 1</b></span>
+            <span class="cell">累計停時<b>00:21:03</b></span>
+          </div>
+          <div class="bar" style="margin:6px 0 4px">
+            <span class="tab on" style="border-top-color:var(--core)">機器狀態</span><span class="tab">停車原因</span>
+            <span style="font-size:.7rem;color:var(--ink-soft)">【自動下一筆 ON】</span>
+          </div>
+          <div class="cards">
+            <span class="cell">送紙部 <span class="pill ok">RUN</span></span>
+            <span class="cell">印刷部 <span class="pill ok">RUN</span></span>
+            <span class="cell">開槽部 <span class="pill low">ERR</span></span>
+          </div>
+        </div>
+        <div class="pane narrow">
+          <p class="p-cap">右欄 · 紙箱展開圖</p>
+          <div class="ph" style="min-height:130px">紙箱展開圖(依盒型 RSC/HSC 變化)</div>
+        </div>
+      </div>
+    </div>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>區塊</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td><b>生產狀況(左上)</b></td><td>當前工單資訊;卡片邊框顏色依準備時間 綠 → 黃 → 紅 提醒逾時</td></tr>
+        <tr><td><b>排程佇列(左下)</b></td><td>待生產工單,欄位:序號/客戶名稱/訂單號碼/紙箱編號/數量/品名/盒型</td></tr>
+        <tr><td><b>監控數據(中上)</b></td><td>六卡:生產數量、車速、剩餘數量、平均車速、生產時間、停車時間;下方停車統計</td></tr>
+        <tr><td><b>機器狀態(中下)</b></td><td>兩頁籤:機台各部位狀態(紅 ERR/綠 RUN/灰 OFF)、停車原因表(開始時間/時長/原因)</td></tr>
+        <tr><td><b>紙箱展開圖(右)</b></td><td>當前工單的盒型展開圖</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>3.2 功能鍵操作</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>按鍵</th><th>功能</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td><kbd>F1</kbd></td><td>上移</td><td>將選取的工單往上移動一格</td></tr>
+        <tr><td><kbd>F2</kbd></td><td>下移</td><td>將選取的工單往下移動一格</td></tr>
+        <tr><td><kbd>F3</kbd></td><td>送單</td><td>開始生產當前工單(需先停機)</td></tr>
+        <tr><td><kbd>F4</kbd></td><td>完工</td><td>結束當前工單,開啟完工確認視窗(需先停機)</td></tr>
+        <tr><td><kbd>F5</kbd></td><td>良品 +1</td><td>手動增加生產計數</td></tr>
+        <tr><td><kbd>F6</kbd></td><td>不良 −1</td><td>手動減少生產計數(不良扣除)</td></tr>
+        <tr><td><kbd>F7</kbd></td><td>訂單</td><td>開啟訂單詳情視窗</td></tr>
+        <tr><td><kbd>F8</kbd></td><td>下一筆</td><td>切換自動/手動下一筆模式</td></tr>
+        <tr><td><kbd>F9</kbd></td><td>班別</td><td>重新選擇班別</td></tr>
+        <tr><td><kbd>F10</kbd></td><td>退回</td><td>將當前工單退回佇列(需先停機)</td></tr>
+        <tr><td><kbd>F12</kbd></td><td>離開</td><td>退出系統</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>3.3 標準操作流程</h3>
+    <div class="flow">
+      <span class="step core-step"><b>1. 確認排程</b><small>選定要生產的工單</small></span>
+      <span class="go">→</span>
+      <span class="step core-step"><b>2. 按 F3 送單</b><small>車速須為 0</small></span>
+      <span class="go">→</span>
+      <span class="step core-step"><b>3. 開始生產</b><small>數量自動累計</small></span>
+      <span class="go">→</span>
+      <span class="step core-step"><b>4. 按 F4 完工</b><small>先停機再完工</small></span>
+      <span class="go">→</span>
+      <span class="step core-step"><b>5. 完工確認</b><small>填良品/不良,寫入報表</small></span>
+    </div>
+    <p>含判斷分支的完整流程請見 <a href="#flows">§19.1 生產作業流程圖</a>。</p>
+
+    <h3 id="s-order">3.4 訂單詳情視窗(S4,F7 開啟)</h3>
+    <div class="wire">
+      <p class="wire-cap">S4 · 訂單詳情 <span class="chip cur">現況</span></p>
+      <div class="modal">
+        <p class="m-title">訂單詳情(修改只影響本訂單)✕</p>
+        <div class="field"><label>紙箱編號</label><span class="box"></span><label style="flex:0 0 70px">客戶名稱</label><span class="box"></span></div>
+        <div class="field"><label>品名</label><span class="box"></span></div>
+        <div class="field"><label>盒型</label><span class="box"></span><span class="btn ghost">選擇</span></div>
+        <div class="field"><label>楞別 / 厚度 / 張摺數</label><span class="box"></span></div>
+        <div class="field"><label>備註</label><span class="box ta"></span></div>
+        <div class="split">
+          <div class="pane"><p class="p-cap">紙箱展開圖</p><div class="ph">展開圖</div></div>
+          <div class="pane"><p class="p-cap">PX 參數 + 印刷單元</p>
+            <table><thead><tr><th>印壓</th><th>位置</th><th>皮帶間隙</th><th>版座間隙</th></tr></thead>
+            <tbody><tr><td>—</td><td>—</td><td>—</td><td>—</td></tr></tbody></table>
+          </div>
+        </div>
+        <div class="row" style="justify-content:flex-end"><span class="btn ghost">取消</span><span class="btn">確認</span></div>
+      </div>
+    </div>
+
+    <h3 id="s-finish">3.5 完工確認視窗(S5,F4 開啟)</h3>
+    <div class="wire">
+      <p class="wire-cap">S5 · 完工確認 <span class="chip cur">現況</span></p>
+      <div class="modal">
+        <p class="m-title">完工確認 ✕</p>
+        <div class="split">
+          <div class="pane">
+            <div class="field"><label>操作員 / 班別</label><span class="fixed">王小明 · A班</span></div>
+            <div class="field"><label>良品數量</label><span class="box"></span></div>
+            <div class="field"><label>分割件數</label><span class="box"></span></div>
+            <div class="field"><label>欠文 / 欠武數量</label><span class="box"></span></div>
+            <div class="field"><label>欠量原因</label><span class="sel">請選擇</span></div>
+            <div class="field"><label>製程類別</label><span class="sel">請選擇</span></div>
+            <div class="field"><label></label><span class="fixed">☐ 是否分割 ☑ 是否完工 ☐ 保存最佳化參數</span></div>
+          </div>
+          <div class="pane">
+            <p class="p-cap">不良品統計</p>
+            <table>
+              <thead><tr><th>不良原因代碼</th><th>不良數量</th></tr></thead>
+              <tbody><tr><td>D01 印刷不良</td><td>12</td></tr><tr><td>D02 壓線不良</td><td>3</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="row" style="justify-content:flex-end"><span class="btn ghost">取消</span><span class="btn">確認</span></div>
+      </div>
+    </div>
+
+    <h3 id="s-stop">3.6 停車原因視窗(S6)</h3>
+    <div class="wire">
+      <p class="wire-cap">S6 · 停車原因(停機時選擇)<span class="chip cur">現況</span></p>
+      <div class="modal" style="max-width:360px">
+        <p class="m-title">停車原因 ✕</p>
+        <table>
+          <thead><tr><th>代碼</th><th>原因</th></tr></thead>
+          <tbody>
+            <tr><td>001</td><td>換單準備</td></tr>
+            <tr><td>002</td><td>機械故障</td></tr>
+            <tr><td>003</td><td>缺料待料</td></tr>
+          </tbody>
+        </table>
+        <div class="row" style="justify-content:flex-end"><span class="btn ghost">取消</span><span class="btn">確認</span></div>
+      </div>
+    </div>
+
+    <h3>3.7 故障排除</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>問題</th><th>可能原因</th><th>解決方式</th></tr></thead>
+      <tbody>
+        <tr><td>無法按 F3 送單</td><td>PLC 連線中斷</td><td>檢查左下角連線狀態,重新連線</td></tr>
+        <tr><td>車速顯示 0</td><td>訊號中斷或機台未啟動</td><td>確認機台電源,檢查 PLC 連線</td></tr>
+        <tr><td>數量不跳動</td><td>光電感測器異常</td><td>通知維護人員檢查感測器</td></tr>
+        <tr><td>F4 完工無反應</td><td>車速不為 0</td><td>需先停機(車速為 0)才能完工</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- ═══ 4. 生產排程 ═══ -->
+  <section id="core-schedule">
+    <h2>4. 主系統:生產排程(Schedule)</h2>
+    <p class="sec-sub">管理生產工單順序與產品資料庫</p>
+
+    <h3 id="s-sched">4.1 主畫面配置(S7)</h3>
+    <div class="wire full">
+      <p class="wire-cap">S7 · 生產排程(左:排程佇列 / 右:產品庫)<span class="chip cur">現況</span></p>
+      <div class="split">
+        <div class="pane">
+          <p class="p-cap">左欄 · 生產排程</p>
+          <div class="row"><span class="btn ghost">上移</span><span class="btn ghost">下移</span><span class="btn ghost">順序重置</span></div>
+          <table>
+            <thead><tr><th>序</th><th>客戶</th><th>訂單號碼</th><th>紙箱編號</th><th>數量</th><th>品名</th><th>盒型</th></tr></thead>
+            <tbody>
+              <tr><td>10</td><td>AA 紙業</td><td>2607040001</td><td>BX-102</td><td>5,000</td><td>外箱</td><td>RSC</td></tr>
+              <tr><td>20</td><td>BB 包裝</td><td>2607040002</td><td>BX-215</td><td>3,200</td><td>內襯</td><td>HSC</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pane">
+          <p class="p-cap">右欄 · 產品庫</p>
+          <div class="row"><span class="btn ok">新增產品</span><span class="btn ghost">修改</span><span class="btn danger">刪除</span><span class="btn">新增排程</span></div>
+          <table>
+            <thead><tr><th>紙箱編號</th><th>品名</th><th>盒型</th><th>客戶</th></tr></thead>
+            <tbody>
+              <tr><td>BX-102</td><td>外箱</td><td>RSC</td><td>AA 紙業</td></tr>
+              <tr><td>BX-215</td><td>內襯</td><td>HSC</td><td>BB 包裝</td></tr>
+            </tbody>
+          </table>
+          <div class="ph" style="margin-top:6px">紙箱展開圖(選取產品後顯示)</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>4.2 操作步驟</h3>
+    <h4>調整排程順序</h4>
+    <ol>
+      <li>在左側選取要移動的工單</li>
+      <li>點擊「<b>上移</b>」或「<b>下移</b>」按鈕</li>
+      <li>點擊「<b>順序重置</b>」可重新編號(10, 20, 30…)</li>
+    </ol>
+    <div class="warn"><b>⚠ 注意</b>正在生產中的工單(第一筆)無法移動。</div>
+
+    <h4>新增/刪除排程</h4>
+    <ol>
+      <li>在右側產品庫選取產品,點「<b>新增排程</b>」開啟視窗(見 S9)</li>
+      <li>刪除排程:左側選取工單後刪除;正在生產的工單需車速為 0 且未生產量為 0</li>
+    </ol>
+
+    <h3 id="s-product">4.3 產品表單視窗(S8)</h3>
+    <div class="wire">
+      <p class="wire-cap">S8 · 產品表單(新增/修改產品)<span class="chip cur">現況</span></p>
+      <div class="modal">
+        <p class="m-title">產品表單 ✕</p>
+        <div class="field"><label>紙箱編號</label><span class="box"></span><label style="flex:0 0 50px">客戶</label><span class="box"></span></div>
+        <div class="field"><label>品名</label><span class="box"></span><label style="flex:0 0 50px">盒型</label><span class="sel">RSC</span></div>
+        <div class="field"><label>楞別 / 厚度 / 捆個數</label><span class="box"></span></div>
+        <div class="field"><label>備註</label><span class="box"></span></div>
+        <div class="subgrp"><p class="sg-cap">機台參數:PX1~PX5 與各部位間隙</p><div class="ph" style="min-height:36px">參數輸入格</div></div>
+        <div class="subgrp"><p class="sg-cap">尺寸參數:長/寬各 6 格 + 自動計算</p><div class="ph" style="min-height:36px">尺寸輸入格</div></div>
+        <div class="subgrp"><p class="sg-cap">印刷單元(4 色組)</p>
+          <table><thead><tr><th>印壓</th><th>位置</th><th>皮帶間隙</th><th>版座間隙</th></tr></thead>
+          <tbody><tr><td>—</td><td>—</td><td>—</td><td>—</td></tr></tbody></table>
+        </div>
+        <div class="row" style="justify-content:flex-end"><span class="btn ghost">取消</span><span class="btn">儲存</span></div>
+      </div>
+    </div>
+
+    <h3 id="s-addsched">4.4 新增排程視窗(S9)</h3>
+    <div class="wire">
+      <p class="wire-cap">S9 · 新增排程 <span class="chip cur">現況</span></p>
+      <div class="modal" style="max-width:360px">
+        <p class="m-title">新增排程 ✕</p>
+        <div class="field"><label>訂單號碼(12 碼)</label><span class="box"></span></div>
+        <div class="field"><label>數量</label><span class="box"></span></div>
+        <div class="field"><label>Seq / No</label><span class="fixed">自動計算</span></div>
+        <div class="field"><label></label><span class="fixed">☐ 是否使用最佳化參數</span></div>
+        <div class="row" style="justify-content:flex-end"><span class="btn ghost">取消</span><span class="btn">確定</span></div>
+      </div>
+    </div>
+
+    <h3>4.5 故障排除</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>問題</th><th>可能原因</th><th>解決方式</th></tr></thead>
+      <tbody>
+        <tr><td>無法刪除第一筆</td><td>工單正在生產中</td><td>需先完工或車速/數量歸零</td></tr>
+        <tr><td>找不到產品</td><td>產品未建檔</td><td>使用右側「新增產品」建立</td></tr>
+        <tr><td>排程消失</td><td>資料未儲存</td><td>重新載入頁面,檢查網路連線</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- ═══ 5. 生產報表 ═══ -->
+  <section id="core-report">
+    <h2>5. 主系統:生產報表(Report)</h2>
+    <p class="sec-sub">查詢與匯出生產記錄</p>
+
+    <h3 id="s-report">5.1 主畫面配置(S10)</h3>
+    <div class="wire full">
+      <p class="wire-cap">S10 · 生產報表(以生產明細為例)<span class="chip cur">現況</span></p>
+      <div class="bar">
+        <span class="tab core-on on">生產明細</span><span class="tab">生產日報表</span><span class="tab">生產月報表</span><span class="tab">停車原因</span>
+      </div>
+      <div class="row">
+        <span class="input sm">開始日期</span> ~ <span class="input sm">結束日期</span>
+        <span class="sel">班別:全部</span>
+        <span class="btn">確認</span>
+        <span class="btn ghost">手動上傳報工</span><span class="btn ok">匯出 Excel</span><span class="btn ghost">離開</span>
+      </div>
+      <table>
+        <thead><tr><th>選</th><th>序</th><th>客戶</th><th>訂單號碼</th><th>品名</th><th>班別</th><th>車速</th><th>數量</th><th>計件數</th><th>良品</th><th>不良</th><th>開始時間</th><th>試車</th></tr></thead>
+        <tbody>
+          <tr><td>☑</td><td>1</td><td>AA 紙業</td><td>2607040001</td><td>外箱</td><td>A</td><td>160</td><td>5,000</td><td>5,015</td><td>4,988</td><td>27</td><td>08:12</td><td>—</td></tr>
+        </tbody>
+      </table>
+      <div class="subgrp"><p class="sg-cap">選中訂單的停車紀錄</p>
+        <table><thead><tr><th>開始時間</th><th>結束時間</th><th>時長</th><th>代碼</th><th>原因</th></tr></thead>
+        <tbody><tr><td>09:02</td><td>09:10</td><td>00:08</td><td>001</td><td>換單準備</td></tr></tbody></table>
+      </div>
+      <div class="statusrow">
+        <span>總訂單數:12</span><span>總數量:48,200</span><span>總良品:47,950</span><span>總不良:250</span><span>平均車速:158</span><span>總生產時間:07:40</span><span>總停車時間:01:05</span>
+      </div>
+    </div>
+
+    <h3>5.2 報表類型與操作</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>報表</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td><b>生產明細</b></td><td>逐筆生產記錄;點選訂單列可看下方停車明細;底部統計摘要</td></tr>
+        <tr><td><b>生產日報表</b></td><td>依日期彙總當日生產統計</td></tr>
+        <tr><td><b>生產月報表</b></td><td>年/月下拉選擇,顯示該月每日統計與月度總計</td></tr>
+        <tr><td><b>停車原因</b></td><td>各原因次數與時長;<b>點擊原因行可展開</b>逐筆訂單的停車細節</td></tr>
+      </tbody>
+    </table></div>
+    <ol>
+      <li>點選報表類型 → 設定日期範圍與班別 → 「確認」載入</li>
+      <li>需要留存時點「匯出 Excel」;ERP 報工異常時可「手動上傳報工」</li>
+    </ol>
+
+    <h3>5.3 故障排除</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>問題</th><th>可能原因</th><th>解決方式</th></tr></thead>
+      <tbody>
+        <tr><td>報表無資料</td><td>日期範圍設定錯誤</td><td>確認日期是否包含生產記錄</td></tr>
+        <tr><td>匯出失敗</td><td>瀏覽器封鎖下載</td><td>檢查瀏覽器下載設定</td></tr>
+        <tr><td>數據不對</td><td>資料尚未同步</td><td>重新整理頁面</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- ═══ 6. 生產分析 ═══ -->
+  <section id="core-analysis">
+    <h2>6. 主系統:生產分析(Analysis)</h2>
+    <p class="sec-sub">進階的生產效能分析與圖表</p>
+
+    <h3 id="s-analysis">6.1 主畫面配置(S11)</h3>
+    <div class="wire full">
+      <p class="wire-cap">S11 · 生產分析(左:篩選側欄 / 右:圖表與指標)<span class="chip cur">現況</span></p>
+      <div class="split">
+        <div class="pane narrow">
+          <p class="p-cap">篩選側欄(可摺疊)</p>
+          <div class="row"><span class="input sm">開始日期</span><span class="input sm">結束日期</span></div>
+          <div class="row"><span class="sel">今日</span><span class="sel">本週</span><span class="sel">本月</span><span class="sel">自訂</span></div>
+          <p style="font-size:.72rem;margin:6px 0 2px;color:var(--ink-soft)">分類篩選(複選):客戶 / 產品 / 紙箱編號 / 盒型 / 訂單號碼 / 數量 / 操作員 / 班別 / 停車原因 / 準備時間 / 楞別 / 日期</p>
+          <p style="font-size:.72rem;margin:6px 0 2px;color:var(--ink-soft)">圖表類型:圓形 / 甜甜圈 / 線 / 柱狀 / 雷達;線圖時間尺度:分/時/日/週/月</p>
+          <p style="font-size:.72rem;margin:6px 0 2px;color:var(--ink-soft)">顯示欄位:數量 / 準備時間 / 生產時間 / 停車時間 / 平均車速 / 停次 / 不良數量 / OEE</p>
+          <div class="row"><span class="btn ghost">清除所有篩選</span></div>
+          <div class="row"><span class="btn ok">匯出 Excel</span><span class="btn ghost">下載圖表</span></div>
+        </div>
+        <div class="pane">
+          <p class="p-cap">主內容區</p>
+          <div class="ph" style="min-height:90px">圖表展示區(依選擇動態切換)</div>
+          <div class="cards">
+            <span class="cell">OEE<b>78.2%</b></span>
+            <span class="cell">時間稼動率<b>85.1%</b></span>
+            <span class="cell">性能稼動率<b>93.4%</b></span>
+            <span class="cell">良品率<b>98.4%</b></span>
+            <span class="cell">平均車速<b>158 m/min</b></span>
+            <span class="cell">不良率<b>1.6%</b></span>
+          </div>
+          <div class="ph" style="min-height:40px">詳細資料表格(欄位隨篩選變更)</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>6.2 分析指標</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>指標</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td><b>OEE</b></td><td>整體設備效率 = 時間稼動率 × 性能稼動率 × 良品率</td></tr>
+        <tr><td><b>時間稼動率</b></td><td>實際運轉時間 ÷ 計劃運轉時間</td></tr>
+        <tr><td><b>性能稼動率</b></td><td>實際產量 ÷ 理論產量</td></tr>
+        <tr><td><b>良品率</b></td><td>良品數量 ÷ 總生產數量</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>6.3 故障排除</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>問題</th><th>可能原因</th><th>解決方式</th></tr></thead>
+      <tbody>
+        <tr><td>圖表不顯示</td><td>無生產資料</td><td>確認時間區間內有生產記錄</td></tr>
+        <tr><td>OEE 異常高/低</td><td>參數設定問題</td><td>檢查系統設定的計算參數</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- ═══ 7. 系統設定 ═══ -->
+  <section id="core-settings">
+    <h2>7. 主系統:系統設定(Settings)</h2>
+    <p class="sec-sub">系統參數與進階設定,通常由管理者操作</p>
+
+    <h3 id="s-settings">7.1 主畫面配置(S12)</h3>
+    <div class="wire full">
+      <p class="wire-cap">S12 · 系統設定(左:分類側欄 / 右:設定內容,以通訊設定為例)<span class="chip cur">現況</span></p>
+      <div class="split">
+        <div class="pane narrow">
+          <p class="p-cap">設定分類</p>
+          <div class="bar" style="flex-direction:column;align-items:stretch">
+            <span class="tab">一般設定</span>
+            <span class="tab">單位設定</span>
+            <span class="tab">機台設定</span>
+            <span class="tab core-on on">通訊設定</span>
+            <span class="tab">計算公式</span>
+            <span class="tab">盒型設定</span>
+            <span class="tab">報表設定</span>
+          </div>
+        </div>
+        <div class="pane">
+          <p class="p-cap">通訊設定內容</p>
+          <div class="subgrp"><p class="sg-cap">PLC 控制設定</p>
+            <div class="field"><label>啟用 / 模擬</label><span class="fixed">☑ 啟用 ☐ 模擬</span></div>
+            <div class="field"><label>裝置類型 / IP / 埠</label><span class="box"></span></div>
+            <div class="field"><label>MQTT Broker / Topic</label><span class="box"></span></div>
+            <div class="row"><span class="btn ghost">測試連線</span></div>
+          </div>
+          <div class="subgrp"><p class="sg-cap">ERP 整合設定</p>
+            <div class="field"><label>啟用</label><span class="fixed">☑</span></div>
+            <div class="field"><label>協定 / 模式 / Host / Port</label><span class="box"></span></div>
+            <div class="field"><label>輸入 / 輸出目錄</label><span class="box"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>7.2 各分類內容</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>分類</th><th>主要內容</th></tr></thead>
+      <tbody>
+        <tr><td><b>一般設定</b></td><td>公司抬頭(名稱/英文名/地址/電話/傳真/Logo 上傳)、使用者管理(新增/編輯/刪除操作員)、班別管理;介面語言(繁中/簡中/英/越/泰)</td></tr>
+        <tr><td><b>單位設定</b></td><td>公厘/英吋切換;楞別表(楞別名稱/厚度)新增刪除</td></tr>
+        <tr><td><b>機台設定</b></td><td>機台極速;機台部位管理表(部位名稱/信號)新增刪除</td></tr>
+        <tr><td><b>通訊設定</b></td><td>PLC(裝置類型/IP/埠/MQTT/測試連線)、ERP(協定/模式/Host/Port/目錄)</td></tr>
+        <tr><td><b>計算公式</b></td><td>標準平均車速、標準準備時間、分印補償、OEE 目標、試車成功率目標、連續生產定義、欠量強制輸入閾值、速度基準%</td></tr>
+        <tr><td><b>盒型設定</b></td><td>盒型列表(名稱/ERP 別碼);長/寬/高欄位對應設定</td></tr>
+        <tr><td><b>報表設定</b></td><td>跨天判定基準時間、小量產判定數量、異常過濾關鍵字</td></tr>
+      </tbody>
+    </table></div>
+    <p>一般操作員僅能查看部分設定;管理者可修改所有設定。</p>
+    <div class="warn"><b>⚠ 警告</b>修改通訊設定可能導致系統連線中斷,請謹慎操作。</div>
+  </section>
+
+  <!-- ═══ 8. 文件門戶 ═══ -->
+  <section id="core-docs">
+    <h2>8. 主系統:文件與線上說明</h2>
+    <p class="sec-sub">導航列「📖 文件」與各頁「📖 說明」按鈕</p>
+
+    <h3 id="s-docs">8.1 文件門戶與操作說明視窗(S13)</h3>
+    <div class="wire full">
+      <p class="wire-cap">S13 · 文件門戶(左:分類索引 / 右:文件內容)<span class="chip cur">現況</span></p>
+      <div class="split">
+        <div class="pane narrow">
+          <p class="p-cap">文件分類</p>
+          <p style="font-size:.74rem;margin:0;color:var(--ink-soft)">
+            📋 作業流程(操作說明書…)<br>
+            🏗️ 設計文件(SASD / 開發說明書…)<br>
+            🚀 部署與運維(Deployment / Handover…)<br>
+            🔄 重構紀錄 · 🧪 測試與品質 · 📅 會議紀錄
+          </p>
+        </div>
+        <div class="pane">
+          <div class="bar"><span class="tab core-on on">文件</span><span class="tab">操作紀錄</span></div>
+          <div class="ph" style="min-height:70px">文件內容(iframe 載入 HTML / Markdown)</div>
+        </div>
+      </div>
+    </div>
+    <p>各頁另有「📖 說明」按鈕開啟<b>操作說明視窗</b>:左側五項(即時監控/生產排程/生產報表/生產分析/系統設定),右側載入對應說明頁 — 內容即本手冊各章的頁內版。</p>
+  </section>
+
+  <!-- ═══ 9. MM 總覽 ═══ -->
+  <section id="mm">
+    <h2>9. MM 設備資產管理:總覽</h2>
+    <p class="sec-sub">設備、保養、維修、備品、採購零件的一站式管理</p>
+
+    <h3 id="m-login">9.1 登入頁(M1)</h3>
+    <div class="wire">
+      <p class="wire-cap">M1 · MM 登入 <span class="chip cur">現況</span></p>
+      <div class="modal" style="max-width:300px">
+        <p class="m-title">🔧 設備保養維修管理</p>
+        <div class="field"><label>帳號</label><span class="box"></span></div>
+        <div class="field"><label>密碼</label><span class="box"></span></div>
+        <div class="row" style="justify-content:flex-end"><span class="btn mmc">登入</span></div>
+        <p style="font-size:.7rem;color:var(--bad);margin:4px 0 0">登入失敗時顯示:帳號或密碼錯誤</p>
+      </div>
+    </div>
+    <ol>
+      <li>開啟 MM(<code>mms.ericchh.work</code> 待 Cloudflare 設定生效,生效前用本機入口 <code>http://localhost:5301</code>),輸入 MM 帳號密碼(與主系統帳號各自獨立)</li>
+      <li>登入後進入設備台帳頁;頂部列右側顯示「執行人員:姓名(角色)」與登出按鈕</li>
+    </ol>
+
+    <h3 id="m-tabs">9.2 頂部列與頁籤列(M2)</h3>
+    <div class="wire full">
+      <p class="wire-cap">M2-a · v2.x 舊頁籤(7 個;歷史對照,系統設定僅管理員可見)<span class="chip cur">v2.x 歷史</span></p>
+      <div class="bar">
+        <span class="tab on">🏭 設備台帳</span>
+        <span class="tab">📋 維修清單</span>
+        <span class="tab">🔩 零件庫存</span>
+        <span class="tab">⏰ 保養排程</span>
+        <span class="tab">📜 歷史紀錄</span>
+        <span class="tab">📷 照片管理</span>
+        <span class="tab">⚙️ 系統設定</span>
+      </div>
+    </div>
+    <div class="wire full">
+      <p class="wire-cap">M2-b · 現況頁籤(9 個;綠框為 v3.0 新增,零件庫存已更名備品庫存,2026-07 實作完成)<span class="chip cur">現況</span></p>
+      <div class="bar">
+        <span class="tab on">🏭 設備台帳</span>
+        <span class="tab">📋 維修清單</span>
+        <span class="tab">🔩 備品庫存</span>
+        <span class="tab is-new">📦 零件主檔</span>
+        <span class="tab is-new">🏢 供應商</span>
+        <span class="tab">⏰ 保養排程</span>
+        <span class="tab">📜 歷史紀錄</span>
+        <span class="tab">📷 照片管理</span>
+        <span class="tab">⚙️ 系統設定</span>
+      </div>
+    </div>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>頁籤</th><th>做什麼</th><th>本版變化</th></tr></thead>
+      <tbody>
+        <tr><td>🏭 設備台帳</td><td>機台與設備基本資料、文件</td><td>—</td></tr>
+        <tr><td>📋 維修清單</td><td>待處理的維修任務、故障回報</td><td>—</td></tr>
+        <tr><td>🔩 備品庫存</td><td>保養維修用的備品數量與警示</td><td>由「零件庫存」<b>更名</b></td></tr>
+        <tr><td>📦 零件主檔</td><td>採購用的零件規格資料</td><td><span class="chip new">新增</span>(自零件管理系統遷入)</td></tr>
+        <tr><td>🏢 供應商</td><td>供應商與報價資料</td><td><span class="chip new">新增</span>(自零件管理系統遷入)</td></tr>
+        <tr><td>⏰ 保養排程</td><td>定期保養時程與執行、範本管理</td><td>—</td></tr>
+        <tr><td>📜 歷史紀錄</td><td>過去的維修與保養記錄</td><td>—</td></tr>
+        <tr><td>📷 照片管理</td><td>設備/維修照片上傳與查看</td><td>—</td></tr>
+        <tr><td>⚙️ 系統設定</td><td>MM 參數與 ERP 級聯(僅管理員可見)</td><td>—</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- ═══ 10. 設備台帳 ═══ -->
+  <section id="mm-equipment">
+    <h2>10. MM:設備台帳</h2>
+    <p class="sec-sub">所有保養、維修、零件都掛在設備底下,先把設備建對</p>
+
+    <h3 id="m-equip">10.1 主畫面配置(M3)</h3>
+    <div class="wire full">
+      <p class="wire-cap">M3 · 設備台帳(左:清單 70% / 右:文件面板 30%)<span class="chip cur">現況</span></p>
+      <div class="split">
+        <div class="pane">
+          <p class="p-cap">🏭 設備台帳</p>
+          <div class="row"><span class="btn mmc">+ 新增設備</span></div>
+          <table>
+            <thead><tr><th>機台代號</th><th>設備名稱</th><th>型號</th><th>位置</th><th>狀態</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr><td>FLX-01</td><td>印刷機 1 號</td><td>FX-2400</td><td>A 區</td><td><span class="pill ok">運轉中</span></td><td>編輯 · 刪除</td></tr>
+              <tr><td>FLX-02</td><td>印刷機 2 號</td><td>FX-2400</td><td>A 區</td><td><span class="pill mid">保養中</span></td><td>編輯 · 刪除</td></tr>
+            </tbody>
+          </table>
+          <p style="font-size:.7rem;color:var(--ink-soft);margin:4px 0 0">狀態徽章:運轉中(綠)/ 保養中(黃)/ 閒置(灰)/ 已報廢(紅)</p>
+        </div>
+        <div class="pane narrow">
+          <p class="p-cap">📁 設備文件 — 印刷機 1 號</p>
+          <div class="row"><span class="sel">分類:圖面</span><span class="btn ghost">選擇檔案</span><span class="btn mmc">上傳</span></div>
+          <table>
+            <thead><tr><th>檔名</th><th>版本</th><th>操作</th></tr></thead>
+            <tbody><tr><td>電路圖.pdf</td><td>v2</td><td>下載 · 刪除</td></tr></tbody>
+          </table>
+          <p style="font-size:.7rem;color:var(--ink-soft);margin:4px 0 0">分類:圖面 / 操作手冊 / 照片 / 其他;單檔上限 50MB</p>
+        </div>
+      </div>
+      <div class="modal" style="margin-top:12px">
+        <p class="m-title">新增/編輯設備</p>
+        <div class="field"><label>機台代號 *</label><span class="box"></span><label style="flex:0 0 70px">設備名稱 *</label><span class="box"></span></div>
+        <div class="field"><label>型號 / 製造商</label><span class="box"></span></div>
+        <div class="field"><label>位置 / 安裝日期</label><span class="box"></span></div>
+        <div class="field"><label>狀態</label><span class="sel">運轉中</span><label style="flex:0 0 50px">啟用</label><span class="fixed">☑</span></div>
+        <div class="field"><label>備註</label><span class="box ta"></span></div>
+        <div class="row" style="justify-content:flex-end"><span class="btn ghost">取消</span><span class="btn mmc">儲存</span></div>
+      </div>
+    </div>
+
+    <h3>10.2 操作步驟</h3>
+    <ol>
+      <li>「+ 新增設備」填機台代號與設備名稱(必填);代號重複會提示「機台代號已存在」</li>
+      <li>點選設備列 → 右側文件面板上傳該設備的圖面、手冊、照片(50MB 內)</li>
+      <li>設備建立後,保養排程、維修工單與照片即可指定到該設備</li>
+    </ol>
+  </section>
+
+  <!-- ═══ 11. 維修清單 ═══ -->
+  <section id="mm-tasks">
+    <h2>11. MM:維修清單</h2>
+    <p class="sec-sub">維修任務總表、故障回報與執行回報</p>
+
+    <h3 id="m-task">11.1 主表格(M4)</h3>
+    <div class="wire full">
+      <p class="wire-cap">M4 · 維修清單總表 <span class="chip cur">現況</span></p>
+      <div class="row">
+        <span class="btn danger">⚠️ 故障回報</span><span class="btn ghost">重整</span>
+        <span class="sel">週期:全部</span><span class="sel">狀態:全部</span>
+        <span class="input">🔍 搜尋零件名稱或料號…</span>
+        <span style="font-size:.72rem;color:var(--ink-soft)">共 23 項</span>
+      </div>
+      <table>
+        <thead><tr><th>序</th><th>零件名稱</th><th>週期</th><th>觸發類型</th><th>狀態</th><th>到期日</th><th>剩餘</th><th>操作</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>送紙皮帶<br><span style="color:var(--ink-soft)">BLT-1250</span></td><td><span class="pill info">月</span></td><td>📅</td><td><span class="pill low">逾期</span></td><td>2026-06-28</td><td>−6 天</td><td>執行 · 詳情</td></tr>
+          <tr><td>2</td><td>印刷滾筒軸承<br><span style="color:var(--ink-soft)">BRG-6200</span></td><td><span class="pill info">季</span></td><td>🔢</td><td><span class="pill mid">即將到期</span></td><td>2026-07-10</td><td>32,000 張</td><td>執行 · 詳情</td></tr>
+          <tr><td>3</td><td>開槽刀組</td><td><span class="pill info">半年</span></td><td>⚙️</td><td><span class="pill ok">正常</span></td><td>2026-09-01</td><td>420 小時</td><td>執行 · 詳情</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:.7rem;color:var(--ink-soft);margin:4px 0 0">觸發類型圖示:📅 週期 / 🔢 張數 / ⚙️ PLC / 🔀 混合;狀態:🔴 逾期 / 🟡 即將到期 / 🔵 進行中 / 🟢 正常</p>
+    </div>
+
+    <h3 id="m-breakdown">11.2 故障回報視窗(M5)</h3>
+    <div class="wire">
+      <p class="wire-cap">M5 · 故障回報(紅色標題列)<span class="chip cur">現況</span></p>
+      <div class="modal">
+        <p class="m-title danger-t">⚠️ 故障回報 ✕</p>
+        <div class="field"><label>故障零件 *</label><span class="sel">請選擇零件</span></div>
+        <div class="field"><label>維修類型</label><span class="fixed">◉ 廠內維修(內修) ○ 委外維修(外修)+ 維修單號</span></div>
+        <div class="field"><label>零件更換狀況</label><span class="sel">無更換零件(僅調整/修復)</span></div>
+        <div class="subgrp"><p class="sg-cap">選「更換整修品」時追加</p>
+          <div class="field"><label>零部件序號 S/N</label><span class="box"></span></div>
+          <div class="field"><label>剩餘壽命比例 %</label><span class="box" style="max-width:80px"></span><span class="fixed">(預設 80%)</span></div>
+        </div>
+        <div class="field"><label>照片上傳</label><span class="btn ghost">選擇檔案</span><span class="fixed">已選 2 張</span></div>
+        <div class="thumbs"><span class="thumb"></span><span class="thumb"></span></div>
+        <div class="field"><label>處理結果</label><span class="fixed">◉ 處理完成 ○ 持續觀察中</span></div>
+        <div class="field"><label>驗收確認</label><span class="fixed">☑ 我已確認設備修復並通過功能驗收</span></div>
+        <div class="field"><label>執行人 * / 驗收人 *</label><span class="box"></span><span class="fixed">(驗收人預設為當前登入者)</span></div>
+        <div class="row" style="justify-content:flex-end"><span class="btn ghost">取消</span><span class="btn danger">確認並歸檔</span></div>
+      </div>
+    </div>
+
+    <h3 id="m-exec">11.3 執行回報視窗(M6)</h3>
+    <div class="wire">
+      <p class="wire-cap">M6 · 執行回報(保養重點逐項勾選)<span class="chip cur">現況</span></p>
+      <div class="modal">
+        <p class="m-title">執行回報 ✕</p>
+        <div class="cards two" style="margin-bottom:8px">
+          <span class="cell">零件名稱<b>送紙皮帶</b></span>
+          <span class="cell">料號<b>BLT-1250</b></span>
+          <span class="cell">維修類型<b>預防保養</b></span>
+          <span class="cell">到期日<b>2026-06-28</b></span>
+        </div>
+        <div class="field"><label>執行人 *</label><span class="sel">王小明(預設當前使用者)</span></div>
+        <div class="subgrp"><p class="sg-cap">保養重點確認(來自綁定範本)</p>
+          <div class="field"><span class="fixed">☑ 檢查皮帶張力 <span class="pill mid">必檢</span> <span class="pill ok">OK</span></span></div>
+          <div class="field"><span class="fixed">☐ 清潔導輪 <span class="pill info">Pending</span> + 備註框(選填)</span></div>
+        </div>
+        <p style="font-size:.72rem;color:#b26a00;margin:6px 0">⚠️ 尚有必檢項未勾選(提醒,不阻擋送出)</p>
+        <div class="row" style="justify-content:flex-end"><span class="btn ghost">取消</span><span class="btn mmc">確認完成</span></div>
+      </div>
+    </div>
+
+    <h3>11.4 維修類型與流程</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>類型</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td><b>預防保養</b></td><td>依保養排程產生的例行工作</td></tr>
+        <tr><td><b>故障維修</b></td><td>突發故障的修復(廠內維修)</td></tr>
+        <tr><td><b>廠商維修</b></td><td>委外處理,填寫外部維修單號</td></tr>
+      </tbody>
+    </table></div>
+    <ol>
+      <li>突發故障 → 「⚠️ 故障回報」填寫零件、更換狀況、照片、執行/驗收人 → 確認並歸檔</li>
+      <li>例行任務 → 清單「執行」→ 逐項勾選保養重點 → 確認完成</li>
+      <li>填寫的零件更換/耗用會<b>自動從備品庫存扣除</b>;完成後轉入歷史紀錄</li>
+    </ol>
+  </section>
+
+  <!-- ═══ 12. 備品庫存 ═══ -->
+  <section id="mm-spare">
+    <h2>12. MM:備品庫存(元件一)</h2>
+    <p class="sec-sub">保養維修的耗用庫存 — 回答「保養用什麼?還剩多少?」</p>
+
+    <h3 id="m-spare">12.1 主畫面配置(M7)</h3>
+    <div class="wire">
+      <p class="wire-cap">M7 · 備品庫存(原頁籤名「零件庫存」,2026-07 已更名)<span class="chip cur">現況</span> <span class="chip new">已更名</span></p>
+      <div class="row">
+        <span class="btn mmc">+ 新增零件</span>
+        <span style="font-size:.72rem;color:var(--ink-soft)">(需 manageParts 權限;編輯僅管理員)</span>
+      </div>
+      <table>
+        <thead><tr><th>零件名稱</th><th>規格</th><th>庫存</th><th>安全庫存</th><th>操作</th></tr></thead>
+        <tbody>
+          <tr><td>軸承</td><td>6200-2Z</td><td>12 <span class="pill ok">正常</span></td><td>5</td><td>編輯</td></tr>
+          <tr><td>皮帶</td><td>B-1250</td><td>2 <span class="pill low">低於安全量</span></td><td>4</td><td>編輯</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>12.2 操作步驟</h3>
+    <ol>
+      <li>「+ 新增零件」輸入名稱與初始庫存、安全庫存</li>
+      <li>「編輯」可修改庫存數量與安全庫存門檻</li>
+      <li>庫存低於安全庫存時,該列顯示紅色警示</li>
+    </ol>
+    <div class="note"><b>ℹ 庫存什麼時候會自己變少?</b>
+      維修/保養回報填寫「耗用備品」歸檔時,系統自動扣庫存 — 不需要手動調整。
+      手動編輯庫存只用於盤點修正或進貨入庫。</div>
+    <div class="warn"><b>⚠ 這頁不是採購資料</b>
+      這裡只管「還剩幾個」。要查「跟誰買、多少錢」,請切到
+      <b>📦 零件主檔</b>與<b>🏢 供應商</b>頁籤(見〈分辨指南〉)。</div>
+  </section>
+
+  <!-- ═══ 13. 零件主檔 ═══ -->
+  <section id="mm-parts">
+    <h2>13. MM:零件主檔(元件二)<span class="chip new">v3.0 新增</span></h2>
+    <p class="sec-sub">採購用的零件規格主檔 — 回答「跟誰買?規格價格為何?」(原零件管理系統遷入)</p>
+
+    <h3 id="m-parts">13.1 主畫面配置(M13)</h3>
+    <div class="wire">
+      <p class="wire-cap">M13 · 零件主檔 <span class="chip cur">現況(已實作)</span></p>
+      <div class="row">
+        <span class="input">🔍 以料號、名稱、規格搜尋…</span>
+        <span class="btn mmc">+ 新增零件</span>
+      </div>
+      <table>
+        <thead><tr><th>內部料號</th><th>名稱</th><th>規格</th><th>安全庫存</th><th>供應商數</th><th>操作</th></tr></thead>
+        <tbody>
+          <tr><td>BRG-6200</td><td>深溝滾珠軸承</td><td>6200-2Z 10×30×9</td><td><span class="pill ok">5</span></td><td>2</td><td>檢視</td></tr>
+          <tr><td>BLT-1250</td><td>傳動皮帶</td><td>B 型 1250mm</td><td><span class="pill ok">4</span></td><td>1</td><td>檢視</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>13.2 查詢零件</h3>
+    <ol>
+      <li>在搜尋列輸入料號、名稱或規格關鍵字,清單即時過濾</li>
+      <li>點「檢視」開啟零件詳情:規格、分類、單位與供應商報價一覽</li>
+    </ol>
+
+    <h3>13.3 新增零件(建檔流程)</h3>
+    <div class="wire">
+      <p class="wire-cap">M13-b · 新增零件視窗 <span class="chip cur">現況(已實作)</span></p>
+      <div class="modal">
+        <p class="m-title">新增零件</p>
+        <div class="field"><label>內部料號 *</label><span class="box"></span></div>
+        <div class="field"><label>名稱 *</label><span class="box"></span></div>
+        <div class="field"><label>規格</label><span class="box"></span></div>
+        <div class="field"><label>分類</label><span class="box"></span></div>
+        <div class="field"><label>單位</label><span class="box"></span></div>
+        <div class="field"><label>安全庫存</label><span class="box"></span></div>
+        <div class="subgrp">
+          <p class="sg-cap">供應商報價(可加多筆)</p>
+          <div class="field"><label>供應商名稱</label><span class="box"></span></div>
+          <div class="field"><label>原廠料號</label><span class="box"></span></div>
+          <div class="field"><label>價格</label><span class="box"></span> <label style="flex:0 0 auto">☑ 優先供應商</label></div>
+        </div>
+        <div class="row" style="justify-content:flex-end;margin-top:10px">
+          <span class="btn ghost">取消</span><span class="btn mmc">儲存</span>
+        </div>
+      </div>
+    </div>
+    <ol>
+      <li>點「<b>+ 新增零件</b>」開啟建檔視窗</li>
+      <li>填寫<b>內部料號</b>與<b>名稱</b>(必填),規格、分類、單位、安全庫存視需要填寫</li>
+      <li>在「供應商報價」區塊逐筆加入:供應商名稱、原廠料號、價格;主要往來的供應商勾選「優先供應商」</li>
+      <li>點「儲存」完成建檔,清單即出現新零件</li>
+    </ol>
+    <div class="note"><b>ℹ 內部料號 vs 原廠料號</b>
+      內部料號是廠內自己編的(同一顆零件全廠只有一個);原廠料號是各供應商目錄上的編號,
+      同一顆零件在不同供應商可能有不同原廠料號 — 所以原廠料號填在供應商報價裡,不填在零件本身。</div>
+    <div class="warn"><b>⚠ 整併來源</b>
+      本頁畫面承接自原 Smart Parts 獨立網站(<code>smartparts.ericchh.work</code>)唯一的零件管理頁,樣式已改寫為 MM 前端慣例。
+      該網站與主系統 :5100 已於 2026-07 退役(P4 完成);
+      <code>smartparts.ericchh.work</code> 的 301 轉址與 <code>mms.ericchh.work</code> 入口<b>待 Eric 於 Cloudflare 儀表板手動設定</b>(步驟見 <code>docs/report20260707-1.md</code> §6.3),生效前請使用 MM 本機入口 <code>http://localhost:5301</code>。</div>
+  </section>
+
+  <!-- ═══ 14. 供應商 ═══ -->
+  <section id="mm-suppliers">
+    <h2>14. MM:供應商<span class="chip new">v3.0 新增</span></h2>
+    <p class="sec-sub">供應商基本資料與供應零件一覽</p>
+
+    <h3 id="m-suppliers">14.1 主畫面配置(M14)</h3>
+    <div class="wire">
+      <p class="wire-cap">M14 · 供應商 <span class="chip cur">現況(已實作)</span></p>
+      <div class="row">
+        <span class="input">🔍 搜尋供應商…</span>
+        <span class="btn mmc">+ 新增供應商</span>
+      </div>
+      <table>
+        <thead><tr><th>供應商</th><th>聯絡方式</th><th>供應零件數</th><th>操作</th></tr></thead>
+        <tbody>
+          <tr><td>SKF 台灣</td><td>02-1234-5678</td><td>8</td><td>檢視</td></tr>
+          <tr><td>大新皮帶行</td><td>04-8765-4321</td><td>3</td><td>檢視</td></tr>
+        </tbody>
+      </table>
+      <div class="subgrp"><p class="sg-cap">檢視:供應商詳情(供應零件與報價)</p>
+        <table>
+          <thead><tr><th>內部料號</th><th>零件名稱</th><th>原廠料號</th><th>價格</th><th>優先</th></tr></thead>
+          <tbody><tr><td>BRG-6200</td><td>深溝滾珠軸承</td><td>6200-2Z</td><td>85</td><td>★</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <h3>14.2 操作步驟</h3>
+    <ol>
+      <li>清單顯示所有供應商與其供應的零件數</li>
+      <li>點「檢視」查看:聯絡資訊、供應的零件與報價</li>
+      <li>「+ 新增供應商」建立基本資料;報價關聯則在零件主檔的建檔/編輯視窗維護</li>
+    </ol>
+    <div class="note"><b>ℹ 從哪邊建關聯都可以查</b>
+      「這家供應商賣哪些零件」在供應商頁看;「這顆零件誰有賣」在零件主檔詳情看 — 同一份資料,兩個角度。</div>
+  </section>
+
+  <!-- ═══ 15. 保養排程 ═══ -->
+  <section id="mm-schedule">
+    <h2>15. MM:保養排程</h2>
+    <p class="sec-sub">四種觸發方式的排程設定、現有排程清單與保養計畫範本</p>
+
+    <h3>15.1 觸發方式</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>觸發方式</th><th>說明</th><th>範例</th></tr></thead>
+      <tbody>
+        <tr><td><b>📅 週期觸發</b></td><td>依固定時間週期(日/週/月/季/半年/年/自訂)</td><td>每 30 天潤滑一次</td></tr>
+        <tr><td><b>🔢 張數觸發</b></td><td>依累計印刷張數(PLC 自動讀取或人工回報)</td><td>每 50 萬張更換軸承</td></tr>
+        <tr><td><b>⚙️ PLC 觸發</b></td><td>依 PLC 訊號數值(運轉時數/溫度/壓力/震動等)</td><td>震動超標即保養</td></tr>
+        <tr><td><b>🔀 混合觸發</b></td><td>多條件組合,任一達成(OR)或全部達成(AND)</td><td>30 天或 50 萬張先到先保養</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3 id="m-sched">15.2 排程設定畫面(M8)</h3>
+    <div class="wire full">
+      <p class="wire-cap">M8 · 保養排程設定(以張數觸發為例)<span class="chip cur">現況</span></p>
+      <div class="field"><label>保養類型</label><span class="fixed">◉ 零件保養(選零件:id/名稱/類型/位置) ○ 非零件保養</span></div>
+      <div class="opt4">
+        <span class="opt">📅 週期觸發<br><small>依固定時間週期</small></span>
+        <span class="opt on">🔢 張數觸發<br><small>依累計印刷張數</small></span>
+        <span class="opt">⚙️ PLC 觸發<br><small>依 PLC 訊號數值</small></span>
+        <span class="opt">🔀 混合觸發<br><small>多條件組合</small></span>
+      </div>
+      <div class="subgrp"><p class="sg-cap">張數觸發設定</p>
+        <div class="field"><label>數據來源</label><span class="fixed">◉ PLC 自動讀取 ○ 人工回報</span></div>
+        <div class="field"><label>閾值</label><span class="fixed">每累計 <b>500,000</b> 張執行一次</span></div>
+        <div class="prog"><i></i></div>
+        <p style="font-size:.72rem;color:var(--ink-soft);margin:2px 0">目前 310,000 張(62%)· 剩餘 190,000 張</p>
+        <div class="field"><label>PLC 位址 / 資料類型</label><span class="box"></span></div>
+      </div>
+      <div class="field"><label>保養計畫範本</label><span class="sel">(不綁範本)</span></div>
+      <div class="field"><label>備註</label><span class="box ta"></span></div>
+      <div class="row" style="justify-content:flex-end"><span class="btn ghost">取消</span><span class="btn mmc">儲存排程</span></div>
+    </div>
+    <p>其他觸發面板:<b>週期</b> = 勾選啟用的週期 + 頻率值 + 上次保養日 + AI 預估下次日期;
+      <b>PLC</b> = 訊號類型七選一 + 閾值 + 半圓儀表板(GaugeChart)顯示目前值與剩餘量;
+      <b>混合</b> = OR/AND 切換 + 條件列表(可增刪,每條 = 類型 + 參數)。</p>
+
+    <h3>15.3 現有排程清單</h3>
+    <div class="wire">
+      <p class="wire-cap">M8-b · 現有排程(N 項)<span class="chip cur">現況</span></p>
+      <table>
+        <thead><tr><th>排程名稱</th><th>頻率</th><th>保養計畫範本</th><th>下次到期日</th><th>狀態</th></tr></thead>
+        <tbody>
+          <tr><td>送紙皮帶潤滑</td><td>每月</td><td>皮帶保養 SOP</td><td style="color:var(--bad)">2026-06-28</td><td><span class="pill low">已逾期</span></td></tr>
+          <tr><td>滾筒軸承更換</td><td>臨時</td><td>(不綁範本)</td><td style="color:#b26a00">2026-07-10</td><td><span class="pill mid">即將到期</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 id="m-tpl">15.4 保養計畫範本管理(M9)</h3>
+    <div class="wire">
+      <p class="wire-cap">M9 · 保養計畫範本(排程頁籤下方)<span class="chip cur">現況</span></p>
+      <div class="row"><span class="btn mmc">+ 新增範本</span></div>
+      <table>
+        <thead><tr><th>範本名稱</th><th>說明</th><th>項目數</th><th>操作</th></tr></thead>
+        <tbody><tr><td>皮帶保養 SOP</td><td>張力/清潔/對位三步驟</td><td>3</td><td>編輯 · 刪除</td></tr></tbody>
+      </table>
+      <div class="modal">
+        <p class="m-title">新增/編輯範本</p>
+        <div class="field"><label>範本名稱 *</label><span class="box"></span><label style="flex:0 0 50px">啟用</label><span class="fixed">☑</span></div>
+        <div class="field"><label>說明</label><span class="box ta"></span></div>
+        <div class="subgrp"><p class="sg-cap">檢查項目(可排序)</p>
+          <div class="field"><span class="fixed">1. 檢查皮帶張力 ☑ 必檢 · 上移/下移/刪除</span></div>
+          <div class="field"><span class="fixed">2. 清潔導輪 ☐ 必檢 · 上移/下移/刪除</span></div>
+          <div class="row"><span class="btn ghost">+ 新增項目</span></div>
+        </div>
+        <div class="row" style="justify-content:flex-end"><span class="btn ghost">取消</span><span class="btn mmc">儲存</span></div>
+      </div>
+      <p style="font-size:.7rem;color:var(--ink-soft);margin:4px 0 0">已被排程綁定的範本不可刪除(會提示)。</p>
+    </div>
+
+    <h3>15.5 建立與執行</h3>
+    <ol>
+      <li>選保養類型與觸發方式 → 填對應參數 → 可綁範本與備品零件 → 儲存</li>
+      <li>排程到期會出現在維修清單;「執行」開啟執行回報視窗(M6)逐項勾選</li>
+      <li>完成後系統建立紀錄並轉入歷史,週期重新起算;綁定的備品自動扣庫存</li>
+    </ol>
+  </section>
+
+  <!-- ═══ 16. 歷史與照片 ═══ -->
+  <section id="mm-history">
+    <h2>16. MM:歷史紀錄與照片管理</h2>
+    <p class="sec-sub">追溯過去的保養維修與現場照片</p>
+
+    <h3 id="m-history">16.1 歷史紀錄(M10)</h3>
+    <div class="wire full">
+      <p class="wire-cap">M10 · 歷史紀錄 <span class="chip cur">現況</span></p>
+      <div class="row">
+        <span class="input sm">開始日期</span><span class="input sm">結束日期</span>
+        <span class="input sm">位置</span><span class="input sm">零件名稱</span>
+        <span class="btn mmc">查詢</span><span class="btn ghost">清除</span><span class="btn ghost">Excel 匯出</span>
+      </div>
+      <p style="font-size:.72rem;color:var(--ink-soft);margin:4px 0">共 18 筆,總工時 42.5 小時,涉及 9 種零件</p>
+      <table>
+        <thead><tr><th>日期</th><th>部位</th><th>零件名稱</th><th>料號</th><th>維修類型</th><th>執行人</th><th>工時</th><th>操作</th></tr></thead>
+        <tbody>
+          <tr><td>2026-06-28</td><td>送紙部</td><td>送紙皮帶</td><td>BLT-1250</td><td>預防保養</td><td>王小明</td><td>1.5</td><td>展開 ▼</td></tr>
+        </tbody>
+      </table>
+      <div class="subgrp"><p class="sg-cap">展開詳情</p>
+        <p style="font-size:.74rem;margin:0;color:var(--ink-soft)">
+          狀態 / 備註 · 驗收項目勾選結果(逐項)· 使用零件(名稱+數量+單位)· 照片(點擊開啟照片彈窗)
+        </p>
+        <div class="thumbs"><span class="thumb"></span><span class="thumb"></span></div>
+      </div>
+    </div>
+
+    <h3 id="m-photos">16.2 照片管理(M11)</h3>
+    <div class="wire">
+      <p class="wire-cap">M11 · 照片管理 <span class="chip cur">現況</span></p>
+      <div class="row">
+        <span class="sel">全部設備</span><span class="btn ghost">選擇檔案</span><span class="btn mmc">上傳</span>
+      </div>
+      <div class="thumbs"><span class="thumb"></span><span class="thumb"></span><span class="thumb"></span></div>
+      <p style="font-size:.72rem;color:var(--ink-soft);margin:6px 0 0">每張含:檔名 · 所屬設備(代號+名稱或「未指定」)· 上傳時間 · 預覽/下載/刪除</p>
+    </div>
+
+    <h3>16.3 故障排除</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>問題</th><th>可能原因</th><th>解決方式</th></tr></thead>
+      <tbody>
+        <tr><td>看不到保養項目</td><td>權限不足</td><td>聯繫管理員開通權限</td></tr>
+        <tr><td>無法上傳照片</td><td>檔案太大</td><td>壓縮照片後重試</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- ═══ 17. MM 系統設定 ═══ -->
+  <section id="mm-settings">
+    <h2>17. MM:系統設定(管理員)</h2>
+    <p class="sec-sub">MM 參數與 ERP 級聯設定 — 僅管理員頁籤可見</p>
+
+    <h3 id="m-settings">17.1 主畫面配置(M12)</h3>
+    <div class="wire full">
+      <p class="wire-cap">M12 · 系統設定 <span class="chip cur">現況</span></p>
+      <div class="row"><span class="btn mmc">+ 新增設定</span></div>
+      <table>
+        <thead><tr><th>設定鍵</th><th>顯示名稱</th><th>機台代號</th><th>單位</th><th>生效值</th><th>操作</th></tr></thead>
+        <tbody>
+          <tr><td>maint.speed.limit</td><td>保養速度上限</td><td>FLX-01</td><td>m/min</td><td>120</td><td>編輯 · 刪除</td></tr>
+          <tr><td>notify.days.before</td><td>到期前通知天數</td><td>全廠通用</td><td>天</td><td>7</td><td>編輯 · 刪除</td></tr>
+        </tbody>
+      </table>
+      <div class="modal">
+        <p class="m-title">新增/編輯設定</p>
+        <div class="field"><label>設定鍵 *</label><span class="box"></span></div>
+        <div class="field"><label>顯示名稱 / 機台代號 / 單位</label><span class="box"></span></div>
+        <div class="field"><label>來源</label><span class="fixed">◉ 繼承 ERP ○ 本地覆寫(選覆寫時顯示本地值欄)</span></div>
+        <div class="field"><label>ERP 值</label><span class="fixed">(唯讀)</span></div>
+        <div class="row" style="justify-content:flex-end"><span class="btn ghost">取消</span><span class="btn mmc">儲存</span></div>
+      </div>
+    </div>
+    <p>級聯規則:設定預設「繼承 ERP」;需要廠內特調時切「本地覆寫」填本地值,生效值以覆寫為準。</p>
+  </section>
+
+  <!-- ═══ 18. 分辨指南 ═══ -->
+  <section id="two-parts">
+    <h2>18. 分辨指南:備品庫存 vs 零件主檔</h2>
+    <p class="sec-sub">兩個頁籤都跟「零件」有關,但管的事完全不同 — 選錯頁籤是最常見的操作問題</p>
+    <div class="vs">
+      <div class="vcard a">
+        <h4>🔩 備品庫存</h4>
+        <p class="q">回答:「保養用什麼?還剩多少?」</p>
+        <ul>
+          <li>保養維修的<b>耗用庫存</b></li>
+          <li>維修歸檔自動扣庫存</li>
+          <li>低於安全庫存亮紅色警示</li>
+          <li>數字隨保養/維修一直變動</li>
+        </ul>
+      </div>
+      <div class="vcard b">
+        <h4>📦 零件主檔 + 🏢 供應商</h4>
+        <p class="q">回答:「跟誰買?規格價格為何?」</p>
+        <ul>
+          <li>採購用的<b>規格主檔</b></li>
+          <li>零件 × 供應商 × 報價的關聯</li>
+          <li>內部料號對應各家原廠料號</li>
+          <li>資料隨採購決策才更新</li>
+        </ul>
+      </div>
+    </div>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>我想要…</th><th>去哪個頁籤</th></tr></thead>
+      <tbody>
+        <tr><td>看皮帶還剩幾條</td><td>🔩 備品庫存</td></tr>
+        <tr><td>盤點後修正庫存數字</td><td>🔩 備品庫存 → 編輯</td></tr>
+        <tr><td>查這顆軸承跟誰買、多少錢</td><td>📦 零件主檔 → 檢視</td></tr>
+        <tr><td>新零件建規格資料</td><td>📦 零件主檔 → + 新增零件</td></tr>
+        <tr><td>看某家供應商賣哪些東西</td><td>🏢 供應商</td></tr>
+        <tr><td>維修時登記用掉的零件</td><td>📋 維修清單的回報視窗內填寫(自動扣 🔩 庫存)</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- ═══ 19. 作業流程圖 ═══ -->
+  <section id="flows">
+    <h2>19. 作業流程圖</h2>
+    <p class="sec-sub">跨畫面的完整走法。◆ 黃底 = 判斷分支;虛線框 = 系統自動處理;編號對應第 2 章畫面清單</p>
+
+    <h3>19.1 主系統:生產作業流程(S1 → S3 → S5)</h3>
+    <div class="fc">
+      <span class="n start">上工:班別選擇(S1)</span><span class="a">↓</span>
+      <span class="n">即時監控頁確認排程佇列<small>必要時 F1 / F2 調整順序</small></span><span class="a">↓</span>
+      <span class="n dec">◆ 車速 = 0?</span>
+      <div class="branch">
+        <div class="lane"><span class="tag no">否</span><span class="n">先停機<small>送單前必須停機</small></span><span class="loop">↩ 回到判斷</span></div>
+        <div class="lane"><span class="tag yes">是</span><span class="n">按 <b>F3</b> 送單</span></div>
+      </div>
+      <span class="a">↓</span>
+      <span class="n">生產中<small>數量自動累計;F5 / F6 手動修正</small></span><span class="a">↓</span>
+      <span class="n dec">◆ 中途停機?</span>
+      <div class="branch">
+        <div class="lane"><span class="tag yes">有</span><span class="n">選擇停車原因(S6)<small>排除狀況後繼續</small></span><span class="loop">↩ 回到生產中</span></div>
+        <div class="lane"><span class="tag no">無</span><span class="n">生產至達標</span></div>
+      </div>
+      <span class="a">↓</span>
+      <span class="n">停機後按 <b>F4</b> 完工</span><span class="a">↓</span>
+      <span class="n">完工確認(S5)<small>良品 / 不良數量、欠量原因、製程類別</small></span><span class="a">↓</span>
+      <span class="n dec">◆ 自動下一筆 ON?(F8 切換)</span>
+      <div class="branch">
+        <div class="lane"><span class="tag yes">是</span><span class="n">自動帶入下一筆工單</span><span class="loop">↩ 回到「車速 = 0?」</span></div>
+        <div class="lane"><span class="tag no">否</span><span class="n end">本筆結束,人工選下一單</span></div>
+      </div>
+    </div>
+
+    <h3>19.2 MM:突發故障維修(M4 → M5 → M10)</h3>
+    <div class="fc">
+      <span class="n start">發現設備故障</span><span class="a">↓</span>
+      <span class="n">📋 維修清單 →「⚠️ 故障回報」(M5)<small>選故障零件</small></span><span class="a">↓</span>
+      <span class="n dec">◆ 廠內修或委外修?</span>
+      <div class="branch">
+        <div class="lane"><span class="tag alt">內修</span><span class="n">廠內人員處理</span></div>
+        <div class="lane"><span class="tag alt">外修</span><span class="n">填寫外部維修單號</span></div>
+      </div>
+      <span class="a">↓</span>
+      <span class="n dec">◆ 有更換零件?</span>
+      <div class="branch">
+        <div class="lane"><span class="tag yes">有</span><span class="n">填更換狀況<small>新品歸零 / 整修品填 S/N 與壽命比例</small></span><span class="n auto">自動扣 🔩 備品庫存</span></div>
+        <div class="lane"><span class="tag no">無</span><span class="n">僅調整 / 修復</span></div>
+      </div>
+      <span class="a">↓</span>
+      <span class="n">上傳現場照片(可多張)</span><span class="a">↓</span>
+      <span class="n dec">◆ 處理完成?</span>
+      <div class="branch">
+        <div class="lane"><span class="tag yes">完成</span><span class="n">勾選功能驗收 + 填驗收人</span><span class="n">確認並歸檔</span><span class="n end">轉入 📜 歷史紀錄(M10)</span></div>
+        <div class="lane"><span class="tag no">觀察中</span><span class="n">選「持續觀察中」<small>暫不結案,後續再回報</small></span></div>
+      </div>
+    </div>
+
+    <h3>19.3 MM:定期保養(M8 → M4 → M6)</h3>
+    <div class="fc">
+      <span class="n start">排程觸發到期<small>週期 / 張數 / PLC / 混合(M8)</small></span><span class="a">↓</span>
+      <span class="n">📋 維修清單出現待辦任務(M4)<small>狀態:即將到期 / 逾期</small></span><span class="a">↓</span>
+      <span class="n">點「執行」開啟執行回報(M6)</span><span class="a">↓</span>
+      <span class="n">逐項勾選保養重點<small>來自綁定的保養計畫範本(M9)</small></span><span class="a">↓</span>
+      <span class="n dec">◆ 必檢項全數勾選?</span>
+      <div class="branch">
+        <div class="lane"><span class="tag no">否</span><span class="n">顯示黃色提醒<small>可補勾或加註後仍可送出</small></span></div>
+        <div class="lane"><span class="tag yes">是</span><span class="n">直接確認</span></div>
+      </div>
+      <span class="a">↓</span>
+      <span class="n">確認完成</span><span class="a">↓</span>
+      <span class="n auto">自動扣排程綁定的備品(🔩)</span><span class="a">↓</span>
+      <span class="n end">轉入 📜 歷史紀錄 · 週期重新起算</span>
+    </div>
+
+    <h3>19.4 MM:備品補貨(M7 → M13 → M14)</h3>
+    <div class="fc">
+      <span class="n start">🔩 備品庫存出現紅色警示(M7)</span><span class="a">↓</span>
+      <span class="n dec">◆ 確實低於安全庫存?<small>先查 📜 歷史紀錄近期耗用,排除誤扣</small></span>
+      <div class="branch">
+        <div class="lane"><span class="tag no">否</span><span class="n end">盤點修正庫存數字即可</span></div>
+        <div class="lane"><span class="tag yes">是</span><span class="n">📦 零件主檔查對應零件(M13)</span></div>
+      </div>
+      <span class="a">↓</span>
+      <span class="n">🏢 查供應商報價(M14)<small>優先供應商先問</small></span><span class="a">↓</span>
+      <span class="n">下單採購<small>走公司採購流程(系統外)</small></span><span class="a">↓</span>
+      <span class="n">到貨入庫:🔩 備品庫存「編輯」補上數量</span><span class="a">↓</span>
+      <span class="n end">紅色警示解除</span>
+    </div>
+    <div class="note"><b>ℹ 目前補貨判斷是人工的</b>
+      「低庫存自動產生採購建議」在未來版本規劃中,目前請依 🔩 頁籤的紅色警示人工發動採購。</div>
+
+    <h3>19.5 MM:新零件建檔(M13)</h3>
+    <div class="fc">
+      <span class="n start">新零件進場 / 新採購需求</span><span class="a">↓</span>
+      <span class="n">📦 零件主檔以料號 / 名稱搜尋(M13)</span><span class="a">↓</span>
+      <span class="n dec">◆ 已建過此零件?</span>
+      <div class="branch">
+        <div class="lane"><span class="tag yes">是</span><span class="n end">直接使用<small>必要時在編輯視窗補供應商報價</small></span></div>
+        <div class="lane"><span class="tag no">否</span><span class="n">「+ 新增零件」<small>內部料號、名稱、規格、分類、單位</small></span></div>
+      </div>
+      <span class="a">↓</span>
+      <span class="n">加入供應商報價<small>可多家;主要往來勾「優先供應商」</small></span><span class="a">↓</span>
+      <span class="n dec">◆ 屬保養耗材?</span>
+      <div class="branch">
+        <div class="lane"><span class="tag yes">是</span><span class="n">到 🔩 備品庫存(M7)建一筆<small>設定初始庫存與安全庫存</small></span></div>
+        <div class="lane"><span class="tag no">否</span><span class="n end">完成建檔</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 20. 故障排除總覽 ═══ -->
+  <section id="trouble">
+    <h2>20. 故障排除總覽</h2>
+
+    <h3>20.1 連線狀態指示燈(主系統)</h3>
+    <p>畫面左下角顯示連線狀態:🟢 綠燈 = 已連線;🔴 紅燈 = 連線中斷(PLC 與 ERP 各一)。</p>
+
+    <h3>20.2 常見問題速查</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>問題</th><th>檢查項目</th><th>處理方式</th></tr></thead>
+      <tbody>
+        <tr><td>系統無反應</td><td>網路連線</td><td>檢查網路線,嘗試重新整理頁面</td></tr>
+        <tr><td>PLC 數據不更新</td><td>PLC 連線狀態</td><td>確認連線燈號,重新連線或重啟服務</td></tr>
+        <tr><td>班別選單跳不掉</td><td>未選取班別</td><td>點選班別行後再按「選取」</td></tr>
+        <tr><td>報表資料不對</td><td>日期/班別設定</td><td>確認篩選條件正確</td></tr>
+        <tr><td>找不到零件管理</td><td>還在開舊網址</td><td>零件管理已搬到 MM 的 📦 零件主檔頁籤(<code>mms.ericchh.work</code> 待 Cloudflare 設定生效,生效前用本機入口 <code>http://localhost:5301</code>)</td></tr>
+        <tr><td>備品數字跟印象不符</td><td>近期維修工單</td><td>維修歸檔會自動扣庫存,先查 📜 歷史紀錄再盤點</td></tr>
+        <tr><td>按鈕無作用</td><td>系統忙碌中</td><td>等待數秒後重試</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>20.3 緊急聯絡</h3>
+    <ul>
+      <li><b>現場主管</b>:[請填入聯絡方式]</li>
+      <li><b>資訊部門</b>:[請填入聯絡方式]</li>
+      <li><b>系統廠商</b>:[請填入聯絡方式]</li>
+    </ul>
+  </section>
+
+  <footer class="doc">
+    <span>印刷 IoT 系統操作說明書 · v3.0(定稿 2026-07-07)· 含全 UI 畫面線框(27 畫面)+ 組織圖 + 流程圖</span>
+    <span>沿革:v1.0(2026-01-18 單一系統)→ v2.x(保養移出為 MM)→ v3.0(零件管理併入 MM;2026-07-07 定稿)</span>
+  </footer>
+</div>
