@@ -1,7 +1,8 @@
-# 規格 — C′ 遷移收尾 回3:整體回歸驗證計畫
+# 規格 — C′ 遷移收尾 回3:整體回歸驗證計畫(v3)
 
 > 日期:2026-07-07(`date` 取得)
-> 撰寫:PM subagent(本檔覆寫回2「遺留小修」規格;回2 原文已歸檔至 `docs/spec20260707-3.md`)
+> 撰寫:PM subagent
+> 版次:**v3** — 基於 `docs/spec-v1.md` 做針對性修訂,除 §7 列明的變更外,其餘條文與 v1 完全相同、且已由 RD/Tester 驗證通過,**不得重新解讀**。
 > 性質:**驗證回合** — 本回原則上「不寫新功能」,RD 依本計畫執行全套回歸;**發現任何回歸問題才修**(修復 + 補測試 + 獨立 commit),全數通過則產出最終回歸報告。
 > 前置:P0–P5 + 遺留小修全部完成(主系統 `docs/report20260707-2.md`、各回 `tests/report-v*.md`)。
 
@@ -9,22 +10,31 @@
 
 ## 0. 範圍界定
 
-### 受驗對象(兩個 repo)
+### 0.1 本版(v3)修訂重點 — 先讀這段
+
+上一輪 Tester 複驗結果:**T1/T2 全過**(兩 repo build/test 全綠 11/33/67/89;A5 三步與 B3-1 五步 migration 鏈於臨時庫重跑全數通過並 DROP;前輪 F-1/F-2/F-3 解除;RD 報告 `docs/report20260707-4.md` 與實測逐項吻合),**唯卡在 AC-B5**:
+
+- 原 AC-B5 要求 `GET /api/v1/parts` 回傳「筆數 > 0」,但來源 FlexoDB 三表(Parts/Suppliers/SupplierParts)**自始為 0 筆**(備份檔 md5 = `d41d8cd98f00b204e9800998ecf8427e`,即空內容;B4 `--verify` 0↔0 對照通過)。搬移腳本、migration、端點實作全部正確 — 任何實作都無法讓不存在的資料出現,屬**規格與既成事實矛盾**。
+- **v3 處置**:修訂 AC-B5 為「回傳筆數與備份檔來源筆數一致(0↔0 亦為 PASS),以 B4 `--verify` 逐表對照為證據」(全文見 §2 B5);§5 邊界表新增 E10 涵蓋「來源 0 筆」情境。
+- **本版不要求 RD 改任何 code**。RD 僅需:依新 AC-B5 重新判定該項(可引用既有 curl / `--verify` 證據,或重跑一次留證),並更新 `docs/report20260707-4.md` 的 AC-B5 判定與總結。Tester 依新標準複驗後即可結案。
+- 若日後需要展示用零件資料,**另立「種子資料策略」新需求**,不屬本回歸範圍。
+
+### 0.2 受驗對象(兩個 repo)
 
 | 代號 | Repo | 路徑 | 分支 | 基準 commit(自此以後為本次遷移變更) |
 |---|---|---|---|---|
 | A | 主系統 Printing IoT | `/Volumes/G70Pro/cusor pool/Printing IoT` | `feat/extract-maintenance` | `b683831` |
 | B | MM 保養維修外掛 | `/Volumes/G70Pro/cusor pool/MM` | `main` | `e3cebd8` |
 
-### 角色分工
+### 0.3 角色分工
 
 | 角色 | 職責 |
 |---|---|
 | PM(本檔) | 產出回歸驗證計畫:涵蓋面、每項的執行指令與判定標準 |
-| RD | 逐項執行 §1–§3;任一項 FAIL → 修復 + 補測試 + 獨立 commit 後**重跑該項與受影響項**;產出最終回歸報告 `docs/report20260707-4.md`(格式見 §4) |
-| Tester | 依本檔驗收標準**獨立複驗**(重跑指令、核對輸出),產出 `tests/report-v*.md` |
+| RD | 逐項執行 §1–§3;任一項 FAIL → 修復 + 補測試 + 獨立 commit 後**重跑該項與受影響項**;產出/更新最終回歸報告 `docs/report20260707-4.md`(格式見 §4)。**本版(v3)下,已通過項目免重跑,僅 AC-B5 依新標準重新判定並更新報告** |
+| Tester | 依本檔驗收標準**獨立複驗**(重跑指令、核對輸出),產出 `tests/report-v*.md`;已於前輪親測通過之項目可引用前輪證據 |
 
-### 硬性紅線(全程遵守)
+### 0.4 硬性紅線(全程遵守)
 
 1. **禁止 `git push`**(兩 repo 皆同)。
 2. 驗證性操作(build/test/grep/compose config)不得改動程式;**只有確認的回歸問題**才允許改 code,且每個修復獨立一個 Conventional Commits commit。
@@ -38,6 +48,7 @@
 ## 1. A 部分 — 主系統(Printing IoT)
 
 > 執行目錄一律用絕對路徑;後端方案檔 `backend/PrintingIoT.sln`,前端 `frontend/`。
+> (本部分 v3 無變更,前輪已全數通過。)
 
 ### A1 後端 build/test 全綠
 
@@ -111,6 +122,7 @@
 ## 2. B 部分 — MM(保養維修外掛)
 
 > 方案檔 `backend/MaintenanceSystem.sln`;migration 位於 `backend/MMS.Infrastructure/Migrations/`。
+> (本部分僅 B5 於 v3 修訂,其餘無變更、前輪已通過。)
 
 ### B1 後端 build/test 全綠(67+)
 
@@ -154,21 +166,25 @@
 ### B4 搬移腳本 --verify
 
 - 指令:`cd "/Volumes/G70Pro/cusor pool/MM" && bash scripts/migrate-parts-data.sh --verify`
-- **驗收 AC-B4**:exit 0,輸出顯示三表(Parts/Suppliers/SupplierParts)來源↔目的筆數對照一致;不產生資料變更。
+- **驗收 AC-B4**:exit 0,輸出顯示三表(Parts/Suppliers/SupplierParts)來源↔目的筆數對照一致(**0↔0 一致亦為 PASS**);不產生資料變更。
 
-### B5 容器端點煙霧測試(兩元件互不影響)
+### B5 容器端點煙霧測試(兩元件互不影響)【v3 修訂】
 
 - 前置:`cd "/Volumes/G70Pro/cusor pool/MM" && docker compose ps` 確認 mms-backend / mms-frontend / postgres 皆 Up(未起則 `docker compose up -d` 後等待健康)。
 - 指令(host 埠依 compose 實際對映;以 curl 驗證):
 
 | 端點 | 元件 | 判定 |
 |---|---|---|
-| `GET /api/parts` | 備品零件(SpareParts) | HTTP 200,回 JSON 陣列 |
-| `GET /api/v1/parts` | 零件管理 | HTTP 200,回 JSON(含搬移後資料,筆數 > 0) |
-| `GET /api/v1/suppliers` | 零件管理 | HTTP 200,回 JSON |
-| `GET /api/v1/supplier-parts` | 零件管理 | HTTP 200,回 JSON |
+| `GET /api/parts` | 備品零件(SpareParts) | HTTP 200,回有效 JSON 陣列 |
+| `GET /api/v1/parts` | 零件管理 | HTTP 200,回有效 JSON;**回傳筆數與備份檔來源筆數一致**(來源 0 筆 → 回空集合即 PASS) |
+| `GET /api/v1/suppliers` | 零件管理 | HTTP 200,回有效 JSON;筆數與來源一致(同上,0↔0 為 PASS) |
+| `GET /api/v1/supplier-parts` | 零件管理 | HTTP 200,回有效 JSON;筆數與來源一致(同上,0↔0 為 PASS) |
 
-- **驗收 AC-B5**:四端點皆 200 且回有效 JSON;`/api/parts` 與 `/api/v1/parts` 回傳的是**不同資料集**(兩元件並立、互不影響)。
+- **驗收 AC-B5(v3)**:
+  1. 四端點皆 HTTP 200 且回有效 JSON(空陣列/空集合屬有效 JSON);
+  2. `/api/v1/*` 三端點回傳筆數與**備份檔來源筆數一致**,以 **B4 `--verify` 逐表對照輸出為證據**(目前已知來源三表為 0 筆,備份檔 md5 = `d41d8cd98f00b204e9800998ecf8427e`,故 **0↔0 即 PASS**;不得以「筆數 > 0」為要求);
+  3. 兩元件互不影響:`/api/parts`(備品零件)與 `/api/v1/parts`(零件管理)由**不同元件/資料表**供應,任一端點的資料多寡不影響另一端點正常回應(來源 0 筆情境下,以「`/api/v1/parts` 回空集合、同時 `/api/parts` 仍正常回 200 與其自身資料」判定)。
+- 註:本項判定變更**不要求改 code**;前輪既有 curl 輸出與 B4 `--verify` 證據若已留存,可直接引用重新判定。若需展示資料,種子資料策略為**另立新需求**,不在本回歸範圍。
 
 ### B6 前端可達 + 九頁籤
 
@@ -179,6 +195,8 @@
 ---
 
 ## 3. C 部分 — 交叉檢查
+
+(本部分 v3 無變更,前輪已通過;若因本版更新報告而在主系統新增 commit,C1 清單需同步補列。)
 
 ### C1 兩 repo commit 清單化 + 確認未 push
 
@@ -205,19 +223,20 @@
 
 ## 4. 輸出物定義(RD 產出)
 
-### 4.1 最終回歸報告 `docs/report20260707-4.md`(主系統 repo)
+### 4.1 最終回歸報告 `docs/report20260707-4.md`(主系統 repo,**v3 為更新既有檔**)
 
 必含章節:
 1. **執行摘要**:總判定(PASS / PASS with fixes)、執行日期、環境(dotnet / node / docker 版本);
-2. **逐項結果表**:AC-A1 ~ AC-C2 每項的「執行指令、結果摘要(通過數/關鍵輸出)、判定」;
+2. **逐項結果表**:AC-A1 ~ AC-C2 每項的「執行指令、結果摘要(通過數/關鍵輸出)、判定」;**AC-B5 需註明依 v3 標準判定(0↔0 一致為 PASS)**;
 3. **修復清單**(若有):問題描述、根因、修復 commit hash、補的測試;無問題則明寫「本回歸未發現問題」;
 4. **兩 repo commit 清單**:自 `b683831` / `e3cebd8` 起全列(含本回新增),並註明皆未 push;
-5. **遺留事項**:Cloudflare Tunnel 三步驟待 Eric 手動執行(引用 `docs/report20260707-2.md` 之指引),及其他未決事項。
+5. **遺留事項**:Cloudflare Tunnel 三步驟待 Eric 手動執行(引用 `docs/report20260707-2.md` 之指引)、零件管理來源資料為 0 筆(如需展示資料另立種子資料需求)、及其他未決事項。
 
 ### 4.2 修復 commit(僅在發現回歸問題時)
 
 - 每個問題獨立 commit,Conventional Commits(`fix:` / `docs:` / `test:`);修 code 必附對應測試。
 - 修復後必須重跑:該項 AC + 同 repo 的 build/test 全套(A1/A2 或 B1/B2)。
+- **v3 下更新報告本身**以 `docs:` commit 提交即可,不觸發重跑全套。
 
 ---
 
@@ -234,6 +253,7 @@
 | E7 | vitest 因 A3-2 補測試而超過原基準數 | 以「全綠且不少於原基準(主系統原數、MM 89)」判定 |
 | E8 | 生產 MmsDB 查詢需要密碼/使用者 | 從 `docker-compose.yml` 環境變數讀取,僅用於唯讀查詢,不寫入報告明文密碼 |
 | E9 | 臨時空庫驗證中途失敗 | 無論成敗,結束時一律 DROP 臨時庫,並在報告記錄 |
+| **E10(v3 新增)** | **零件管理搬移來源(FlexoDB 三表)為 0 筆**(備份檔為空內容,md5 = `d41d8cd98f00b204e9800998ecf8427e`) | **非缺陷**:端點回空集合 + HTTP 200 即正常;AC-B4/AC-B5 以「來源↔目的筆數一致」判定(0↔0 為 PASS);**禁止**為湊資料而手動 INSERT 或造假;如需展示資料,種子資料策略另立新需求 |
 
 ---
 
@@ -252,9 +272,20 @@
 | AC-B2 | MM vitest 全綠(≥89) | ☐ |
 | AC-B3-1 | MM 三段 migration 空庫全套 apply + 逐段 Down + 重放 | ☐ |
 | AC-B3-2 | 生產 MmsDB history 三筆完整、無 pending model changes、全程唯讀 | ☐ |
-| AC-B4 | migrate-parts-data.sh --verify 通過 | ☐ |
-| AC-B5 | 四端點 200 且兩元件資料集互不影響 | ☐ |
+| AC-B4 | migrate-parts-data.sh --verify 通過(0↔0 一致亦 PASS) | ☐ |
+| AC-B5(v3) | 四端點 200 且回有效 JSON;`/api/v1/*` 筆數與來源一致(0↔0 為 PASS,B4 --verify 為證據);兩元件互不影響 | ☐ |
 | AC-B6 | localhost:5301 可達、九頁籤設定正確 | ☐ |
 | AC-C1 | 兩 repo commit 全清單、皆未 push | ☐ |
 | AC-C2 | 文件與最終程式狀態無矛盾 | ☐ |
-| AC-R | 最終回歸報告 `docs/report20260707-4.md` 含 §4.1 五章節 | ☐ |
+| AC-R | 最終回歸報告 `docs/report20260707-4.md` 含 §4.1 五章節(AC-B5 註明依 v3 標準) | ☐ |
+
+> Tester 複驗指引:前輪已親測通過之項目(AC-A1~A6、B1~B4、B6、C1、C2)可引用前輪證據直接勾稽;本輪重點為 **AC-B5 依 v3 新標準複驗**與 AC-R 報告更新確認。
+
+---
+
+## 7. 版次變更紀錄
+
+| 版次 | 日期 | 變更 |
+|---|---|---|
+| v1 | 2026-07-07 | 初版回歸驗證計畫(回2 規格歸檔於 `docs/spec20260707-3.md`) |
+| v3 | 2026-07-07 | 依 Tester 回饋修訂 AC-B5:移除不可滿足的「筆數 > 0」,改為「回傳筆數與備份檔來源筆數一致(0↔0 亦 PASS),以 B4 `--verify` 逐表對照為證據」;AC-B4 同步註明 0↔0 為 PASS;§5 新增 E10「來源 0 筆」邊界;§0.1 註明本版不要求改 code,僅重新判定 AC-B5 並更新報告 |

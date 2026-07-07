@@ -1,90 +1,92 @@
-# 驗收報告 v2 — C′ 遷移 回3(P4 主系統瘦身)
+# 驗收報告 v2 — C′ 遷移收尾 回3:整體回歸驗證(第二輪複驗)
 
-> 日期:2026-07-07
+> 日期:2026-07-07(`date` 取得)
 > 驗收者:Tester subagent(獨立驗收,所有指令親自重跑,不採信 RD 說法)
-> 規格:`docs/spec-v1.md`
-> 受驗 repo:`/Volumes/G70Pro/cusor pool/Printing IoT`(branch `feat/extract-maintenance`,ahead 7 未 push;本輪新增 commit `add7fde`)
-> 附帶 repo:`/Volumes/G70Pro/cusor pool/MM`(main,ahead 7 未 push,commit `d6289c2`)
-> 前情:v1 驗收 FAIL(T2)— F-1 RD 報告缺失、F-2 AC-8 前置不成立未回報。本輪驗證 RD 補交付物(`docs/report20260707-1.md`)後全案。
-> 結果:**PASS**(T1/T2/T3 全過;T3 附三則觀察,均不影響判定)
+> 規格:`docs/spec-v1.md`(回3 整體回歸驗證計畫)
+> RD 交付:`docs/report20260707-4.md`(本輪已補齊,前輪 F-1 缺件已解除)
+> 受驗 repo:主系統 `feat/extract-maintenance`(HEAD `3008939`,基準 `b683831` 起 11 commits)、MM `main`(HEAD `4009193`,基準 `e3cebd8` 起 11 commits)
+> 前情:v1 驗收 FAIL(T2)→ route=RD,四項待辦(F-1 報告缺件、F-2 生產庫 history 缺第三段、F-3 殘留臨時庫、F-4 AC-B5 規格矛盾)
+> 結果:**FAIL(T3 judgment)→ route=PM**(T1/T2 全過;唯 AC-B5「筆數 > 0」為規格對既成事實的錯誤假設,任何實作皆不可滿足,需 PM 修訂判定標準)
+>
+> 註:本檔覆寫回2(P4 瘦身回合)之驗收報告,原內容見 git 歷史。
 
 ---
 
-## T1 — Deterministic(自動化測試與建置,全部親自執行)
+## 沙箱註記(規格 §0 準繩 5 / E1)
 
-> 沙箱說明:dotnet/docker/curl/dig 需 docker socket 與網路,依 AC-10「測試若因沙箱失敗,停沙箱重跑後再判定」停沙箱執行(前輪已實證沙箱擋 NuGet restore)。
+dotnet build/test(寫 obj)、docker(socket)、curl(網路)、EF 連庫於沙箱下必然失敗,前兩輪已實證誤報;本輪該類指令一律停沙箱執行後判定。靜態檢查(git/grep/原始碼)於沙箱內執行。
 
-| # | 檢查項目 | 指令 | 結果 | 證據 |
+---
+
+## T1 deterministic(全數親自執行)— PASS
+
+| # | AC | 指令 | 結果 | 證據 |
 |---|---|---|---|---|
-| T1-1 | 主系統建置(AC-2) | `dotnet build PrintingIoT.sln` | ✅ | 「建置成功。0 個警告 0 個錯誤」(3.63s) |
-| T1-2 | 主系統測試(AC-3) | `dotnet test PrintingIoT.sln` | ✅ | 「已通過! 失敗: 0,通過: 11,總計: 11」;`PartServiceTests.cs` 不存在,`PrintingIoT.Tests/` 僅餘 AuthControllerTests / OpenApiContractTests / QA_Scenarios_Tests / SpeedCalculatorTests |
-| T1-3 | compose 驗證(AC-5) | `docker compose config --services` | ✅ | postgres/redis/backend-api/frontend/cloudflared/mqtt-broker/backend-worker,**無 sm-frontend** |
-| T1-4 | 目錄刪除(AC-5) | `ls` | ✅ | `smart-parts-frontend/`、`backend/SmartParts.API/` 皆「No such file or directory」 |
-| T1-5 | 回歸端點(AC-6) | `curl localhost` | ✅ | frontend 5600→200;`/api/orders`→200、`/api/monitor/realtime`→204;**`/api/v1/parts`→404**;port 5100→connection refused(已釋出) |
-| T1-6 | migration 現況(AC-4) | psql `__EFMigrationsHistory`、`\dt` | ✅ | 最新 = `20260706143822_RemoveSmartPartsModule`;FlexoDB 8 表,三表(Parts/Suppliers/SupplierParts)消失,其餘無恙 |
-| T1-7 | migration Down 親測(AC-4) | `dotnet ef database update 20260606021031_RemoveMaintenanceModule` | ✅ | Done;`\dt` 11 表(三表重建);`\d` 逐項比對:Parts 九欄含 `IX_Parts_InternalPN` UNIQUE、SupplierParts `Price numeric(18,2)`、兩組 FK `ON DELETE RESTRICT`(與 drop 前備份 schema 一致) |
-| T1-8 | migration 再 Up 親測(AC-4) | `dotnet ef database update` | ✅ | Done;三表消失(pg_tables count=0)、history 回最新、`Orders` 可查 — Down→Up 可重複,結果一致 |
-| T1-9 | 備份檔(AC-1) | ls + grep + sed | ✅ | `MM/backups/flexodb-backup-20260706115229.sql`(13,484 bytes,最新)含三表 `CREATE TABLE`(L75/L165/L182);COPY 區塊三表皆空(L254/L286/L294 後即 `\.`)→ drop 前三表 0 筆 |
-| T1-10 | MmsDB 筆數(AC-1) | psql MmsDB | ✅ | `0|0|0` — 與 FlexoDB drop 前(0/0/0)逐表相等 |
-| T1-11 | MM 後端(AC-9) | `dotnet test`(MM/backend) | ✅ | 「已通過! 失敗: 0,通過: 65,總計: 65」 |
-| T1-12 | MM 前端(AC-9) | `npm test -- --run`、`npm run build` | ✅ | vitest 89/89;vite build ✓ 486ms |
-| T1-13 | tunnel 現況(AC-8) | dig/curl | ✅* | `mms.ericchh.work` → **NXDOMAIN**;`smartparts.ericchh.work` → HTTP/2 **403**(仍在 Cloudflare)— 與 RD 報告 §6.1 陳述一致;*此為「前置不成立」事實查證,判定見 T2 |
+| T1-1 | AC-A1 | `dotnet build PrintingIoT.sln` + `dotnet test` | ✅ | 建置成功 0 警告 0 錯誤;測試 **11 通過 / 0 失敗 / 0 略過** |
+| T1-2 | AC-A2 | `npm run build` + `npx vitest run`(主系統 frontend/) | ✅ | build exit 0、`dist/` 產出;vitest **5 檔 33/33 全過**(含 BoxDiagram 回歸測試 4 條) |
+| T1-3 | AC-A4 | `docker compose config` + `--services` | ✅ | config exit 0;services 恰 7 項:backend-api / backend-worker / cloudflared / frontend / mqtt-broker / postgres / redis;`grep -c sm-frontend docker-compose.yml` = 0 |
+| T1-4 | AC-A5 | 臨時庫 `printing_regress_v2_1783407663`(printingiot-postgres :5433)三步 `dotnet ef database update --connection` | ✅ | S1 全套 apply exit 0,history 尾筆 `20260706143822_RemoveSmartPartsModule`;S2 Down 至 `20260606021031_RemoveMaintenanceModule` exit 0,尾筆為之;S3 再 apply exit 0,尾筆回 `RemoveSmartPartsModule`;驗畢 DROP,`psql -lt` grep regress 零命中(**本輪 Tester 親自重跑,前輪未複驗項已補**) |
+| T1-5 | AC-B1 | `dotnet build MaintenanceSystem.sln` + `dotnet test` | ✅ | 建置成功 0 錯誤;測試 **67 通過 / 0 失敗**(≥67) |
+| T1-6 | AC-B2 | `npx vitest run`(MM frontend/) | ✅ | **5 檔 89/89 全過**(≥89、0 failed) |
+| T1-7 | AC-B3-1 | 臨時庫 `mm_regress_v2_1783407700`(mm-postgres :5434)五步鏈 | ✅ | S1 全套 apply(0→3)、S2 Down 第 3 段、S3 Down 第 2 段、S4 Down 至 0、S5 重放,五步皆 exit 0;S4 後 public 僅剩空 `__EFMigrationsHistory`(COUNT=0);S5 後 history 恰 3 筆(InitialCreate / AddPartsManagement / RemoveShadowForeignKeys);驗畢 DROP、殘留零命中(**本輪 Tester 親自重跑,前輪未複驗項已補**) |
+| T1-8 | AC-B4 | `bash scripts/migrate-parts-data.sh --verify` | ✅ | exit 0;來源三表已移除後改以最新備份檔(`flexodb-backup-20260706115229.sql`)還原臨時庫 `_migverify_*` 對照;Suppliers/Parts/SupplierParts 三表 0↔0 通過、抽樣通過、來源 FlexoDB 前後 md5 一致、臨時庫自動 DROP |
+| T1-9 | AC-B5(HTTP 層) | curl `http://localhost:5300` 四端點 | ✅* | `/api/parts`、`/api/v1/parts`、`/api/v1/suppliers`、`/api/v1/supplier-parts` 皆 **HTTP 200、回有效 JSON 陣列**;唯 `/api/v1/parts` 回 `[]`(筆數 = 0),與規格「筆數 > 0」不符 → 歸 T3 處理(見下) |
+| T1-10 | AC-B6(可達性) | `curl -w "%{http_code}" http://localhost:5301/` + `npm run build` | ✅ | 5301 回 **200**(compose 對映 80→5301 核實);MM 前端 build exit 0 |
+| T1-11 | AC-B3-2 | `docker exec mm-postgres-1 psql ... __EFMigrationsHistory`(唯讀)+ `dotnet ef migrations has-pending-model-changes` | ✅ | 生產 MmsDB history **恰 3 筆、順序正確**(前輪 F-2 已由 RD 重建 mms-backend 修復,`docker ps` 顯示該容器重啟於本輪複驗前);`has-pending-model-changes` → 「No changes have been made to the model since the last migration.」;全程僅 SELECT |
 
-**T1 判定:PASS。**
+**前輪 F-3 複驗**:`docker exec mm-postgres-1 psql -U postgres -lt | grep -i regress` 零命中,殘留臨時庫 `mm_regress_20260707_t` 已 DROP ✅;本輪 Tester 自建之兩個臨時庫亦皆驗畢即 DROP 並複核(E9 遵循)。
 
----
-
-## T2 — Semantic(邏輯符合規格;重點驗前輪 F-1/F-2 是否解除)
-
-| # | 檢查項目 | 結果 | 證據 |
-|---|---|---|---|
-| S-1 | **F-1 解除:RD 報告存在且落地四項佐證** | ✅ | `docs/report20260707-1.md`(commit `add7fde`,`docs:` 前綴,194 行):§1 筆數對照表(AC-1)、§3 migration 三步驟紀錄(AC-4)、§5 grep 結果表(AC-7)、§6 tunnel 處置說明(AC-8)— DoD §5 四項內容齊備 |
-| S-2 | RD 報告內容與現實相符(反虛報查核) | ✅ | 報告 §1 筆數 0/0/0 ↔ 本輪 T1-9/T1-10 親測一致;§3 三步驟 ↔ T1-6~T1-8 親測重現;§4 compose/curl ↔ T1-3/T1-5 一致;§6.1 NXDOMAIN/403 ↔ T1-13 一致 — 無任何虛報 |
-| S-3 | **F-2 解除:AC-8 前置不成立已依 §2.6 回報** | ✅ | 報告 §6.2 明載「mms.ericchh.work 不在 tunnel(NXDOMAIN)→ 前置不成立,中止此工作項並回報」;§6.3 手動指引**第一步即建立 mms public hostname**(v1 指正事項),再處理 smartparts 移除 + 301 Redirect Rule,標題明標「**待 Eric 手動執行**」,附 curl/dig 驗證指令;採首選方案並說明理由 — 符合 §2.6「無儀表板/API 權限時」交付要求 |
-| S-4 | 「無 Cloudflare API 權限」宣稱查證 | ✅ | 親自 grep `.env`/compose/scripts:僅 `CLOUDFLARE_TUNNEL_TOKEN`(token 模式),無 `CF_API`/`CLOUDFLARE_API`/`api.cloudflare` 憑證 — 宣稱屬實,走無權限分支正當 |
-| S-5 | AC-7 grep 白名單外零命中(親自重掃) | ✅ | `backend/**/*.cs`(排除 Migrations/obj/bin)對 `smartparts|IPartService|PartsController|SupplierPart` 零命中;`*.csproj`/`.sln` 零命中;`frontend/src/**` 僅 `reportUtils.js:152-155`、`BoxTypeTab.jsx:130-135` 字串切分之 `parts` 變數(英文一般字白名單);`scripts/` 零命中;報告 §5 結果表逐項判定與實況相符 |
-| S-6 | migration 檔品質(§2.3) | ✅ | `20260706143822_RemoveSmartPartsModule.cs`:Up 先刪子表 SupplierParts 再父表(:21-28);註解正體中文、含輸入/輸出/邏輯(:14-18, :31-37);:35-36 明寫「Down 僅還原結構,不還原資料 — 須另自 MM/backups/ 匯入」 |
-| S-7 | 其餘功能零異動(§0 準繩) | ✅ | `PrintingContext` 僅餘 ProductionLogs/Orders/MachineSections/Products/Auth 三表 DbSet;既有測試未改斷言語意;回歸端點全綠(T1-5) |
-| S-8 | MM 附帶項範圍(AC-9) | ✅ | `d6289c2` 僅動 5 檔(PartsCatalogController/PartDtos/IPartService/PartService/PartServiceTests);`PartDto` 含 `Specification/Category/Unit`(`PartDtos.cs:34-36`);備品(`/api/parts`、SpareParts)與保養功能零異動;MM 工作樹乾淨 |
-| S-9 | AC-10 程序面 | ✅ | 四個主系統 commit(`a17f71f` refactor / `8069abe` chore / `279f813` chore / `add7fde` docs)+ MM `d6289c2`(fix)皆 Conventional Commits、正體中文;兩 repo 各 ahead 7 **未 push**(Tester 亦未 push) |
-
-**T2 判定:PASS** — 前輪 F-1/F-2 全數解除,報告內容經逐項反查與現實一致。
+**T1:PASS**(所有 build/test/腳本/端點可達性全綠)
 
 ---
 
-## T3 — Judgment(驗收契約合理性與 edge case)
+## T2 semantic(對照規格逐條核閱)— PASS
 
-| # | 檢查項目 | 結果 | 說明 |
-|---|---|---|---|
-| J-1 | AC-8 允許「無權限 → 手動指引」分支是否合理 | ✅ | 合理 — cloudflared token 模式下 hostname 路由確實不在 repo(§1.3 已盤點),AC-8 明文提供此分支;RD 交付完整可執行指引且無虛報。**殘留人工動作**:Eric 需依報告 §6.3 步驟 1–9 執行(建 mms hostname → 移除 smartparts → 301 Rule),執行前 mms.ericchh.work 對外不可達(僅本機可用) |
-| J-2 | AC-9 edge「有值必須正確顯示」在 0 筆資料下的可測性 | ✅ | 兩庫零件資料現為 0 筆,無法以真實資料演練前端顯示;惟 MM 測試 65 案含三欄映射/空值補位/依 Id 查詢案例,映射正確性已由測試層覆蓋,規格 edge case(空字串顯示空白或「-」皆可)不被違反 — 契約可接受 |
-| J-3 | 規格內部矛盾與白名單縫隙(觀察,不影響判定) | ⚠ 觀察 | 見下列三則,建議 PM 於 P5 或下版規格處理 |
+| AC | 判定 | 證據 |
+|---|---|---|
+| AC-A3-1 | ✅ | `git show 284baa7` 被刪片段 = SchedulePanel 之 `handleAddOrder/handleEditOrder/handleDeleteOrder/handleReorder` props 與 `dashboard.schedule.addOrder/editOrder/deleteOrder/reorder` 按鈕列、Dashboard 之 ProductFormModal 掛載與 handlers;於現行 HEAD 之 `SchedulePanel.jsx`、`Dashboard.jsx` 精確 grep **零命中(exit 1)**;現存 `dashboard.schedule.seqNo/customer/...` 為表頭欄位,非被刪片段;vitest 33/33 + build 佐證正常渲染 |
+| AC-A3-2 | ✅ | `frontend/src/components/common/BoxDiagram.jsx:59-63`:`segCount = Number(l3) > 0 ? 5 : 4`(l3 = dimL5/S5),尺寸欄與分隔線共用 `colW = 500 / segCount` 均分邏輯 — 與規格「RSC/HSC 4 面+舌片、S5 有值才 5 面、尺寸欄對齊」一致;`src/tests/components/BoxDiagram.test.jsx`(commit `c5d58ea`)四條測試涵蓋 RSC 4 面、HSC 4 面(無上蓋 H1)、S5 有值 5 面、對齊公式,隨 T1-2 全綠 |
+| AC-A6 | ✅ | 依規格排除條件重掃:英文 `smartparts\|sm-frontend` allowlist(tests/report-\*.md、RemoveSmartPartsModule migration 檔)外 **0 命中**;中文「零件管理」allowlist 外僅 `README.md:9,101`,皆為「已移入 MM 外掛」之移除紀錄敘述句,符合 E5 個案(理由:描述已移除事實,非程式/設定/路由殘留) |
+| AC-B6(九頁籤) | ✅ | `MM/frontend/src/App.jsx:234-246` tabs 陣列恰 9 頁籤(equipment/taskList/parts/partsCatalog/suppliers/schedule/history/photos + 管理員 settings);i18n:`parts=備品庫存(🔩)`、`partsCatalog=零件主檔(📦)`、`suppliers=供應商(🏢)`,i18n.test.js 有斷言且全綠 |
+| AC-B5(兩元件並立) | ✅ | `/api/parts`(PartsController→SpareParts 表)與 `/api/v1/parts`(PartsCatalogController→Parts 表)走不同 Controller 與資料表,MM CLAUDE.md:11-16 明定邊界;67 後端測試含兩元件,互不影響 |
+| AC-C1 | ✅ | 主系統 `b683831..HEAD` 11 commits(`a17f71f`…`3008939`)、`git status -sb` ahead 14、`@{u}..HEAD` = 14,**全數未 push**;工作區僅 workflow 管理檔(`docs/spec-v1.md`、`tests/report-v1.md` 修改)與報告/歸檔新檔(`docs/report20260707-4.md`、`spec20260707-2/-3.md`),已列明;MM `e3cebd8..HEAD` 11 commits(`aeb06e9`…`4009193`)、ahead 13 = `@{u}..HEAD`,工作區乾淨,**全數未 push**;與 RD 報告 §4 清單逐筆一致 |
+| AC-C2 | ✅ | 四點核對:(1) 主系統 README:9、`doc/PROJECT_STATUS.md:15-16` 皆載明保養/零件管理**已移出**至 MM;(2) MM README 兩元件並立表(備品零件 `/api/parts` + 零件管理 `/api/v1/*`)、CLAUDE.md:11-16 API 邊界;(3) MM README/CLAUDE.md 九頁籤 + 5301 入口;(4) compose 無 sm-frontend(PROJECT_STATUS:14 亦載明退役)— 無矛盾;操作說明書 v3.0 之「零件管理併入 MM/搬家」為紀錄性敘述,一致 |
+| AC-R | ✅ | `docs/report20260707-4.md` 存在(前輪 F-1 解除),含 §4.1 五章節:執行摘要(含環境版本與總判定)、逐項結果表(AC-A1~C2)、修復清單(F-2/F-3/F-4)、兩 repo commit 清單(註明未 push)、遺留事項(含 Cloudflare Tunnel 待 Eric 手動);RD 報告所載各項數據(11/33/67/89、7 services、history 3 筆、0↔0)與本輪 Tester 親自重跑結果**逐項吻合,無虛報** |
+| 前輪 F-2 | ✅ 已修復 | 生產 MmsDB history 恰 3 筆(本輪唯讀複查);修法(重建 mms-backend 令 MigrateAsync 套用)未動生產資料,符合紅線 3 |
+| 前輪 F-3 | ✅ 已修復 | `mm_regress_20260707_t` 已 DROP,psql -lt 零命中 |
 
-**T3 觀察(供 PM 參考,均不構成本輪 FAIL)**:
+**T2:PASS**(實作與 RD 報告皆與規格描述行為一致;無 RD 誤解規格情事)
 
-1. **「兩組 Cascade FK」為規格盤點筆誤**(§1.1/§2.3/AC-4):drop 前真實 schema(備份佐證)與 EF 模型皆為 `ON DELETE RESTRICT`;規格自身主準繩「與移除前逐項一致」足以裁決,RD 忠實還原 Restrict 並於 migration 註解與報告 §3 載明,處理正確。建議下版規格文字更正為 Restrict。
-2. **`docker-compose.yml:60` 註解**「Phase 3.9: SmartPartsDB and MmsDB removed…」位於服務定義區而非檔尾 DEPRECATED 區塊:本輪依 §2.7 白名單「類別=部署歷史註解(例為示例非窮舉)」判定保留,RD 報告 §5 亦已表列判定;建議 PM 下版明列或指示移至檔尾,消除「必須零命中範圍 vs 白名單類別」的縫隙。
-3. **操作說明書 v3.0 公告與現況時序落差**:說明書已載明「smartparts 已停用並轉址到 MM」,但 301 尚待 Eric 手動執行(現況 403)— 屬 P5(文件定稿)與 J-1 人工動作的銜接事項,建議 PM 在 P5 驗收時一併確認 301 已生效。
+---
 
-**T3 判定:PASS。**
+## T3 judgment(驗收契約合理性)— **FAIL → route=PM**
+
+### F-4(承前輪):AC-B5「/api/v1/parts 筆數 > 0」為不可滿足的驗收標準
+
+- **事實鏈**(本輪親自複核):
+  1. `curl :5300/api/v1/parts` → HTTP 200、`[]`(筆數 0);
+  2. B4 `--verify` 輸出:來源(備份檔還原)↔ 目的三表 **0↔0**、來源三表 md5 = `d41d8cd98f00b204e9800998ecf8427e`(**空內容之 md5**,證明來源自始 0 筆);
+  3. MM `docs/report20260706-1.md`(P2 搬移報告)明載生產 FlexoDB 三表搬移當時即 0 筆。
+- **判定**:搬移腳本、migration、端點實作全部正確(0 筆資料被完整、冪等地搬移並可查詢);「筆數 > 0」失敗的唯一原因是**規格假設來源有資料,與既成事實矛盾**。此非 RD 實作缺陷 — 任何實作都不可能讓不存在的資料出現。規格 §5 邊界情境表(E1–E9)未涵蓋「來源資料為 0 筆」此 edge case,屬驗收契約本身的缺口。
+- **對 PM 的具體修正建議**(擇一,下一輪規格明文化):
+  - **甲案(建議)**:AC-B5 改為「`/api/v1/parts` 回傳筆數與備份檔來源筆數**一致**(0↔0 亦為 PASS),以 B4 `--verify` 逐表對照輸出為證據」;
+  - 乙案:若 Eric 要求上線即有展示資料,另訂**種子資料策略**(seed 腳本 + 對應清除機制)並補 AC 定義筆數來源 — 此屬新需求,不應由回歸驗證回合夾帶。
+- 另請 PM 順手處理:RD 報告 §5 遺留事項 2 已將本議題列案,PM 修訂 AC-B5 後本項可逕依新標準複驗,毋須 RD 改 code。
+
+### 其餘 judgment 檢視(無礙,僅列紀錄)
+
+| # | 項目 | 判定 |
+|---|---|---|
+| J-1 | E5 個案(README:9,101 中文「零件管理」保留) | 合理 — 皆為「已移出」紀錄性敘述,符合 E5 允許類別,RD 報告已載明理由 |
+| J-2 | AC-B6 settings 頁籤為管理員條件式(`can(user,'manageSettings')`) | 合理 — 權限未啟用時 `can()` 全放行照常顯示 9 頁籤,與規格 M2-b 配置一致 |
+| J-3 | F-2 修法(重建容器令 MigrateAsync 套用)是否違反紅線 3「不動生產庫」 | 合理 — 紅線 3 禁止「驗證程序」寫入生產庫;MigrateAsync 為**既定部署機制**,套用已 commit 之 migration 屬正常部署行為,且 RD 已把「migration 進 repo 須重建映像」寫入遺留事項 3 作為 SOP 提醒 |
+| J-4 | Cloudflare Tunnel 三步驟未完成 | 不擋 — 規格 §4.1 第 5 章即定位為「待 Eric 手動執行」之遺留事項,RD 報告已引用指引 |
 
 ---
 
 ## 結論
 
-**PASS(T1/T2/T3 全過)。** AC-1~AC-10 逐條成立:
+**FAIL(failedLayer=T3)→ route=PM。**
 
-| AC | 判定 | 主要證據 |
-|---|---|---|
-| AC-1 | ✅ | 報告 §1 對照表 + 本輪 T1-9/T1-10 親測(0/0/0 兩庫相等;備份非空含三表) |
-| AC-2 | ✅ | T1-1(build 0 警告 0 錯誤)+ v1 已驗八項移除(commit a17f71f diff) |
-| AC-3 | ✅ | T1-2(11/11;PartServiceTests 不存在) |
-| AC-4 | ✅ | T1-6~T1-8 三步驟親測 + 報告 §3 留痕(FK 為 Restrict,見 T3 觀察 1) |
-| AC-5 | ✅ | T1-3/T1-4 |
-| AC-6 | ✅ | T1-5 |
-| AC-7 | ✅ | S-5 親自重掃 + 報告 §5 結果表 |
-| AC-8 | ✅ | 無權限分支:前置不成立已回報 + 完整手動指引明標「待 Eric 手動執行」(S-3/S-4;殘留人工動作見 T3 J-1) |
-| AC-9 | ✅ | T1-11/T1-12 + S-8 |
-| AC-10 | ✅ | S-9(Conventional Commits、無 push、停沙箱重跑) |
-
-後續交辦(非驗收阻擋):Eric 依 `docs/report20260707-1.md` §6.3 手動完成 Cloudflare 儀表板三步驟並以 curl 驗證;PM 於下版規格處理 T3 三則觀察。
+- T1/T2 全過:兩 repo build/test 全綠(11/33/67/89)、A5 與 B3-1 migration 鏈本輪已由 Tester 親自重跑補齊複驗、前輪 F-1/F-2/F-3 全部解除、RD 報告與實況逐項吻合。**程式碼層面本回歸零問題,RD 無待辦。**
+- 唯一未結案項為規格議題 F-4:AC-B5「筆數 > 0」與「來源三表自始 0 筆」的既成事實矛盾,PM 下一輪請依 T3 節建議修訂 AC-B5 判定標準(建議甲案:改為「與備份檔來源筆數一致」),或明文訂定種子資料策略;修訂後本項可直接依新標準結案,無須 RD 動工。
