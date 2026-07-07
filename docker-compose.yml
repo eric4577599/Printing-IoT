@@ -57,7 +57,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
       - POSTGRES_DB=${POSTGRES_DB:-FlexoDB}
-      # Phase 3.9: SmartPartsDB and MmsDB removed — all tables now in FlexoDB
+      # Phase 3.9: 舊拆分資料庫已移除 — 所有資料表現整併於 FlexoDB
     ports:
       - "5433:5432"
     volumes:
@@ -100,12 +100,12 @@ services:
   # MaintenanceSchedules/SpareParts/MaintenanceRecords 資料表已由
   # migration RemoveMaintenanceModule 自 FlexoDB 移除
   #
-  # EXTRACTED: 零件管理(Smart Parts)已隨 C′ 遷移移入 MM(2026-07)
-  # sm-frontend(原 port 5100)服務移除、smart-parts-frontend/ 目錄刪除
-  # Parts/Suppliers/SupplierParts 三表已由 migration RemoveSmartPartsModule
+  # EXTRACTED: 零件(Smart Parts)模組已隨 C′ 遷移移入 MM(2026-07)
+  # 原 port 5100 前端服務與對應前端目錄已刪除
+  # Parts/Suppliers/SupplierParts 三表已由 2026-07-06 的移除 migration
   # 自 FlexoDB 移除;資料與功能改由 MM 承接:
   #   /Volumes/G70Pro/cusor pool/MM/(mms.ericchh.work,/api/v1/parts)
-  # 舊網址 smartparts.ericchh.work 已停用並轉址至 mms.ericchh.work
+  # 舊 Smart Parts 子網域已停用並轉址至 mms.ericchh.work
   # ======================================================================
 
 volumes:
