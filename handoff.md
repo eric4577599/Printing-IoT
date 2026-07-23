@@ -1,8 +1,45 @@
 # Handoff — Claude(Printing IoT)
-> 最後更新:2026-07-08 20:09(回4:J-1 Git 治理缺口文件修正)
+> 最後更新:2026-07-24 07:30(UI 對抗性稽核 /loop 收工,16 筆確認缺陷僅修 reports 3 筆)
 
 ## Current Task
-C′ 遷移**全部完成**:P0–P5 + 遺留小修 + 整體回歸驗證,共六回 PM/RD/Tester 全數 PASS。無進行中工作。
+**UI 對抗性稽核與修正(進行中,Eric 喊收工暫停)**。/loop workflow:7 獵手(6 UI 頁 + api-contract)→ 每筆發現三視角(repro/correctness/impact)反駁投票 ≥2 存活。因兩度撞 session 限額,驗證分三段跑(audit 全數完成並快取;dashboard/schedule/reports 驗證完成;analysis/settings/shell/api-contract 驗證**未完成**,最後一次 resume 被收工指令中止)。
+
+### 稽核結果現況
+- **已確認 16 筆**(三票驗證存活):dashboard 8、schedule 6、reports 2 — 完整清單與 file:line 見 `/private/tmp/claude-501/-Volumes-G70Pro-cusor-pool-Printing-IoT/ceb1c530-0341-40f9-9db4-b556dd3c7d48/tasks/wrjvh381c.output`(tmp 檔可能被清,重要摘要如下)
+- **已修正並實測 3 筆**(commit `3693556`,容器已重建):reports 生產明細 mock 資料→真實 productionHistory+日期過濾、手動報工寫回持久化、停車記錄接 stopReasons(瀏覽器端對端驗證通過)
+- **確認未修 13 筆**(下次接續,severity 排序):
+  1. [critical] Dashboard.jsx:218 handleFinish 用過期閉包 di1(F4 永遠「生產數量 0」)→ 改 currentDataRef.current.di1
+  2. [high] Dashboard.jsx:228 handleConfirmFinish 讀不存在的 currentData.total_length → avgSpeed/OEE 全 NaN → 改 di1
+  3. [high] Dashboard.jsx:58 mqttClientRef 從未 connect(完工不會發後端、remote 模擬無效)→ 參考 DebugDashboard.jsx getBrokerUrl/mqtt.connect 補連線 effect
+  4. [high] FinishOrderModal.jsx:29 effect 依賴 [isOpen, initialData],父層每秒重建 initialData → 輸入每秒被重設 → 只在 closed→open 邊緣初始化
+  5. [high] Dashboard.jsx:689 polling 只映射 line_speed/di1/status_code,di3~di10 不進 currentData → 狀態燈永遠 OFF(注意:後端 realtime 是否回 di3-di10 未確認,api-contract 稽核說沒有 → 可能要動後端)
+  6. [medium] Dashboard.jsx:271 data.defectQty 不存在(modal 傳的是 defects 陣列)→ 應加總 defects[].qty
+  7. [medium] Dashboard.jsx:324 佇列僅剩 1 筆時完工不移除工單/不歸零/不清後端(if orders.length>1 才處理)
+  8. [medium] StatusPanel.jsx:113 dashboard.stopReasons.* i18n 鍵缺失
+  9. [medium] ProductDetailModal.jsx:78 dashboard.schedule.notes 鍵缺失
+  10. [medium] Schedule.jsx:272 產品庫 Reload 按鈕無 onClick
+  11. [medium] Schedule.jsx:284 產品庫搜尋框+搜尋類型 radio 未實作
+  12. [medium] MainLayout.jsx:229 saveProduct 以 boxNo upsert,編輯時改 boxNo 會變新增重複
+  13. [low] AddScheduleModal.jsx:38 訂單號碼標示不可重複但無檢查;LanguageContext.jsx:742 en/zh-CN 缺 sheets、flute_single 鍵
+  + [medium] ReportsPage.jsx 匯出/離開按鈕無 handler、預設日期用 UTC(台灣 00:00-07:59 會是昨天)— reports 剩餘 2 筆
+- **待驗證 ~20 筆**(analysis 5、settings 6、shell 4、api-contract 8,票數不足非被反駁):resume 指令 `Workflow({scriptPath: "<session>/workflows/scripts/ui-adversarial-audit-wf_39a7cca2-0d5.js", resumeFromRunId: "wf_39a7cca2-0d5"})`(scriptPath 在 session 目錄,新 session 可能需重寫 workflow;audit 快取在 run wf_39a7cca2-0d5)
+
+## (歷史)2026-07-13 紙上補文件回合
+五項 backlog/風險紙上三件套:docs/spec20260713-1.md、docs/report20260713-1.md、tests/report-20260713-1.md。無程式異動。
+
+## 2026-07-13 紙上補文件回合(未寫任何 code)
+- **刻意未用 `pm-rd-tester` 命名工作流**(handoff.md:43-49 既知 bug:會誤讀本目錄 spec-v1/v2/v3 舊檔;且該工作流會寫真 code,違反本次「不寫程式」指示)→ 改自行紙上執行 PM→RD→Tester。
+- 先派 4 個 read-only Explore agent 抓真實 file:line grounding(排程 DnD、i18n、MQTT/WISE+Redis、Cloudflare),再手寫三份文件,故規格引用皆對得上真實碼。
+- 交付(**日期式命名,刻意不用 spec-v{n} 以免再餵工作流 bug**):
+  - `docs/spec20260713-1.md`(PM:五項需求/規格/AC/未完成計劃)
+  - `docs/report20260713-1.md`(RD:設計/受影響檔/模擬邏輯走查/未完成實作計劃,code 皆標【示意,未落地】)
+  - `tests/report-20260713-1.md`(Tester:T1/T2/T3 模擬測試矩陣 + 路由判定)
+- 關鍵發現(grounding):dnd-kit 已裝、後端 `POST /api/orders/reorder` 已存在僅前端未接;i18n 是自製 Context,`vn`/`th` 已有 stub(僅約30-40/265 鍵);Redis 全單鍵、程式面本質 cluster-safe;WISE 速度計算對 rollover/接點彈跳有預判缺陷(D1/D2,待真機定值)。
+- Tester 結論:無一項因規格矛盾需回 PM;回 RD 兩處(S3 翻譯、S4 待真機)皆屬「工作未做/待硬體」非缺陷;T3 全 BLOCKED 於外部資源(Eric 手動/OT 硬體/Cluster 環境)。
+- 建議推進序:S3 越泰文 → S2 拖拉 Phase1 → S5 Redis 小改 → S1 Cloudflare → S2 Phase2/S4。
+
+## (以下為 C′ 遷移歷史)
+C′ 遷移**全部完成**:P0–P5 + 遺留小修 + 整體回歸驗證,共六回 PM/RD/Tester 全數 PASS。
 
 ## Done
 - P0–P4 三回(2026-07-06~07):零件管理移出主系統併入 MM,詳 docs/report20260707-2.md
