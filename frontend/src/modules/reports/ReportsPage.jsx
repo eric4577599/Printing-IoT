@@ -22,19 +22,13 @@ const reportTypes = [
     { id: 'stop', label: '停車原因 (Stop Reasons)' },
 ];
 
-// Mock Data matching screenshot style
-const mockOrders = [
-    { id: '005', client: 'aaa', orderNo: '123456789012', product: 'aaa', shift: 'A', speed: 0, qty: 2000, count: 1, good: 1, bad: 0, start: '2021/07/02 08:00:00', test: '2021...', status: 'Normal' },
-    { id: '006', client: 'aaa', orderNo: '123456789012', product: 'aaa', shift: 'A', speed: 0, qty: 2000, count: 2, good: 2, bad: 0, start: '2021/07/02 21:51:27', test: '2021...', status: 'Normal' },
-    { id: '007', client: '花東製米...', orderNo: '7100257721...', product: '', shift: 'A', speed: 70, qty: 1008, count: 1012, good: 1008, bad: 0, start: '2021/07/06 16:00:00', test: '2021...', status: 'Running' }, // active-like row
-    { id: '009', client: '屏東縣蔬...', orderNo: '112233445566', product: '', shift: 'A', speed: -15, qty: 2000, count: 2002, good: 0, bad: 0, start: '2021/07/06 08:00:00', test: '2021...', status: 'Error' },
-];
-
-const mockStopLogs = {
-    '005': [
-        { start: '14:16:59', end: '14:19:14', code: '001', reason: '送紙歪斜 (Feed Skew)' }
-    ],
-    '007': []
+// 格式化完工時間戳為 YYYY/MM/DD HH:mm:ss(顯示用)
+const formatFinishedAt = (isoString) => {
+    if (!isoString) return '-';
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return '-';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 };
 
 const ReportsPage = () => {
@@ -45,6 +39,9 @@ const ReportsPage = () => {
     const [startDate, setStartDate] = useState(today);
     const [endDate, setEndDate] = useState(today);
     const [selectedShift, setSelectedShift] = useState('全部');
+
+    // 生產明細實際套用的查詢區間(按「確認」才更新,與輸入框暫存值分離)
+    const [appliedRange, setAppliedRange] = useState({ start: today, end: today });
 
     // 載入生產歷史資料
     const [productionHistory, setProductionHistory] = useState([]);
@@ -76,24 +73,43 @@ const ReportsPage = () => {
         }
     }, []);
 
+    // 生產明細:依已套用的查詢區間過濾真實生產紀錄
+    const detailRecords = useMemo(
+        () => filterByDateRange(productionHistory, appliedRange.start, appliedRange.end),
+        [productionHistory, appliedRange]
+    );
+
     const handleOpenUpload = () => {
         if (!selectedOrderId) {
             alert('請先選擇一筆訂單 (Please select an order first)');
             return;
         }
-        const order = mockOrders.find(o => o.id === selectedOrderId);
-        setEditData({ good: order.good, bad: order.bad });
+        const record = productionHistory.find(r => r.id === selectedOrderId);
+        if (!record) return;
+        setEditData({ good: record.goodQty ?? 0, bad: record.defectQty ?? 0 });
         setShowUploadModal(true);
     };
 
+    // 手動上傳報工:更新所選紀錄的良品/不良數並寫回 localStorage
     const handleSaveUpload = () => {
-        alert(`Saved: Good=${editData.good}, Bad=${editData.bad}`);
+        const goodQty = Number(editData.good) || 0;
+        const defectQty = Number(editData.bad) || 0;
+        const updated = productionHistory.map(r =>
+            r.id === selectedOrderId ? { ...r, goodQty, defectQty } : r
+        );
+        setProductionHistory(updated);
+        try {
+            localStorage.setItem('productionHistory', JSON.stringify(updated));
+        } catch (err) {
+            console.error('Failed to save production history:', err);
+        }
         setShowUploadModal(false);
     };
 
     // Render "Production Details" Layout
     const renderDetailsView = () => {
-        const selectedLogs = selectedOrderId ? mockStopLogs[selectedOrderId] || [] : [];
+        const selectedRecord = detailRecords.find(r => r.id === selectedOrderId);
+        const selectedLogs = selectedRecord?.stopReasons || [];
 
         return (
             <div className={styles.content}>
@@ -115,7 +131,7 @@ const ReportsPage = () => {
                                 value={endDate}
                                 onChange={e => setEndDate(e.target.value)}
                             />
-                            <button className={styles.btn} onClick={() => alert(`Querying from ${startDate} to ${endDate}`)}>確認 (Confirm)</button>
+                            <button className={styles.btn} onClick={() => { setAppliedRange({ start: startDate, end: endDate }); setSelectedOrderId(null); }}>確認 (Confirm)</button>
                         </div>
 
                         <div className={styles.actionButtons}>
@@ -140,36 +156,36 @@ const ReportsPage = () => {
                         <div className={styles.headerCell} style={{ width: 60 }}>計件數</div>
                         <div className={styles.headerCell} style={{ width: 60 }}>良品</div>
                         <div className={styles.headerCell} style={{ width: 60 }}>不良</div>
-                        <div className={styles.headerCell} style={{ width: 150 }}>開始時間</div>
-                        <div className={styles.headerCell} style={{ width: 50 }}>試車</div>
+                        <div className={styles.headerCell} style={{ width: 150 }}>完工時間</div>
+                        <div className={styles.headerCell} style={{ width: 50 }}>OEE</div>
                     </div>
                     <div className={styles.tableBody}>
-                        {mockOrders.map((order, index) => {
-                            const isSelected = selectedOrderId === order.id;
-                            // Based on screenshot, text color logic seems specific. 
-                            // Let's use Pink for OrderNo/Client if not selected, and White if selected.
+                        {detailRecords.length === 0 ? (
+                            <div style={{ padding: 10, textAlign: 'center', color: '#888' }}>查詢區間內無生產紀錄</div>
+                        ) : detailRecords.map((record, index) => {
+                            const isSelected = selectedOrderId === record.id;
                             const rowStyle = `${styles.tableRow} ${isSelected ? styles.selectedRow : ''}`;
-                            const textClass = isSelected ? '' : styles.textRed; // Use Red/Pink for ID/Client as seen in screenshot (pinkish)
+                            const textClass = isSelected ? '' : styles.textRed;
 
                             return (
                                 <div
-                                    key={index}
+                                    key={record.id}
                                     className={rowStyle}
-                                    onClick={() => setSelectedOrderId(order.id)}
+                                    onClick={() => setSelectedOrderId(record.id)}
                                 >
-                                    <div className={`${styles.cell} ${styles.cellCenter}`} style={{ width: 30 }}><input type="checkbox" /></div>
-                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 50 }}>{order.id}...</div>
-                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 120 }}>{order.client}</div>
-                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 140 }}>{order.orderNo}</div>
-                                    <div className={`${styles.cell} ${textClass}`} style={{ flex: 1 }}>{order.product}</div>
-                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 40 }}>{order.shift}</div>
-                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 50 }}>{order.speed}</div>
-                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 60 }}>{order.qty}</div>
-                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 60 }}>{order.count}</div>
-                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 60 }}>{order.good}</div>
-                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 60 }}>{order.bad}</div>
-                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 150 }}>{order.start}</div>
-                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 50 }}>{order.test}</div>
+                                    <div className={`${styles.cell} ${styles.cellCenter}`} style={{ width: 30 }}><input type="checkbox" checked={isSelected} readOnly /></div>
+                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 50 }}>{index + 1}</div>
+                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 120 }}>{record.customer}</div>
+                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 140 }}>{record.orderNo}</div>
+                                    <div className={`${styles.cell} ${textClass}`} style={{ flex: 1 }}>{record.productName}</div>
+                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 40 }}>{record.shift}</div>
+                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 50 }}>{record.avgSpeed}</div>
+                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 60 }}>{record.targetQty}</div>
+                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 60 }}>{(record.goodQty || 0) + (record.defectQty || 0)}</div>
+                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 60 }}>{record.goodQty}</div>
+                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 60 }}>{record.defectQty}</div>
+                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 150 }}>{formatFinishedAt(record.finishedAt)}</div>
+                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 50 }}>{record.oee != null ? `${record.oee}%` : '-'}</div>
                                 </div>
                             );
                         })}
@@ -180,19 +196,17 @@ const ReportsPage = () => {
                 <div className={styles.lowerGridContainer}>
                     <div className={styles.tableHeader}>
                         <div className={styles.headerCell} style={{ flex: 1 }}>停車開始</div>
-                        <div className={styles.headerCell} style={{ flex: 1 }}>停車結束</div>
-                        <div className={styles.headerCell} style={{ flex: 1 }}>停車代碼</div>
+                        <div className={styles.headerCell} style={{ flex: 1 }}>持續時間</div>
                         <div className={styles.headerCell} style={{ flex: 3 }}>停車原因</div>
                     </div>
                     <div className={styles.tableBody}>
                         {selectedLogs.length === 0 ? (
-                            <div style={{ padding: 10, textAlign: 'center', color: '#fff' }}></div>
+                            <div style={{ padding: 10, textAlign: 'center', color: '#888' }}>{selectedOrderId ? '此筆紀錄無停車記錄' : ''}</div>
                         ) : (
                             selectedLogs.map((log, idx) => (
                                 <div key={idx} className={styles.tableRow} style={{ backgroundColor: '#fff' }}>
-                                    <div className={styles.cell} style={{ flex: 1 }}>{log.start}</div>
-                                    <div className={styles.cell} style={{ flex: 1 }}>{log.end}</div>
-                                    <div className={styles.cell} style={{ flex: 1 }}>{log.code}</div>
+                                    <div className={styles.cell} style={{ flex: 1 }}>{log.time}</div>
+                                    <div className={styles.cell} style={{ flex: 1 }}>{log.duration}</div>
                                     <div className={styles.cell} style={{ flex: 3 }}>{log.reason}</div>
                                 </div>
                             ))
