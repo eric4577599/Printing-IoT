@@ -1,28 +1,33 @@
 # Handoff — Claude(Printing IoT)
-> 最後更新:2026-07-24 07:30(UI 對抗性稽核 /loop 收工,16 筆確認缺陷僅修 reports 3 筆)
+> 最後更新:2026-07-24 07:40(UI 對抗性稽核 /loop 接續:確認缺陷 16→修 15、僅 #5 延後)
 
 ## Current Task
-**UI 對抗性稽核與修正(進行中,Eric 喊收工暫停)**。/loop workflow:7 獵手(6 UI 頁 + api-contract)→ 每筆發現三視角(repro/correctness/impact)反駁投票 ≥2 存活。因兩度撞 session 限額,驗證分三段跑(audit 全數完成並快取;dashboard/schedule/reports 驗證完成;analysis/settings/shell/api-contract 驗證**未完成**,最後一次 resume 被收工指令中止)。
+**UI 對抗性稽核與修正**。/loop workflow:7 獵手(6 UI 頁 + api-contract)→ 每筆發現三視角(repro/correctness/impact)反駁投票 ≥2 存活。**16 筆確認缺陷已修 15 筆(3 筆 reports 於 3693556、12 筆本回合於 b9e4123),僅 #5 di3-di10 延後(需後端/硬體決策)。** 尚有 ~20 筆待驗證項(票數不足,非被反駁),需 resume workflow。
 
 ### 稽核結果現況
-- **已確認 16 筆**(三票驗證存活):dashboard 8、schedule 6、reports 2 — 完整清單與 file:line 見 `/private/tmp/claude-501/-Volumes-G70Pro-cusor-pool-Printing-IoT/ceb1c530-0341-40f9-9db4-b556dd3c7d48/tasks/wrjvh381c.output`(tmp 檔可能被清,重要摘要如下)
-- **已修正並實測 3 筆**(commit `3693556`,容器已重建):reports 生產明細 mock 資料→真實 productionHistory+日期過濾、手動報工寫回持久化、停車記錄接 stopReasons(瀏覽器端對端驗證通過)
-- **確認未修 13 筆**(下次接續,severity 排序):
-  1. [critical] Dashboard.jsx:218 handleFinish 用過期閉包 di1(F4 永遠「生產數量 0」)→ 改 currentDataRef.current.di1
-  2. [high] Dashboard.jsx:228 handleConfirmFinish 讀不存在的 currentData.total_length → avgSpeed/OEE 全 NaN → 改 di1
-  3. [high] Dashboard.jsx:58 mqttClientRef 從未 connect(完工不會發後端、remote 模擬無效)→ 參考 DebugDashboard.jsx getBrokerUrl/mqtt.connect 補連線 effect
-  4. [high] FinishOrderModal.jsx:29 effect 依賴 [isOpen, initialData],父層每秒重建 initialData → 輸入每秒被重設 → 只在 closed→open 邊緣初始化
-  5. [high] Dashboard.jsx:689 polling 只映射 line_speed/di1/status_code,di3~di10 不進 currentData → 狀態燈永遠 OFF(注意:後端 realtime 是否回 di3-di10 未確認,api-contract 稽核說沒有 → 可能要動後端)
-  6. [medium] Dashboard.jsx:271 data.defectQty 不存在(modal 傳的是 defects 陣列)→ 應加總 defects[].qty
-  7. [medium] Dashboard.jsx:324 佇列僅剩 1 筆時完工不移除工單/不歸零/不清後端(if orders.length>1 才處理)
-  8. [medium] StatusPanel.jsx:113 dashboard.stopReasons.* i18n 鍵缺失
-  9. [medium] ProductDetailModal.jsx:78 dashboard.schedule.notes 鍵缺失
-  10. [medium] Schedule.jsx:272 產品庫 Reload 按鈕無 onClick
-  11. [medium] Schedule.jsx:284 產品庫搜尋框+搜尋類型 radio 未實作
-  12. [medium] MainLayout.jsx:229 saveProduct 以 boxNo upsert,編輯時改 boxNo 會變新增重複
-  13. [low] AddScheduleModal.jsx:38 訂單號碼標示不可重複但無檢查;LanguageContext.jsx:742 en/zh-CN 缺 sheets、flute_single 鍵
-  + [medium] ReportsPage.jsx 匯出/離開按鈕無 handler、預設日期用 UTC(台灣 00:00-07:59 會是昨天)— reports 剩餘 2 筆
-- **待驗證 ~20 筆**(analysis 5、settings 6、shell 4、api-contract 8,票數不足非被反駁):resume 指令 `Workflow({scriptPath: "<session>/workflows/scripts/ui-adversarial-audit-wf_39a7cca2-0d5.js", resumeFromRunId: "wf_39a7cca2-0d5"})`(scriptPath 在 session 目錄,新 session 可能需重寫 workflow;audit 快取在 run wf_39a7cca2-0d5)
+- **已修正並驗證 15/16 筆**:
+  - commit `3693556`(reports 3 筆,已重建容器實測):生產明細接真實 productionHistory+日期過濾、手動報工持久化、停車記錄接 stopReasons
+  - commit `b9e4123`(本回合 12 筆,vite build 通過 + vitest 40 passed;**容器尚未重建**):
+    - #1 Dashboard handleFinish 過期閉包 di1 → currentDataRef.current.di1
+    - #2 Dashboard handleConfirmFinish total_length(NaN)→ di1
+    - #3 Dashboard 補 MQTT 連線 effect(ws 9001,參考 DebugDashboard)
+    - #4 FinishOrderModal effect 只依 isOpen、ref 持 initialData、closed→open 才初始化(+ 新增回歸測試 3 筆)
+    - #6 defectQty 由 modal defects 陣列加總
+    - #7 佇列剩 1 筆完工正確移除/歸零/清後端(guard >=1 且保護 orders[1])
+    - #8/#9/#13 i18n:dashboard.stopReasons.*、dashboard.schedule.notes、cn/en 補 flute_single+sheets
+    - #10/#11 Schedule 產品庫 Reload onClick + 搜尋框/radio(過濾保留原始 index)
+    - #12 MainLayout saveProduct 優先以 id upsert(編輯改 boxNo 不再重複)
+    - #13 AddScheduleModal 訂單號碼重複檢查
+    - reports 剩餘:匯出 CSV、離開導回監控、預設日期改本地時區
+- **確認未修 1 筆(延後,需後端+硬體決策)**:
+  - **#5 [high] di3-di10 狀態燈永遠 OFF**:已查證後端 `MonitorData`(PrintingIoT.Core/Models/MonitorData.cs)僅 5 欄(DeviceId/Speed/di1/Status/Timestamp),realtime API 根本不回 di3-di10。StatusPanel 對有配置 errorSignal/runSignal(如 di3~di10)的機台部位因 currentData 無該欄恆判 OFF。**非安全前端修正**:需 (a) WISE 模組 DI 點位→機台部位對映決策(Eric/硬體);(b) 後端 MonitorData 擴充 di3-di10 + Worker 寫入 Redis;(c) 前端 polling 映射。等 Eric 定 DI 對映再動。
+- **待驗證 ~20 筆**(analysis 5、settings 6、shell 4、api-contract 8,票數不足非被反駁):resume 指令 `Workflow({scriptPath: "<session>/workflows/scripts/ui-adversarial-audit-wf_39a7cca2-0d5.js", resumeFromRunId: "wf_39a7cca2-0d5"})`(scriptPath 在舊 session 目錄,新 session 需重寫 workflow;原 audit 快取在 run wf_39a7cca2-0d5,新 session 未必可用)
+
+## Next Step(UI 稽核)
+1. **容器重建**:`printingiot-frontend-1`(:5600)尚未以 b9e4123 重建,前端修正未在跑起來的站台生效。Eric 確認無展示中即可重建。
+2. **#5 di3-di10**:需 Eric 提供 WISE DI 點位→機台部位對映後,才能安全實作後端+前端。
+3. **待驗證 ~20 筆**:若要收尾需重跑 workflow(新 session 重寫獵手 script)。
+4. 主系統新增 commit(含 b9e4123)是否 push 待 Eric 個別指示(全域紅線:未經明確同意不 push)。
 
 ## (歷史)2026-07-13 紙上補文件回合
 五項 backlog/風險紙上三件套:docs/spec20260713-1.md、docs/report20260713-1.md、tests/report-20260713-1.md。無程式異動。
