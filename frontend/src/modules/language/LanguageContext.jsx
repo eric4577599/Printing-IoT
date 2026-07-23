@@ -102,7 +102,8 @@ export const translations = {
                 noQueuedOrders: '無排程訂單',
                 autoNextOn: '【 自動下一筆 ON 】',
                 autoNextOff: '【 自動下一筆 OFF 】',
-                sheets: '張數'
+                sheets: '張數',
+                notes: '備註'
             },
             machineStatus: {
                 title: '機器狀態',
@@ -110,6 +111,11 @@ export const translations = {
                 normal: '正常',
                 warning: '警告',
                 error: '異常'
+            },
+            stopReasons: {
+                startTime: '開始時間',
+                duration: '時長',
+                reason: '原因'
             },
             alerts: {
                 plcDisconnected: 'PLC 連線中斷，無法開始生產！',
@@ -369,7 +375,8 @@ export const translations = {
                 fluteSettings: '楞型设置',
                 flute: '楞型',
                 thickness: '厚度',
-                addFlute: '新增楞型'
+                addFlute: '新增楞型',
+                flute_single: '楞'
             },
             formula: {
                 title: '计算公式参数设置',
@@ -426,7 +433,9 @@ export const translations = {
                 boxType: '盒型',
                 noQueuedOrders: '无排程订单',
                 autoNextOn: '【 自动下一笔 ON 】',
-                autoNextOff: '【 自动下一笔 OFF 】'
+                autoNextOff: '【 自动下一笔 OFF 】',
+                sheets: '张数',
+                notes: '备注'
             },
             machineStatus: {
                 title: '机器状态',
@@ -434,6 +443,11 @@ export const translations = {
                 normal: '正常',
                 warning: '警告',
                 error: '异常'
+            },
+            stopReasons: {
+                startTime: '开始时间',
+                duration: '时长',
+                reason: '原因'
             },
             alerts: {
                 plcDisconnected: 'PLC 连接中断，无法开始生产！',
@@ -692,7 +706,8 @@ export const translations = {
                 fluteSettings: 'Flute Settings',
                 flute: 'Flute',
                 thickness: 'Thickness',
-                addFlute: 'Add Flute'
+                addFlute: 'Add Flute',
+                flute_single: 'Flute'
             },
             formula: {
                 title: 'Formula Settings',
@@ -749,7 +764,9 @@ export const translations = {
                 boxType: 'Box Type',
                 noQueuedOrders: 'No Queued Orders',
                 autoNextOn: '【 Auto Next ON 】',
-                autoNextOff: '【 Auto Next OFF 】'
+                autoNextOff: '【 Auto Next OFF 】',
+                sheets: 'Sheets',
+                notes: 'Notes'
             },
             machineStatus: {
                 title: 'Machine Status',
@@ -757,6 +774,11 @@ export const translations = {
                 normal: 'Normal',
                 warning: 'Warning',
                 error: 'Error'
+            },
+            stopReasons: {
+                startTime: 'Start Time',
+                duration: 'Duration',
+                reason: 'Reason'
             },
             alerts: {
                 plcDisconnected: 'PLC Disconnected! Cannot start production.',

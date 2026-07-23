@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import mqtt from 'mqtt';
 import styles from './Dashboard.module.css';
 import SchedulePanel from '../components/dashboard/SchedulePanel';
 import StatusPanel from '../components/dashboard/StatusPanel';
@@ -131,6 +132,26 @@ const Dashboard = () => {
         fetchSections();
     }, []);
 
+    // Effect: MQTT 連線(供 remote 模擬發佈與完工紀錄上傳)
+    // 修正:mqttClientRef 原本從未 connect,導致 remote 模擬不會發訊、完工紀錄永遠送不到後端。
+    // 參考 DebugDashboard 的 getBrokerUrl / mqtt.connect 模式,連 docker-compose 暴露的 ws 9001 埠。
+    useEffect(() => {
+        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const brokerUrl = `${protocol}://${window.location.hostname}:9001`;
+        const client = mqtt.connect(brokerUrl, {
+            clientId: `dashboard_${Math.random().toString(16).substring(2, 8)}`,
+            keepalive: 60,
+        });
+        client.on('connect', () => addLog('MQTT connected'));
+        client.on('error', (err) => console.error('MQTT connection error:', err));
+        mqttClientRef.current = client;
+        return () => {
+            client.end();
+            mqttClientRef.current = null;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
 
 
     // Helper: Format Seconds to HH:MM:SS
@@ -215,7 +236,8 @@ const Dashboard = () => {
     const [showFinishModal, setShowFinishModal] = useState(false);
 
     const handleFinish = () => {
-        const currentCount = Math.floor(currentData.di1 - resetOffset);
+        // 修正:F4 完工透過 currentDataRef 取即時 di1,避免 keydown effect 閉包捕捉到過期 currentData 導致永遠判定「生產數量 0」
+        const currentCount = Math.floor(currentDataRef.current.di1 - resetOffset);
         if (currentCount > 0) {
             setShowFinishModal(true);
         } else {
@@ -225,7 +247,10 @@ const Dashboard = () => {
     };
 
     const handleConfirmFinish = (data) => {
-        const currentCount = Math.floor(currentData.total_length - resetOffset);
+        // 修正:原讀不存在的 currentData.total_length(恆為 NaN,連帶 avgSpeed/OEE 全 NaN),改用即時 di1
+        const currentCount = Math.floor(currentDataRef.current.di1 - resetOffset);
+        // 修正:FinishOrderModal 傳回的是 defects 陣列(非單一 defectQty),需加總各項不良數量
+        const defectQty = (data.defects || []).reduce((sum, d) => sum + (Number(d.qty) || 0), 0);
         addLog(`Order ${orders[0].id} Finished. Good: ${data.goodQty}, Operator: ${data.operator}`);
 
         // --- Auto-Save to Product Library ---
@@ -268,7 +293,7 @@ const Dashboard = () => {
             shift: user?.shift || 'Day',
             targetQty: finishedOrder.qty || 0,
             goodQty: data.goodQty || currentCount,
-            defectQty: data.defectQty || 0,
+            defectQty: defectQty,
             prepTime: Math.round(prepTimeSeconds / 60 * 10) / 10,   // 準備時間（分鐘，保留1位小數）
             runTime: Math.round(jobRunTime / 60 * 10) / 10,         // 運轉時間（分鐘）
             stopTime: Math.round(jobStopTime / 60 * 10) / 10,       // 停車時間（分鐘）
@@ -305,7 +330,7 @@ const Dashboard = () => {
                 timestamp: new Date().toISOString(),
                 details: {
                     goodQty: data.goodQty || currentCount,
-                    defectQty: data.defectQty || 0,
+                    defectQty: defectQty,
                     operator: data.operator || user?.name || 'Unknown',
                     avgSpeed: avgSpeedCalc,
                     oee: oeeCalc,
@@ -321,11 +346,13 @@ const Dashboard = () => {
         }
         // -----------------------------------------
 
-        if (orders.length > 1) {
+        // 修正:原僅 orders.length > 1 才處理,佇列剩最後 1 筆完工時工單不移除/計數不歸零/後端不清除。
+        // slice(1) 對長度 1 會得到空陣列,可同時處理「換下一筆」與「完成最後一筆」兩種情境。
+        if (orders.length >= 1) {
             const nextOrders = orders.slice(1);
             setOrders(nextOrders);
-            setResetOffset(currentData.di1);
-            if (selectedOrderId === orders[1].id) setSelectedOrderId(null);
+            setResetOffset(currentDataRef.current.di1);
+            if (orders[1] && selectedOrderId === orders[1].id) setSelectedOrderId(null);
 
             setHasLoggedStop(false);
             setStopReasons([]);

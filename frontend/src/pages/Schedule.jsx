@@ -26,6 +26,10 @@ const Schedule = () => {
     const [selectedScheduleId, setSelectedScheduleId] = useState(null);
     const [selectedProductIndex, setSelectedProductIndex] = useState(null);
 
+    // 產品庫搜尋狀態(修正:原搜尋框與 boxNo/customer radio 皆未實作)
+    const [productSearch, setProductSearch] = useState('');
+    const [productSearchType, setProductSearchType] = useState('boxNo'); // 'boxNo' | 'customer'
+
     // --- Graphic Linking Logic ---
     const [lastClickedSection, setLastClickedSection] = useState('none'); // 'schedule', 'product'
 
@@ -141,6 +145,29 @@ const Schedule = () => {
         saveProduct(formData);
         setShowProductModal(false);
     };
+
+    // 產品庫重新載入(修正:原 🔄 按鈕無 onClick)。由 localStorage 重新同步產品清單並清除搜尋與選取。
+    const handleReloadProducts = () => {
+        try {
+            const saved = localStorage.getItem('products');
+            if (saved) setProducts(JSON.parse(saved));
+        } catch (e) {
+            console.error('Failed to reload products', e);
+        }
+        setProductSearch('');
+        setSelectedProductIndex(null);
+        addLog('Product library reloaded');
+    };
+
+    // 依搜尋條件過濾產品(保留原始 index 供選取/刪除正確對應 products 陣列)
+    const filteredProductEntries = products
+        .map((prod, i) => ({ prod, i }))
+        .filter(({ prod }) => {
+            const q = productSearch.trim().toLowerCase();
+            if (!q) return true;
+            const field = productSearchType === 'customer' ? prod.customer : prod.boxNo;
+            return String(field || '').toLowerCase().includes(q);
+        });
 
     /**
      * 新增排程 - 彈出 Modal 讓使用者輸入訂單參數
@@ -261,15 +288,15 @@ const Schedule = () => {
                             {/* Radios */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#fff', fontSize: '0.9rem', marginRight: '5px' }}>
                                 <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                    <input type="radio" name="searchType" defaultChecked style={{ marginRight: '4px' }} /> {t('dashboard.schedule.boxNo')}
+                                    <input type="radio" name="searchType" checked={productSearchType === 'boxNo'} onChange={() => setProductSearchType('boxNo')} style={{ marginRight: '4px' }} /> {t('dashboard.schedule.boxNo')}
                                 </label>
                                 <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                    <input type="radio" name="searchType" style={{ marginRight: '4px' }} /> {t('dashboard.schedule.customer')}
+                                    <input type="radio" name="searchType" checked={productSearchType === 'customer'} onChange={() => setProductSearchType('customer')} style={{ marginRight: '4px' }} /> {t('dashboard.schedule.customer')}
                                 </label>
                             </div>
 
                             {/* Refresh Icon */}
-                            <button className={styles.iconBtn} title="Reload" style={{ fontSize: '1.2rem', padding: '0 5px' }}>🔄</button>
+                            <button onClick={handleReloadProducts} className={styles.iconBtn} title="Reload" style={{ fontSize: '1.2rem', padding: '0 5px' }}>🔄</button>
 
                             {/* Spacer */}
                             <div style={{ flex: 1 }}></div>
@@ -281,7 +308,7 @@ const Schedule = () => {
 
                         {/* Row 2: Search & Delete */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                            <input className={styles.searchInput} placeholder={t('ui.buttons.search')} style={{ flex: 1, height: '30px' }} />
+                            <input className={styles.searchInput} placeholder={t('ui.buttons.search')} value={productSearch} onChange={(e) => setProductSearch(e.target.value)} style={{ flex: 1, height: '30px' }} />
                             <button onClick={handleDeleteProduct} className={styles.redBtn} style={{ minWidth: '70px', height: '30px' }}>{t('ui.buttons.delete')}</button>
                         </div>
                     </div>
@@ -303,7 +330,7 @@ const Schedule = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {products.map((prod, i) => (
+                            {filteredProductEntries.map(({ prod, i }) => (
                                 <tr key={prod.id || `product-${i}`}
                                     onClick={() => {
                                         setSelectedProductIndex(i);

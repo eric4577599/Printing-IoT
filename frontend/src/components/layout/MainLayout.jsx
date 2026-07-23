@@ -225,16 +225,19 @@ const MainLayout = () => {
 
     // Product Management Helpers
     const saveProduct = (productData) => {
-        // Check if exists
-        const exists = products.find(p => p.boxNo === productData.boxNo);
-        if (exists) {
-            // Update? Or just skip? Req says "Auto save if not exists". 
-            // Let's perform upsert or update if explicitly asked. 
-            // For now, pure add if new.
+        // 修正:原以 boxNo 為 upsert 鍵,編輯時若修改 boxNo 會找不到舊記錄而新增一筆,造成重複。
+        // 編輯流程(ProductFormModal)會帶回既有 id,優先以 id 比對更新;僅在無 id 時(儀表板自動存檔)才退回以 boxNo upsert。
+        const existsById = productData.id && products.find(p => p.id === productData.id);
+        const existsByBoxNo = !productData.id && products.find(p => p.boxNo === productData.boxNo);
+
+        if (existsById) {
+            setProducts(prev => prev.map(p => p.id === productData.id ? { ...p, ...productData } : p));
+            addLog(`Product ${productData.boxNo} Updated in Library`);
+        } else if (existsByBoxNo) {
             setProducts(prev => prev.map(p => p.boxNo === productData.boxNo ? { ...p, ...productData } : p));
             addLog(`Product ${productData.boxNo} Updated in Library`);
         } else {
-            setProducts(prev => [...prev, { ...productData, id: `p${Date.now()}` }]);
+            setProducts(prev => [...prev, { ...productData, id: productData.id || `p${Date.now()}` }]);
             addLog(`Product ${productData.boxNo} Auto-Saved to Library`);
         }
     };

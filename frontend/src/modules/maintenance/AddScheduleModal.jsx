@@ -44,6 +44,12 @@ const AddScheduleModal = ({ isOpen, onClose, onSave, product, orders = [] }) => 
             alert('請輸入有效數量 (Valid Qty is required)');
             return;
         }
+        // 修正:輸入框標示「不可重複」但原無檢查。比對現有排程,拒絕重複訂單號碼。
+        const inputNo = formData.orderNo.trim();
+        if (orders.some(o => (o.orderNo || '').trim() === inputNo)) {
+            alert(`訂單號碼重複 (Order No. "${inputNo}" already exists)`);
+            return;
+        }
         onSave(formData);
     };
 

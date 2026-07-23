@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styles from './ReportsPage.module.css';
 import {
     filterByDateRange,
@@ -32,10 +33,16 @@ const formatFinishedAt = (isoString) => {
 };
 
 const ReportsPage = () => {
+    const navigate = useNavigate();
     const [activeReport, setActiveReport] = useState('details');
 
     // 設定預設日期為今天
-    const today = new Date().toISOString().split('T')[0];
+    // 修正:原用 toISOString()(UTC),台灣(UTC+8)在 00:00-07:59 會取到前一天。改用本地時區。
+    const today = (() => {
+        const d = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    })();
     const [startDate, setStartDate] = useState(today);
     const [endDate, setEndDate] = useState(today);
     const [selectedShift, setSelectedShift] = useState('全部');
@@ -106,6 +113,35 @@ const ReportsPage = () => {
         setShowUploadModal(false);
     };
 
+    // 匯出生產明細為 CSV(修正:原「匯出」按鈕無 handler)
+    const handleExport = () => {
+        if (detailRecords.length === 0) {
+            alert('查詢區間內無生產紀錄可匯出 (No records to export)');
+            return;
+        }
+        const headers = ['序號', '客戶名稱', '訂單號碼', '品名', '班別', '車速', '數量', '計件數', '良品', '不良', '完工時間', 'OEE'];
+        const rows = detailRecords.map((r, i) => [
+            i + 1, r.customer, r.orderNo, r.productName, r.shift, r.avgSpeed,
+            r.targetQty, (r.goodQty || 0) + (r.defectQty || 0), r.goodQty, r.defectQty,
+            formatFinishedAt(r.finishedAt), r.oee != null ? `${r.oee}%` : '-'
+        ]);
+        const escape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+        const csv = [headers, ...rows].map(row => row.map(escape).join(',')).join('\r\n');
+        // 加 BOM 讓 Excel 正確辨識 UTF-8
+        const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `production_details_${appliedRange.start}_${appliedRange.end}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    // 離開報表頁,返回即時監控(修正:原「離開」按鈕無 handler)
+    const handleLeave = () => navigate('/');
+
     // Render "Production Details" Layout
     const renderDetailsView = () => {
         const selectedRecord = detailRecords.find(r => r.id === selectedOrderId);
@@ -136,8 +172,8 @@ const ReportsPage = () => {
 
                         <div className={styles.actionButtons}>
                             <button className={styles.btn} onClick={handleOpenUpload}>手動上傳報工</button>
-                            <button className={styles.btn}>匯出 (Export)</button>
-                            <button className={styles.btn}>離開</button>
+                            <button className={styles.btn} onClick={handleExport}>匯出 (Export)</button>
+                            <button className={styles.btn} onClick={handleLeave}>離開</button>
                         </div>
                     </div>
                 </div>

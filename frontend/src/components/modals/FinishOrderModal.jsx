@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../../modules/language/LanguageContext';
 import styles from './ModalStyles.module.css';
 
@@ -26,17 +26,27 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
         { id: 'A04', reason: '超製', qty: 0 },
     ]);
 
+    // 修正:原 effect 依賴 [isOpen, initialData],父層(Dashboard)每秒重建 initialData 物件,
+    // 導致 goodQty 每秒被即時計數覆寫、操作員無法手動修改。改為只在 closed→open 邊緣以最新
+    // initialData 初始化一次;用 ref 持有最新 initialData,effect 僅依賴 isOpen。
+    const initialDataRef = useRef(initialData);
+    initialDataRef.current = initialData;
+
     useEffect(() => {
-        if (isOpen && initialData) {
-            setFormData(prev => ({
-                ...prev,
-                operator: initialData.operator || '',
-                shift: initialData.shift || 'A',
-                goodQty: initialData.qty || 0,
-                targetQty: initialData.targetQty || 0
-            }));
+        if (isOpen) {
+            const init = initialDataRef.current;
+            if (init) {
+                setFormData(prev => ({
+                    ...prev,
+                    operator: init.operator || '',
+                    shift: init.shift || 'A',
+                    goodQty: init.qty || 0,
+                    targetQty: init.targetQty || 0
+                }));
+            }
         }
-    }, [isOpen, initialData]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen]);
 
     const handleInputChange = (e) => {
         const { name, value, type, checked } = e.target;
