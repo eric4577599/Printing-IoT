@@ -1,8 +1,8 @@
 # Handoff — Claude(Printing IoT)
-> 最後更新:2026-07-24 07:40(UI 對抗性稽核 /loop 接續:確認缺陷 16→修 15、僅 #5 延後)
+> 最後更新:2026-07-24 08:55(UI 對抗性稽核:16/16 確認缺陷全修完,含 #5 DI 狀態燈;已上線+push)
 
 ## Current Task
-**UI 對抗性稽核與修正**。/loop workflow:7 獵手(6 UI 頁 + api-contract)→ 每筆發現三視角(repro/correctness/impact)反駁投票 ≥2 存活。**16 筆確認缺陷已修 15 筆(3 筆 reports 於 3693556、12 筆本回合於 b9e4123),僅 #5 di3-di10 延後(需後端/硬體決策)。** 尚有 ~20 筆待驗證項(票數不足,非被反駁),需 resume workflow。
+**UI 對抗性稽核與修正 — 確認缺陷全數收工**。/loop workflow:7 獵手(6 UI 頁 + api-contract)→ 每筆發現三視角(repro/correctness/impact)反駁投票 ≥2 存活。**16 筆確認缺陷全數修正(3 於 3693556、12 於 b9e4123、#5 於 c0e92c7),容器均已重建上線,分支已 push 至 origin。** 尚有 ~20 筆待驗證項(票數不足,非被反駁),需 resume workflow 才能收尾。
 
 ### 稽核結果現況
 - **已修正並驗證 15/16 筆**:
@@ -19,15 +19,19 @@
     - #12 MainLayout saveProduct 優先以 id upsert(編輯改 boxNo 不再重複)
     - #13 AddScheduleModal 訂單號碼重複檢查
     - reports 剩餘:匯出 CSV、離開導回監控、預設日期改本地時區
-- **確認未修 1 筆(延後,需後端+硬體決策)**:
-  - **#5 [high] di3-di10 狀態燈永遠 OFF**:已查證後端 `MonitorData`(PrintingIoT.Core/Models/MonitorData.cs)僅 5 欄(DeviceId/Speed/di1/Status/Timestamp),realtime API 根本不回 di3-di10。StatusPanel 對有配置 errorSignal/runSignal(如 di3~di10)的機台部位因 currentData 無該欄恆判 OFF。**非安全前端修正**:需 (a) WISE 模組 DI 點位→機台部位對映決策(Eric/硬體);(b) 後端 MonitorData 擴充 di3-di10 + Worker 寫入 Redis;(c) 前端 polling 映射。等 Eric 定 DI 對映再動。
+- **#5 [high] di3-di10 狀態燈 — 已修(commit `c0e92c7`,容器已重建 bundle index-Cop-KWSc.js)**:
+  - Eric 定調:WISE DI 保留模擬、DI 對應不同設備可各自設定、提供預設參數頁供日後新增。查證後既有基礎已足(**不需動後端/硬體**):`MachineTab` 設定頁已可增刪/排序部位並逐一設定 errorSignal/runSignal + 值;`DEFAULT_SECTIONS` 已內建 di3~di10 八部位預設 +「預設(Defaults)」重置。
+  - 真正缺口在狀態燈邏輯與 DI 供值:(1) StatusPanel 只配故障訊號無 runSignal 的部位,未故障+運轉→RUN、停機→OFF、DI 達故障值→ERR(修正前恆灰 OFF);(2) Dashboard 虛擬 PLC 與 currentData 初始化 di3~di10=0 保留模擬供值;(3) MachineTab DI 下拉擴充 di1~di10。
+  - 註:現有站台部位早已 seed(errorSignal-only),StatusPanel 改法讓其**免重置即生效**(運轉顯 RUN)。實 DI 或模擬故障值到位即點紅。新增 StatusPanel.test.jsx 5 筆。
+  - **16/16 確認缺陷全數修正完成。**
 - **待驗證 ~20 筆**(analysis 5、settings 6、shell 4、api-contract 8,票數不足非被反駁):resume 指令 `Workflow({scriptPath: "<session>/workflows/scripts/ui-adversarial-audit-wf_39a7cca2-0d5.js", resumeFromRunId: "wf_39a7cca2-0d5"})`(scriptPath 在舊 session 目錄,新 session 需重寫 workflow;原 audit 快取在 run wf_39a7cca2-0d5,新 session 未必可用)
 
 ## Next Step(UI 稽核)
-1. ~~容器重建~~ ✅ 2026-07-24 完成:`printingiot-frontend-1`(:5600)已以 b9e4123 重建並驗證(served bundle `index-65tuBnEn.js` 與新 build 一致、HTTP 200),前端修正已在站台生效。
-2. **#5 di3-di10**:需 Eric 提供 WISE DI 點位→機台部位對映後,才能安全實作後端+前端。(唯一未修的確認缺陷)
-3. **待驗證 ~20 筆**:若要收尾需重跑 workflow(新 session 重寫獵手 script)。
-4. ~~push 待指示~~ ✅ 2026-07-24:Eric 明確授權「Push」,`feat/extract-maintenance` 已推送至 origin(`2318253..f92f77d`,含 b9e4123/f92f77d 及先前 UI commits),HEAD 與 origin 一致。
+1. ~~容器重建~~ ✅ 2026-07-24:`printingiot-frontend-1`(:5600)已重建至最新 c0e92c7(served bundle `index-Cop-KWSc.js`、HTTP 200),全部前端修正已上線。
+2. ~~#5 di3-di10~~ ✅ 已修(見上;WISE DI 保留模擬 + 設定頁對應,免動後端)。
+3. **待驗證 ~20 筆**(analysis 5、settings 6、shell 4、api-contract 8):若要收尾需重跑對抗性 workflow(新 session 重寫獵手 script);Eric 開口再跑。
+4. ~~push~~ ✅ 2026-07-24:Eric 授權,`feat/extract-maintenance` 已推送至 origin(最新 `c0e92c7`),本機 HEAD 與 origin 一致。
+5. (選配)部位若要即時看到「模擬故障→紅燈」,現況模擬預設 di3~di10=0(無故障)→ 運轉顯 RUN;未來可加模擬故障注入或接真 WISE 訊號。
 
 ## (歷史)2026-07-13 紙上補文件回合
 五項 backlog/風險紙上三件套:docs/spec20260713-1.md、docs/report20260713-1.md、tests/report-20260713-1.md。無程式異動。
