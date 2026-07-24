@@ -29,7 +29,11 @@
 ## Next Step(UI 稽核)
 1. ~~容器重建~~ ✅ 2026-07-24:`printingiot-frontend-1`(:5600)已重建至最新 c0e92c7(served bundle `index-Cop-KWSc.js`、HTTP 200),全部前端修正已上線。
 2. ~~#5 di3-di10~~ ✅ 已修(見上;WISE DI 保留模擬 + 設定頁對應,免動後端)。
-3. **待驗證 ~20 筆**(analysis 5、settings 6、shell 4、api-contract 8):若要收尾需重跑對抗性 workflow(新 session 重寫獵手 script);Eric 開口再跑。
+3. ~~待驗證 ~20 筆~~ ✅ 2026-07-24 重跑對抗性 workflow(Run `wf_e544d9cf-a8e`,55 agents):候選 17 → **確認 14 / 反駁 3**。完整清單見 `docs/report20260724-2.md`。**14 筆尚未修**(待 Eric 指示):
+   - **MachineTab 叢集(high×4+medium×1)**:handleMoveSection 呼叫簽章錯(打到 /machine-sections/undefined)、handleAddSection 用 s.order(應 displayOrder)→NaN + 欄位名 order/is_active 不符後端、排序 NaN。同檔(本輪 #5 DI 剛動過)一次修。
+   - **Analysis 叢集(critical×1+high×2)**:分析頁 i18n 鍵幾乎全缺(顯示原始 key)、時間刻度聚合 no-op、分類側欄 groupedData 算完沒用。
+   - **Shell #6(high)**:底部 F5+/F6+ 良品/不良按鈕派發非法鍵字串→滑鼠點擊無效。
+   - 其餘 medium/low:CommunicationTab monitor_interval 不持久化、測試連線丟棄 host/port、vn/th i18n 缺、GeneralTab 改使用者代碼變重複、速度滑桿標籤誤導。
 4. ~~push~~ ✅ 2026-07-24:Eric 授權,`feat/extract-maintenance` 已推送至 origin(最新 `c0e92c7`),本機 HEAD 與 origin 一致。
 5. (選配)部位若要即時看到「模擬故障→紅燈」,現況模擬預設 di3~di10=0(無故障)→ 運轉顯 RUN;未來可加模擬故障注入或接真 WISE 訊號。
 
