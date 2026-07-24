@@ -80,11 +80,15 @@ const StatusPanel = ({
                                         }
                                     }
 
-                                    // 3. Fallback (Global Motor)
-                                    // If no specific signals configured, use global IsMotorOn
+                                    // 3. Fallback
+                                    //  - 未配置任何訊號:跟隨全域 motor 狀態
+                                    //  - 只配置故障訊號(WISE DI 模擬預設 di3~di10):未故障且機台運轉中即視為 RUN,
+                                    //    停機為 OFF。避免無 runSignal 的部位在 currentData 尚無該 DI 值時永遠灰色 OFF。
                                     if (!section.errorSignal && !section.runSignal) {
                                         isFault = !(isPlcConnected && isMotorOn);
                                         isRun = !isFault;
+                                    } else if (!isFault && !section.runSignal) {
+                                        isRun = isPlcConnected && isMotorOn;
                                     }
 
                                     // Determine Color

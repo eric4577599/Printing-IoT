@@ -247,9 +247,10 @@ const MachineTab = () => {
         const sortedSections = [...machineSettings.sections].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
         const selectedSection = machineSettings.sections.find(s => s.id === selectedSectionId);
 
+        // DI 訊號選項:涵蓋預設部位使用的 di1~di10(原僅到 di8,導致預設 di9/di10 無法選取)
         const signals = [
             { value: '', label: '(None)' },
-            ...Array.from({ length: 8 }, (_, i) => ({ value: `di${i + 1}`, label: `DI ${i + 1}` })),
+            ...Array.from({ length: 10 }, (_, i) => ({ value: `di${i + 1}`, label: `DI ${i + 1}` })),
             ...Array.from({ length: 8 }, (_, i) => ({ value: `do${i + 1}`, label: `DO ${i + 1}` })),
             { value: 'status_code', label: 'Status Code' }
         ];

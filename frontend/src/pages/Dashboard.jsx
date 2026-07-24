@@ -43,17 +43,23 @@ const Dashboard = () => {
         isPlcConnected: true
     };
 
+    // WISE DI 模擬:保留機台部位故障訊號(di3~di10)於虛擬 PLC 記憶體。
+    // 預設 0(無故障);機台部位在設定頁(MachineTab)可對應不同 DI,實訊號到位前由模擬供值。
+    const simulatedDiDefaults = { di3: 0, di4: 0, di5: 0, di6: 0, di7: 0, di8: 0, di9: 0, di10: 0 };
+
     const [currentData, setCurrentData] = useState({
         line_speed: 0,
         di1: 0,
-        status_code: 0
+        status_code: 0,
+        ...simulatedDiDefaults
     });
 
     // Simulation Internal State (Virtual PLC Memory)
     const simStateRef = useRef({
         line_speed: 0,
         di1: 0,
-        status_code: 0
+        status_code: 0,
+        ...simulatedDiDefaults
     });
     // MQTT Client Ref
     const mqttClientRef = useRef(null);
