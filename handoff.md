@@ -24,10 +24,10 @@
 - **待驗證 ~20 筆**(analysis 5、settings 6、shell 4、api-contract 8,票數不足非被反駁):resume 指令 `Workflow({scriptPath: "<session>/workflows/scripts/ui-adversarial-audit-wf_39a7cca2-0d5.js", resumeFromRunId: "wf_39a7cca2-0d5"})`(scriptPath 在舊 session 目錄,新 session 需重寫 workflow;原 audit 快取在 run wf_39a7cca2-0d5,新 session 未必可用)
 
 ## Next Step(UI 稽核)
-1. **容器重建**:`printingiot-frontend-1`(:5600)尚未以 b9e4123 重建,前端修正未在跑起來的站台生效。Eric 確認無展示中即可重建。
-2. **#5 di3-di10**:需 Eric 提供 WISE DI 點位→機台部位對映後,才能安全實作後端+前端。
+1. ~~容器重建~~ ✅ 2026-07-24 完成:`printingiot-frontend-1`(:5600)已以 b9e4123 重建並驗證(served bundle `index-65tuBnEn.js` 與新 build 一致、HTTP 200),前端修正已在站台生效。
+2. **#5 di3-di10**:需 Eric 提供 WISE DI 點位→機台部位對映後,才能安全實作後端+前端。(唯一未修的確認缺陷)
 3. **待驗證 ~20 筆**:若要收尾需重跑 workflow(新 session 重寫獵手 script)。
-4. 主系統新增 commit(含 b9e4123)是否 push 待 Eric 個別指示(全域紅線:未經明確同意不 push)。
+4. ~~push 待指示~~ ✅ 2026-07-24:Eric 明確授權「Push」,`feat/extract-maintenance` 已推送至 origin(`2318253..f92f77d`,含 b9e4123/f92f77d 及先前 UI commits),HEAD 與 origin 一致。
 
 ## (歷史)2026-07-13 紙上補文件回合
 五項 backlog/風險紙上三件套:docs/spec20260713-1.md、docs/report20260713-1.md、tests/report-20260713-1.md。無程式異動。
