@@ -241,7 +241,24 @@ export const translations = {
                 week: '本週',
                 month: '本月',
                 custom: '自訂'
-            }
+            },
+            fields: {
+                customer: '客戶', product: '品名', boxNo: '紙箱編號', boxType: '盒型',
+                orderNo: '訂單號碼', qty: '數量', operator: '操作員', shift: '班別',
+                stopReason: '停車原因', prepTime: '準備時間', date: '日期', runTime: '運轉時間',
+                stopTime: '停車時間', avgSpeed: '平均車速', stopCount: '停車次數',
+                defectQty: '不良數量', oee: 'OEE', goodQty: '良品數量'
+            },
+            chartType: { title: '圖表類型' },
+            chartTypes: { pie: '圓餅圖', doughnut: '環圈圖', line: '折線圖', bar: '長條圖', radar: '雷達圖' },
+            timeScale: { title: '時間刻度' },
+            timeScales: { minute: '分', hour: '時', day: '日', week: '週', month: '月' },
+            category: { title: '分類條件' },
+            display: { title: '顯示欄位' },
+            dateRange: '日期範圍',
+            quickDate: { today: '今日', yesterday: '昨日', last7days: '近 7 日', last30days: '近 30 日', thisMonth: '本月' },
+            actions: { clearFilters: '清除條件', downloadImage: '下載圖檔', exportExcel: '匯出 Excel', print: '列印' },
+            summary: { totalQty: '總良品數', avgDailyQty: '日均產量', totalStopTime: '總停車時間', avgSpeed: '平均車速', recordsCount: '紀錄筆數' }
         },
         modals: {
             finishOrder: {
@@ -572,7 +589,24 @@ export const translations = {
                 week: '本周',
                 month: '本月',
                 custom: '自定义'
-            }
+            },
+            fields: {
+                customer: '客户', product: '品名', boxNo: '纸箱编号', boxType: '盒型',
+                orderNo: '订单号码', qty: '数量', operator: '操作员', shift: '班别',
+                stopReason: '停车原因', prepTime: '准备时间', date: '日期', runTime: '运转时间',
+                stopTime: '停车时间', avgSpeed: '平均车速', stopCount: '停车次数',
+                defectQty: '不良数量', oee: 'OEE', goodQty: '良品数量'
+            },
+            chartType: { title: '图表类型' },
+            chartTypes: { pie: '饼图', doughnut: '环圈图', line: '折线图', bar: '柱状图', radar: '雷达图' },
+            timeScale: { title: '时间刻度' },
+            timeScales: { minute: '分', hour: '时', day: '日', week: '周', month: '月' },
+            category: { title: '分类条件' },
+            display: { title: '显示字段' },
+            dateRange: '日期范围',
+            quickDate: { today: '今日', yesterday: '昨日', last7days: '近 7 日', last30days: '近 30 日', thisMonth: '本月' },
+            actions: { clearFilters: '清除条件', downloadImage: '下载图档', exportExcel: '导出 Excel', print: '打印' },
+            summary: { totalQty: '总良品数', avgDailyQty: '日均产量', totalStopTime: '总停车时间', avgSpeed: '平均车速', recordsCount: '记录笔数' }
         },
         modals: {
             finishOrder: {
@@ -903,7 +937,24 @@ export const translations = {
                 week: 'This Week',
                 month: 'This Month',
                 custom: 'Custom'
-            }
+            },
+            fields: {
+                customer: 'Customer', product: 'Product', boxNo: 'Box No', boxType: 'Box Type',
+                orderNo: 'Order No', qty: 'Qty', operator: 'Operator', shift: 'Shift',
+                stopReason: 'Stop Reason', prepTime: 'Prep Time', date: 'Date', runTime: 'Run Time',
+                stopTime: 'Stop Time', avgSpeed: 'Avg Speed', stopCount: 'Stop Count',
+                defectQty: 'Defect Qty', oee: 'OEE', goodQty: 'Good Qty'
+            },
+            chartType: { title: 'Chart Type' },
+            chartTypes: { pie: 'Pie', doughnut: 'Doughnut', line: 'Line', bar: 'Bar', radar: 'Radar' },
+            timeScale: { title: 'Time Scale' },
+            timeScales: { minute: 'Minute', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month' },
+            category: { title: 'Group By' },
+            display: { title: 'Display Fields' },
+            dateRange: 'Date Range',
+            quickDate: { today: 'Today', yesterday: 'Yesterday', last7days: 'Last 7d', last30days: 'Last 30d', thisMonth: 'This Month' },
+            actions: { clearFilters: 'Clear Filters', downloadImage: 'Download Image', exportExcel: 'Export Excel', print: 'Print' },
+            summary: { totalQty: 'Total Good', avgDailyQty: 'Daily Avg', totalStopTime: 'Total Stop Time', avgSpeed: 'Avg Speed', recordsCount: 'Records' }
         },
         modals: {
             finishOrder: {
@@ -1028,6 +1079,21 @@ export const translations = {
                 sectionName: 'Tên bộ phận',
                 add: 'Thêm',
                 delete: 'Xóa'
+            },
+            unit: {
+                title: 'Cài đặt Đơn vị', select: 'Chọn đơn vị', mm: 'Milimét (mm)', inch: 'Inch',
+                fluteSettings: 'Cài đặt sóng', flute: 'Loại sóng', thickness: 'Độ dày',
+                addFlute: 'Thêm sóng', flute_single: 'Sóng'
+            },
+            formula: {
+                title: 'Cài đặt Tham số Công thức', desc: 'Tham số chuẩn theo tài liệu',
+                coreEff: 'Hiệu suất lõi', timeAvail: 'Khả dụng thời gian', continuous: 'Định nghĩa sản xuất liên tục',
+                targets: 'Mục tiêu', stdAvgSpeed: 'Tốc độ TB chuẩn', stdPrepTime: 'Thời gian chuẩn bị chuẩn',
+                splitPrintCredit: 'Bù trừ in tách', targetOEE: 'Mục tiêu OEE', targetPrepSuccess: 'Mục tiêu tỷ lệ chạy thử'
+            },
+            report: {
+                title: 'Cài đặt Tham số Báo cáo', desc: 'Cấu hình logic tạo báo cáo backend',
+                timeBoundary: 'Ranh giới thời gian', smallBatch: 'Định nghĩa lô nhỏ', exceptionFilters: 'Bộ lọc ngoại lệ'
             }
         },
     },
@@ -1062,6 +1128,21 @@ export const translations = {
                 sectionName: 'ชื่อส่วน',
                 add: 'เพิ่ม',
                 delete: 'ลบ'
+            },
+            unit: {
+                title: 'การตั้งค่าหน่วย', select: 'เลือกหน่วย', mm: 'มิลลิเมตร (mm)', inch: 'นิ้ว',
+                fluteSettings: 'การตั้งค่าลอน', flute: 'ชนิดลอน', thickness: 'ความหนา',
+                addFlute: 'เพิ่มลอน', flute_single: 'ลอน'
+            },
+            formula: {
+                title: 'การตั้งค่าพารามิเตอร์สูตร', desc: 'พารามิเตอร์มาตรฐานตามเอกสาร',
+                coreEff: 'ประสิทธิภาพหลัก', timeAvail: 'อัตราการใช้เวลา', continuous: 'นิยามการผลิตต่อเนื่อง',
+                targets: 'เป้าหมาย', stdAvgSpeed: 'ความเร็วเฉลี่ยมาตรฐาน', stdPrepTime: 'เวลาเตรียมมาตรฐาน',
+                splitPrintCredit: 'ชดเชยการพิมพ์แยก', targetOEE: 'เป้าหมาย OEE', targetPrepSuccess: 'เป้าหมายอัตราทดลองเครื่อง'
+            },
+            report: {
+                title: 'การตั้งค่าพารามิเตอร์รายงาน', desc: 'กำหนดค่าตรรกะการสร้างรายงาน backend',
+                timeBoundary: 'ขอบเขตเวลา', smallBatch: 'นิยามล็อตเล็ก', exceptionFilters: 'ตัวกรองข้อยกเว้น'
             }
         },
     }

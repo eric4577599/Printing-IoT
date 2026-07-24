@@ -84,7 +84,17 @@ const GeneralTab = () => {
             shift: newUserShift
         };
 
-        const existingIdx = users.findIndex(u => u.id === newUserCode);
+        // 修正:編輯模式以原始 id(selectedUserId)定位,變更代碼時原地更新,避免新增重複使用者;
+        // 新增模式仍以代碼定位。
+        const editingId = selectedUserId;
+        // 編輯時若把代碼改成與「其他」既有使用者相同 → 阻止,避免覆蓋別人或製造重複
+        if (editingId != null && newUserCode !== editingId && users.some(u => u.id === newUserCode)) {
+            alert(`代碼 ${newUserCode} 已存在於其他使用者 (Duplicate user code)`);
+            return;
+        }
+        const existingIdx = editingId != null
+            ? users.findIndex(u => u.id === editingId)
+            : users.findIndex(u => u.id === newUserCode);
         let newUsers;
         if (existingIdx >= 0) {
             newUsers = [...users];

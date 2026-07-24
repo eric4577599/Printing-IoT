@@ -124,38 +124,92 @@ const AnalysisPage = () => {
     // === 圖表數據聚合邏輯 (移回 Page 層級以保持 Hook 單純) ===
     const chartData = useMemo(() => {
         const fieldMapping = { qty: 'goodQty', prepTime: 'prepTime', runTime: 'runTime', stopTime: 'stopTime', avgSpeed: 'avgSpeed', stopCount: 'stopCount', defectQty: 'defectQty', oee: 'oee' };
-        const colors = [
-            { border: '#36a2eb', bg: 'rgba(54, 162, 235, 0.5)' },
-            { border: '#ff6384', bg: 'rgba(255, 99, 132, 0.5)' },
-            { border: '#4bc0c0', bg: 'rgba(75, 192, 192, 0.5)' }
+        const palette = [
+            { border: '#36a2eb', bg: 'rgba(54,162,235,.5)' },
+            { border: '#ff6384', bg: 'rgba(255,99,132,.5)' },
+            { border: '#4bc0c0', bg: 'rgba(75,192,192,.5)' },
+            { border: '#ff9f40', bg: 'rgba(255,159,64,.5)' },
+            { border: '#9966ff', bg: 'rgba(153,102,255,.5)' },
+            { border: '#ffcd56', bg: 'rgba(255,205,86,.5)' },
+            { border: '#2ecc71', bg: 'rgba(46,204,113,.5)' },
+            { border: '#e74c3c', bg: 'rgba(231,76,60,.5)' },
         ];
+        const labelOf = (itemId) => availableDisplayFields.find(f => f.id === itemId)?.label || itemId;
 
-        const aggregate = (records, itemId) => {
-            const field = fieldMapping[itemId] || itemId;
-            const res = {};
-            records.forEach(r => {
-                const key = timeScale === 'day' ? r.date : r.date; // 簡化處理
-                if (!res[key]) res[key] = 0;
-                res[key] += (r[field] || 0);
-            });
-            return res;
+        // 依時間刻度把單筆紀錄歸入時間桶(修正 #2:原三元兩邊皆 r.date,minute/hour/week/month 全為 no-op)
+        // minute/hour 需時間戳,取 finishedAt;day/week/month 以日期字串為準。
+        const pad = (n) => String(n).padStart(2, '0');
+        const bucketOf = (r) => {
+            const dateStr = r.date || (r.finishedAt ? r.finishedAt.split('T')[0] : '-');
+            const ts = r.finishedAt ? new Date(r.finishedAt) : (r.date ? new Date(`${r.date}T00:00:00`) : null);
+            switch (timeScale) {
+                case 'minute': return ts ? `${dateStr} ${pad(ts.getHours())}:${pad(ts.getMinutes())}` : dateStr;
+                case 'hour': return ts ? `${dateStr} ${pad(ts.getHours())}:00` : dateStr;
+                case 'week': {
+                    if (!ts) return dateStr;
+                    const dow = (ts.getDay() + 6) % 7; // 週一為週首
+                    const monday = new Date(ts); monday.setDate(ts.getDate() - dow);
+                    return `${monday.getFullYear()}-${pad(monday.getMonth() + 1)}-${pad(monday.getDate())} (週)`;
+                }
+                case 'month': return dateStr.slice(0, 7);
+                case 'day':
+                default: return dateStr;
+            }
         };
 
-        const timeKeys = Array.from(new Set(productionHistory.map(r => r.date))).sort();
-        const datasets = selectedDisplayItems.map((itemId, i) => {
-            const agg = aggregate(productionHistory, itemId);
+        // 修正 #3:改用 groupedData(分類分組結果);未選分類時為 { '全部': productionHistory }
+        const groupKeys = Object.keys(groupedData);
+        const isGrouped = !(groupKeys.length === 1 && groupKeys[0] === '全部');
+
+        // 分佈圖(圓餅/環圈/雷達):有選分類→每組一切片;未選→依時間桶切片。值=第一個顯示欄位總和
+        if (isDistributionChart) {
+            const itemId = selectedDisplayItems[0] || 'qty';
+            const field = fieldMapping[itemId] || itemId;
+            let labels, values;
+            if (isGrouped) {
+                labels = groupKeys;
+                values = groupKeys.map(k => groupedData[k].reduce((s, r) => s + (r[field] || 0), 0));
+            } else {
+                const agg = {};
+                productionHistory.forEach(r => { const b = bucketOf(r); agg[b] = (agg[b] || 0) + (r[field] || 0); });
+                labels = Object.keys(agg).sort();
+                values = labels.map(k => agg[k]);
+            }
             return {
-                label: availableDisplayFields.find(f => f.id === itemId)?.label || itemId,
-                data: timeKeys.map(k => agg[k] || 0),
-                borderColor: colors[i % colors.length].border,
-                backgroundColor: colors[i % colors.length].bg,
-                fill: chartType === 'line',
-                tension: 0.4
+                labels,
+                datasets: [{
+                    label: labelOf(itemId),
+                    data: values,
+                    borderColor: labels.map((_, i) => palette[i % palette.length].border),
+                    backgroundColor: labels.map((_, i) => palette[i % palette.length].bg),
+                }]
             };
+        }
+
+        // 時間序列(折線/長條):X 軸為時間桶;每個(分組 × 顯示欄位)為一條資料集
+        const timeKeys = Array.from(new Set(productionHistory.map(bucketOf))).sort();
+        const datasets = [];
+        let ci = 0;
+        groupKeys.forEach(gk => {
+            selectedDisplayItems.forEach(itemId => {
+                const field = fieldMapping[itemId] || itemId;
+                const agg = {};
+                groupedData[gk].forEach(r => { const b = bucketOf(r); agg[b] = (agg[b] || 0) + (r[field] || 0); });
+                const c = palette[ci % palette.length];
+                datasets.push({
+                    label: isGrouped ? `${gk} · ${labelOf(itemId)}` : labelOf(itemId),
+                    data: timeKeys.map(k => agg[k] || 0),
+                    borderColor: c.border,
+                    backgroundColor: c.bg,
+                    fill: chartType === 'line',
+                    tension: 0.4,
+                });
+                ci++;
+            });
         });
 
-        return { labels: timeKeys.map(k => k.split('-').slice(1).join('/')), datasets };
-    }, [productionHistory, selectedDisplayItems, timeScale, chartType, availableDisplayFields]);
+        return { labels: timeKeys, datasets };
+    }, [productionHistory, groupedData, selectedDisplayItems, timeScale, chartType, isDistributionChart, availableDisplayFields]);
 
     const needsDualAxis = useMemo(() => {
         const units = selectedDisplayItems.map(id => availableDisplayFields.find(f => f.id === id)?.unit);

@@ -280,8 +280,8 @@ const MainLayout = () => {
         { key: 'F2', label: t('fkeys.f2') },
         { key: 'F3', label: t('fkeys.f3') },
         { key: 'F4', label: t('fkeys.f4') },
-        { key: 'F5+', label: t('fkeys.f5') },
-        { key: 'F6+', label: t('fkeys.f6') },
+        { key: 'F5+', label: t('fkeys.f5'), code: 'F5' }, // 修正:派發真實鍵 F5(原派發 'F5+' Dashboard 永不匹配),按鈕仍顯示 F5+
+        { key: 'F6+', label: t('fkeys.f6'), code: 'F6' }, // 修正:同上,派發 F6
         { key: 'F7', label: t('fkeys.f7') },
         { key: 'M/N', label: t('fkeys.f8'), className: styles.pinkBtn, code: 'F8' }, // Manual
         { key: 'F9', label: '班別' },
@@ -370,7 +370,7 @@ const MainLayout = () => {
                         {/* 速度調整滑桿 */}
                         {isSimulating && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: '8px' }}>
-                                <span style={{ fontSize: '0.7rem', color: '#666' }}>0</span>
+                                <span style={{ fontSize: '0.7rem', color: '#666' }}>停止</span>
                                 <input
                                     type="range"
                                     min="-1"

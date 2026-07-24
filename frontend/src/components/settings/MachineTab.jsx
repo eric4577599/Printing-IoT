@@ -94,14 +94,17 @@ const MachineTab = () => {
         }
         const name = newSectionName;
 
+        // 修正:欄位為 displayOrder(非 order),原 s.order 全 undefined → Math.max=NaN
         const maxOrder = machineSettings.sections.length > 0
-            ? Math.max(...machineSettings.sections.map(s => s.order))
+            ? Math.max(...machineSettings.sections.map(s => s.displayOrder || 0))
             : 0;
 
+        // 修正:payload 欄位名需對應後端 MachineSection(DisplayOrder/IsActive),
+        // 原 order/is_active 比對不到 → 新部位 DisplayOrder 恆為 0、排序錯亂
         const newSectionPayload = {
             name,
-            order: maxOrder + 1,
-            is_active: true
+            displayOrder: maxOrder + 1,
+            isActive: true
         };
 
         try {
@@ -156,7 +159,8 @@ const MachineTab = () => {
             * @param {'up' | 'down'} direction - 移動方向
             */
     const handleMoveSection = async (sectionId, direction) => {
-        const sections = [...machineSettings.sections].sort((a, b) => a.order - b.order);
+        // 修正:依 displayOrder 排序(原 a.order 不存在→NaN 不排序,導致與畫面清單順序不一致而交換到錯誤相鄰部位)
+        const sections = [...machineSettings.sections].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
         const idx = sections.findIndex(s => s.id === sectionId);
 
         if (idx === -1) return;
@@ -182,10 +186,13 @@ const MachineTab = () => {
         handleMachineChange('sections', sortedSections);
 
         // API Update
+        // 修正:updateMachineSection 只吃單一 section 物件並讀 section.id;原以 (id, 部分物件) 兩參數呼叫
+        // → 送到 /machine-sections/undefined 且 body 錯誤,排序永遠寫入失敗。改傳完整物件(含更新後 displayOrder),
+        // 避免後端把 [Required] Name 等欄位清空。
         try {
             await Promise.all([
-                apiUpdateSection(currentSection.id, { displayOrder: newCurrentOrder }),
-                apiUpdateSection(targetSection.id, { displayOrder: newTargetOrder })
+                apiUpdateSection({ ...currentSection, displayOrder: newCurrentOrder }),
+                apiUpdateSection({ ...targetSection, displayOrder: newTargetOrder })
             ]);
         } catch (error) {
             console.error("Failed to update section order:", error);

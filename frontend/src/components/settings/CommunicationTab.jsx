@@ -104,6 +104,7 @@ const CommunicationTab = () => {
             plc_port: newSettings.plc.port,
             plc_motor_signal: newSettings.plc.motorSignal,
             plc_count_signal: newSettings.plc.countSignal,
+            plc_monitor_interval: newSettings.plc.monitor_interval, // 修正 #9:原 payload 遺漏,監控頻率永不送到後端
 
             mqtt_broker_url: newSettings.plc.mqttBroker,
             mqtt_topic: newSettings.plc.mqttTopic,
@@ -445,6 +446,7 @@ const CommunicationTab = () => {
                                 plc_port: newSettings.plc.port,
                                 plc_motor_signal: newSettings.plc.motorSignal,
                                 plc_count_signal: newSettings.plc.countSignal,
+                                plc_monitor_interval: newSettings.plc.monitor_interval, // 修正 #9:保留監控頻率
                                 erp_enabled: newSettings.erp.enabled,
                                 erp_protocol: newSettings.erp.protocol,
                                 erp_connection_type: newSettings.erp.connectionType,
@@ -492,6 +494,7 @@ const CommunicationTab = () => {
                                     plc_port: newSettings.plc.port,
                                     plc_motor_signal: newSettings.plc.motorSignal,
                                     plc_count_signal: newSettings.plc.countSignal,
+                                    plc_monitor_interval: newSettings.plc.monitor_interval, // 修正 #9:保留監控頻率
                                     erp_enabled: newSettings.erp.enabled,
                                     erp_protocol: newSettings.erp.protocol,
                                     erp_connection_type: newSettings.erp.connectionType,

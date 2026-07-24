@@ -90,8 +90,9 @@ export const updateSimulationSpeed = async (speedFactor) => {
     return response.data;
 };
 
-export const testMqttConnection = async () => {
-    const response = await api.post('/simulation/test-mqtt');
+// 修正 #10:原本不收參數,呼叫端傳入的 host/port/device_type 全被丟棄。改為轉發 config 至後端。
+export const testMqttConnection = async (config = {}) => {
+    const response = await api.post('/simulation/test-mqtt', config);
     return response.data;
 };
 
