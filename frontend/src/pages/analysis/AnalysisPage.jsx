@@ -237,13 +237,13 @@ const AnalysisPage = () => {
                 />
                 <div className={styles.chartArea}>
                     <div className={styles.viewModeToggle}>
-                        <button className={`${styles.viewModeBtn} ${viewMode === 'chart' ? styles.active : ''}`} onClick={() => setViewMode('chart')}>📊 圖表視圖</button>
-                        <button className={`${styles.viewModeBtn} ${viewMode === 'table' ? styles.active : ''}`} onClick={() => setViewMode('table')}>📋 表格視圖</button>
+                        <button className={`${styles.viewModeBtn} ${viewMode === 'chart' ? styles.active : ''}`} onClick={() => setViewMode('chart')}>📊 {t('analysis.controls.chartView')}</button>
+                        <button className={`${styles.viewModeBtn} ${viewMode === 'table' ? styles.active : ''}`} onClick={() => setViewMode('table')}>📋 {t('analysis.controls.tableView')}</button>
                     </div>
                     <AnalysisSummary summaryStats={summaryStats} historyCount={productionHistory.length} formatStopTime={formatStopTime} t={t} />
                     <div className={styles.chartNavigation}>
-                        <button className={styles.navBtn} onClick={scrollToStart}>◀ 開始</button>
-                        <button className={styles.navBtn} onClick={scrollToEnd}>結束 ▶</button>
+                        <button className={styles.navBtn} onClick={scrollToStart}>◀ {t('analysis.controls.scrollStart')}</button>
+                        <button className={styles.navBtn} onClick={scrollToEnd}>{t('analysis.controls.scrollEnd')} ▶</button>
                     </div>
                     <div ref={chartContainerRef} className={styles.chartContainer}>
                         {viewMode === 'table' ? (

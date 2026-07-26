@@ -221,6 +221,7 @@ export const translations = {
         },
         analysis: {
             title: '生產分析',
+            controls: { chartView: '圖表視圖', tableView: '表格視圖', scrollStart: '開始', scrollEnd: '結束' },
             charts: {
                 oee: 'OEE 趨勢',
                 speedTrend: '車速趨勢',
@@ -512,7 +513,8 @@ export const translations = {
                 boxNo: '纸箱编号',
                 productName: '品名',
                 boxType: '盒型',
-                customer: '客户'
+                customer: '客户',
+                maintenance_title: '数据库维护'
             },
             alerts: {
                 selectOrder: '请先选择工单',
@@ -569,6 +571,7 @@ export const translations = {
         },
         analysis: {
             title: '生产分析',
+            controls: { chartView: '图表视图', tableView: '表格视图', scrollStart: '开始', scrollEnd: '结束' },
             charts: {
                 oee: 'OEE 趋势',
                 speedTrend: '车速趋势',
@@ -860,7 +863,8 @@ export const translations = {
                 boxNo: 'Box No',
                 productName: 'Product',
                 boxType: 'Box Type',
-                customer: 'Customer'
+                customer: 'Customer',
+                maintenance_title: 'Database Maintenance'
             },
             alerts: {
                 selectOrder: 'Please select an order',
@@ -917,6 +921,7 @@ export const translations = {
         },
         analysis: {
             title: 'Production Analysis',
+            controls: { chartView: 'Chart View', tableView: 'Table View', scrollStart: 'Start', scrollEnd: 'End' },
             charts: {
                 oee: 'OEE Trend',
                 speedTrend: 'Speed Trend',
@@ -1096,6 +1101,59 @@ export const translations = {
                 timeBoundary: 'Ranh giới thời gian', smallBatch: 'Định nghĩa lô nhỏ', exceptionFilters: 'Bộ lọc ngoại lệ'
             }
         },
+        dashboard: {
+            monitor: { productionQty: 'Số lượng sản xuất', qty: 'Qty', speed: 'Tốc độ', standard: 'Tiêu chuẩn', maxSpeed: 'Tốc độ tối đa', idle: 'Chờ máy (Idle)', waitForF3: 'Chờ F3 bắt đầu sản xuất', running: 'Running' },
+            stats: { squareMeter: 'Mét vuông', total: 'Tổng số', count: 'Số đếm', remaining: 'Còn lại', defect: 'Lỗi', avgSpeed: 'Tốc độ TB', runTime: 'Thời gian SX', stopTime: 'Thời gian dừng', stopCount: 'Số lần dừng', today: 'Hôm nay', currentJob: 'Đơn hiện tại' },
+            schedule: { seqNo: 'STT', customer: 'Tên khách hàng', orderNo: 'Số đơn hàng', boxNo: 'Mã thùng', qty: 'Số lượng', productName: 'Tên sản phẩm', boxType: 'Loại hộp', noQueuedOrders: 'Không có đơn trong lịch', autoNextOn: '【 Tự động đơn kế ON 】', autoNextOff: '【 Tự động đơn kế OFF 】', sheets: 'Số tờ', notes: 'Ghi chú' },
+            machineStatus: { title: 'Trạng thái máy', stopReason: 'Lý do dừng máy', normal: 'Bình thường', warning: 'Cảnh báo', error: 'Lỗi' },
+            stopReasons: { startTime: 'Thời gian bắt đầu', duration: 'Thời lượng', reason: 'Lý do' },
+            alerts: { plcDisconnected: 'Mất kết nối PLC, không thể bắt đầu sản xuất!', selectOrderFirst: 'Vui lòng chọn lệnh sản xuất trước', selectQueuedOrder: 'Vui lòng chọn lệnh trong lịch bên dưới', speedNotZero: 'Tốc độ khác 0, không thể hoàn tất! Vui lòng dừng máy trước.', speedNotZeroReturn: 'Tốc độ khác 0, không thể trả về! Vui lòng dừng máy trước.', confirmDelete: 'Xác nhận xóa lệnh sản xuất', confirmReorder: 'Xác nhận sắp xếp lại thứ tự lệnh?', confirmExit: 'Xác nhận thoát?', startProduction: 'Bắt đầu sản xuất' },
+            logs: { f1Pressed: 'F1: Nhấn (Lên)', f2Pressed: 'F2: Nhấn (Xuống)', f3Start: 'F3: Bắt đầu sản xuất', f4Finish: 'F4: Hoàn tất', f5GoodQty: 'F5: Số lượng +1', f6DefectQty: 'F6: Số lượng -1', f7OrderModal: 'F7: Mở cửa sổ đơn hàng', f8AutoNext: 'F8: Bật/tắt tự động đơn kế', f9SwitchShift: 'F9: Chuyển ca', f10Return: 'F10: Trả về', f12Exit: 'F12: Thoát hệ thống' }
+        },
+        orders: {
+            tabs: { schedule: 'Quản lý lịch SX', products: 'Kho sản phẩm' },
+            schedule: { title: 'Lịch sản xuất', moveUp: 'Lên', moveDown: 'Xuống', delete: 'Xóa lịch', reorder: 'Đặt lại thứ tự', addToSchedule: 'Thêm vào lịch' },
+            products: { title: 'Kho sản phẩm', add: 'Thêm sản phẩm', edit: 'Sửa', delete: 'Xóa', boxNo: 'Mã thùng', productName: 'Tên sản phẩm', boxType: 'Loại hộp', customer: 'Khách hàng', maintenance_title: 'Bảo trì cơ sở dữ liệu' },
+            alerts: { selectOrder: 'Vui lòng chọn lệnh sản xuất trước', confirmDeleteRunning: 'Xác nhận xóa lệnh đang chạy? Vui lòng đảm bảo tốc độ và sản lượng bằng 0', confirmDelete: 'Xác nhận xóa lệnh sản xuất', confirmReorder: 'Xác nhận sắp xếp lại thứ tự lệnh?' }
+        },
+        reports: {
+            tabs: { daily: 'Báo cáo SX ngày', monthly: 'Báo cáo SX tháng', stopReasons: 'Lý do dừng máy' },
+            filters: { dateRange: 'Khoảng ngày', shift: 'Ca', allShifts: 'Tất cả ca', shiftA: 'Ca A', shiftB: 'Ca B', shiftC: 'Ca C' },
+            table: { id: 'STT', client: 'Khách hàng', orderNo: 'Số đơn hàng', product: 'Sản phẩm', shift: 'Ca', speed: 'Tốc độ', qty: 'Số lượng', count: 'Số đếm', good: 'Sản phẩm tốt', bad: 'Lỗi', start: 'Thời gian bắt đầu', test: 'Thời gian chạy thử', status: 'Trạng thái' },
+            stopReasons: { startTime: 'Thời gian bắt đầu', endTime: 'Thời gian kết thúc', duration: 'Thời lượng', code: 'Mã', reason: 'Lý do' },
+            summary: { totalOrders: 'Tổng số đơn', totalQty: 'Tổng số lượng', totalGood: 'Tổng sản phẩm tốt', totalBad: 'Tổng lỗi', avgSpeed: 'Tốc độ TB', totalRunTime: 'Tổng thời gian SX', totalStopTime: 'Tổng thời gian dừng' }
+        },
+        analysis: {
+            title: 'Phân tích sản xuất',
+            controls: { chartView: 'Xem biểu đồ', tableView: 'Xem bảng', scrollStart: 'Đầu', scrollEnd: 'Cuối' },
+            charts: { oee: 'Xu hướng OEE', speedTrend: 'Xu hướng tốc độ', defectRate: 'Phân tích tỷ lệ lỗi', stopReasons: 'Phân tích lý do dừng máy' },
+            metrics: { oee: 'OEE', availability: 'Tỷ lệ khả dụng', performance: 'Tỷ lệ hiệu suất', quality: 'Tỷ lệ sản phẩm tốt', avgSpeed: 'Tốc độ TB', defectRate: 'Tỷ lệ lỗi' },
+            filters: { timePeriod: 'Khoảng thời gian', today: 'Hôm nay', week: 'Tuần này', month: 'Tháng này', custom: 'Tùy chỉnh' },
+            fields: { customer: 'Khách hàng', product: 'Tên sản phẩm', boxNo: 'Mã thùng', boxType: 'Loại hộp', orderNo: 'Số đơn hàng', qty: 'Số lượng', operator: 'Người vận hành', shift: 'Ca', stopReason: 'Lý do dừng máy', prepTime: 'Thời gian chuẩn bị', date: 'Ngày', runTime: 'Thời gian chạy', stopTime: 'Thời gian dừng', avgSpeed: 'Tốc độ TB', stopCount: 'Số lần dừng', defectQty: 'Số lượng lỗi', oee: 'OEE', goodQty: 'Số lượng tốt' },
+            chartType: { title: 'Loại biểu đồ' },
+            chartTypes: { pie: 'Biểu đồ tròn', doughnut: 'Biểu đồ vành khuyên', line: 'Biểu đồ đường', bar: 'Biểu đồ cột', radar: 'Biểu đồ radar' },
+            timeScale: { title: 'Thang thời gian' },
+            timeScales: { minute: 'Phút', hour: 'Giờ', day: 'Ngày', week: 'Tuần', month: 'Tháng' },
+            category: { title: 'Điều kiện phân loại' },
+            display: { title: 'Cột hiển thị' },
+            dateRange: 'Khoảng ngày',
+            quickDate: { today: 'Hôm nay', yesterday: 'Hôm qua', last7days: '7 ngày qua', last30days: '30 ngày qua', thisMonth: 'Tháng này' },
+            actions: { clearFilters: 'Xóa điều kiện', downloadImage: 'Tải ảnh', exportExcel: 'Xuất Excel', print: 'In' },
+            summary: { totalQty: 'Tổng sản phẩm tốt', avgDailyQty: 'Sản lượng TB ngày', totalStopTime: 'Tổng thời gian dừng', avgSpeed: 'Tốc độ TB', recordsCount: 'Số bản ghi' }
+        },
+        modals: {
+            finishOrder: { title: 'Xác nhận hoàn tất', goodQty: 'Số lượng tốt', defectQty: 'Số lượng lỗi', operator: 'Người vận hành', notes: 'Ghi chú', confirm: 'Xác nhận hoàn tất', cancel: 'Hủy' },
+            productDetail: { title: 'Chi tiết quy cách sản phẩm' },
+            orderDetails: { title: 'Chi tiết đơn hàng', orderNo: 'Số đơn hàng', customer: 'Tên khách hàng', boxNo: 'Mã thùng', productName: 'Tên sản phẩm', boxType: 'Loại hộp', qty: 'Số lượng', status: 'Trạng thái', close: 'Đóng' },
+            productForm: { title: 'Biểu mẫu sản phẩm', addProduct: 'Thêm sản phẩm', editProduct: 'Sửa sản phẩm', boxNo: 'Mã thùng', productName: 'Tên sản phẩm', boxType: 'Loại hộp', customer: 'Khách hàng', length: 'Chiều dài', width: 'Chiều rộng', height: 'Chiều cao', save: 'Lưu', cancel: 'Hủy' },
+            stopReason: { title: 'Lý do dừng máy', selectReason: 'Chọn lý do dừng máy', customReason: 'Lý do tùy chỉnh', startTime: 'Thời gian bắt đầu', duration: 'Thời lượng', confirm: 'Xác nhận', cancel: 'Hủy' },
+            help: { title: 'Hướng dẫn sử dụng', fkeys: 'Giải thích phím chức năng', close: 'Đóng' }
+        },
+        ui: {
+            buttons: { save: 'Lưu', cancel: 'Hủy', delete: 'Xóa', edit: 'Sửa', add: 'Thêm', confirm: 'Xác nhận', close: 'Đóng', search: 'Tìm kiếm', reset: 'Đặt lại', export: 'Xuất', import: 'Nhập', upload: 'Tải lên', download: 'Tải xuống' },
+            status: { idle: 'Chờ máy', running: 'Đang chạy', stopped: 'Đã dừng', completed: 'Đã hoàn tất', error: 'Lỗi', warning: 'Cảnh báo', normal: 'Bình thường' },
+            messages: { saveSuccess: 'Lưu thành công', saveFailed: 'Lưu thất bại', deleteSuccess: 'Xóa thành công', deleteFailed: 'Xóa thất bại', updateSuccess: 'Cập nhật thành công', updateFailed: 'Cập nhật thất bại', loading: 'Đang tải...', noData: 'Không có dữ liệu', confirmDelete: 'Xác nhận xóa?', confirmAction: 'Xác nhận thực hiện thao tác này?' }
+        }
     },
     th: {
         nav: { monitor: 'จอภาพ', schedule: 'กำหนดการ', reports: 'รายงาน', settings: 'การตั้งค่า' },
@@ -1145,6 +1203,59 @@ export const translations = {
                 timeBoundary: 'ขอบเขตเวลา', smallBatch: 'นิยามล็อตเล็ก', exceptionFilters: 'ตัวกรองข้อยกเว้น'
             }
         },
+        dashboard: {
+            monitor: { productionQty: 'จำนวนผลิต', qty: 'Qty', speed: 'ความเร็ว', standard: 'มาตรฐาน', maxSpeed: 'ความเร็วสูงสุด', idle: 'รอทำงาน (Idle)', waitForF3: 'รอกด F3 เริ่มผลิต', running: 'Running' },
+            stats: { squareMeter: 'ตารางเมตร', total: 'รวม', count: 'จำนวนชิ้น', remaining: 'คงเหลือ', defect: 'ของเสีย', avgSpeed: 'ความเร็วเฉลี่ย', runTime: 'เวลาผลิต', stopTime: 'เวลาหยุด', stopCount: 'จำนวนครั้งหยุด', today: 'วันนี้', currentJob: 'งานนี้' },
+            schedule: { seqNo: 'ลำดับ', customer: 'ชื่อลูกค้า', orderNo: 'เลขที่ออเดอร์', boxNo: 'รหัสกล่อง', qty: 'จำนวน', productName: 'ชื่อสินค้า', boxType: 'ประเภทกล่อง', noQueuedOrders: 'ไม่มีออเดอร์ในคิว', autoNextOn: '【 งานถัดไปอัตโนมัติ ON 】', autoNextOff: '【 งานถัดไปอัตโนมัติ OFF 】', sheets: 'จำนวนแผ่น', notes: 'หมายเหตุ' },
+            machineStatus: { title: 'สถานะเครื่อง', stopReason: 'สาเหตุหยุด', normal: 'ปกติ', warning: 'เตือน', error: 'ผิดปกติ' },
+            stopReasons: { startTime: 'เวลาเริ่ม', duration: 'ระยะเวลา', reason: 'สาเหตุ' },
+            alerts: { plcDisconnected: 'PLC หลุดการเชื่อมต่อ ไม่สามารถเริ่มผลิตได้!', selectOrderFirst: 'กรุณาเลือกใบสั่งงานก่อน', selectQueuedOrder: 'กรุณาเลือกใบสั่งงานในคิวด้านล่างก่อน', speedNotZero: 'ความเร็วไม่เป็น 0 ไม่สามารถปิดงานได้! กรุณาหยุดเครื่องก่อน', speedNotZeroReturn: 'ความเร็วไม่เป็น 0 ไม่สามารถถอยกลับได้! กรุณาหยุดเครื่องก่อน', confirmDelete: 'ยืนยันลบใบสั่งงาน', confirmReorder: 'ยืนยันจัดลำดับใบสั่งงานใหม่?', confirmExit: 'ยืนยันออก?', startProduction: 'เริ่มผลิต' },
+            logs: { f1Pressed: 'F1: กด (เลื่อนขึ้น)', f2Pressed: 'F2: กด (เลื่อนลง)', f3Start: 'F3: เริ่มผลิต', f4Finish: 'F4: ปิดงาน', f5GoodQty: 'F5: จำนวนผลิต +1', f6DefectQty: 'F6: จำนวนผลิต -1', f7OrderModal: 'F7: เปิดหน้าต่างออเดอร์', f8AutoNext: 'F8: สลับงานถัดไปอัตโนมัติ', f9SwitchShift: 'F9: สลับกะ', f10Return: 'F10: ถอยกลับ', f12Exit: 'F12: ออกจากระบบ' }
+        },
+        orders: {
+            tabs: { schedule: 'จัดการตารางผลิต', products: 'คลังสินค้า' },
+            schedule: { title: 'ตารางการผลิต', moveUp: 'เลื่อนขึ้น', moveDown: 'เลื่อนลง', delete: 'ลบตาราง', reorder: 'รีเซ็ตลำดับ', addToSchedule: 'เพิ่มตาราง' },
+            products: { title: 'คลังสินค้า', add: 'เพิ่มสินค้า', edit: 'แก้ไข', delete: 'ลบ', boxNo: 'รหัสกล่อง', productName: 'ชื่อสินค้า', boxType: 'ประเภทกล่อง', customer: 'ลูกค้า', maintenance_title: 'บำรุงรักษาฐานข้อมูล' },
+            alerts: { selectOrder: 'กรุณาเลือกใบสั่งงานก่อน', confirmDeleteRunning: 'ยืนยันลบใบสั่งงานที่กำลังทำงาน? กรุณาตรวจสอบว่าความเร็วและจำนวนผลิตเป็น 0', confirmDelete: 'ยืนยันลบใบสั่งงาน', confirmReorder: 'ยืนยันจัดลำดับใบสั่งงานใหม่?' }
+        },
+        reports: {
+            tabs: { daily: 'รายงานผลิตประจำวัน', monthly: 'รายงานผลิตประจำเดือน', stopReasons: 'สาเหตุหยุดเครื่อง' },
+            filters: { dateRange: 'ช่วงวันที่', shift: 'กะ', allShifts: 'ทุกกะ', shiftA: 'กะ A', shiftB: 'กะ B', shiftC: 'กะ C' },
+            table: { id: 'ลำดับ', client: 'ลูกค้า', orderNo: 'เลขที่ออเดอร์', product: 'สินค้า', shift: 'กะ', speed: 'ความเร็ว', qty: 'จำนวน', count: 'นับ', good: 'ของดี', bad: 'ของเสีย', start: 'เวลาเริ่ม', test: 'เวลาทดลองเครื่อง', status: 'สถานะ' },
+            stopReasons: { startTime: 'เวลาเริ่ม', endTime: 'เวลาสิ้นสุด', duration: 'ระยะเวลา', code: 'รหัส', reason: 'สาเหตุ' },
+            summary: { totalOrders: 'จำนวนออเดอร์รวม', totalQty: 'จำนวนรวม', totalGood: 'ของดีรวม', totalBad: 'ของเสียรวม', avgSpeed: 'ความเร็วเฉลี่ย', totalRunTime: 'เวลาผลิตรวม', totalStopTime: 'เวลาหยุดรวม' }
+        },
+        analysis: {
+            title: 'วิเคราะห์การผลิต',
+            controls: { chartView: 'มุมมองกราฟ', tableView: 'มุมมองตาราง', scrollStart: 'เริ่ม', scrollEnd: 'สิ้นสุด' },
+            charts: { oee: 'แนวโน้ม OEE', speedTrend: 'แนวโน้มความเร็ว', defectRate: 'วิเคราะห์อัตราของเสีย', stopReasons: 'วิเคราะห์สาเหตุหยุดเครื่อง' },
+            metrics: { oee: 'OEE', availability: 'อัตราการเดินเครื่อง', performance: 'อัตราสมรรถนะ', quality: 'อัตราของดี', avgSpeed: 'ความเร็วเฉลี่ย', defectRate: 'อัตราของเสีย' },
+            filters: { timePeriod: 'ช่วงเวลา', today: 'วันนี้', week: 'สัปดาห์นี้', month: 'เดือนนี้', custom: 'กำหนดเอง' },
+            fields: { customer: 'ลูกค้า', product: 'ชื่อสินค้า', boxNo: 'รหัสกล่อง', boxType: 'ประเภทกล่อง', orderNo: 'เลขที่ออเดอร์', qty: 'จำนวน', operator: 'พนักงาน', shift: 'กะ', stopReason: 'สาเหตุหยุด', prepTime: 'เวลาเตรียม', date: 'วันที่', runTime: 'เวลาเดินเครื่อง', stopTime: 'เวลาหยุด', avgSpeed: 'ความเร็วเฉลี่ย', stopCount: 'จำนวนครั้งหยุด', defectQty: 'จำนวนของเสีย', oee: 'OEE', goodQty: 'จำนวนของดี' },
+            chartType: { title: 'ประเภทกราฟ' },
+            chartTypes: { pie: 'กราฟวงกลม', doughnut: 'กราฟโดนัท', line: 'กราฟเส้น', bar: 'กราฟแท่ง', radar: 'กราฟเรดาร์' },
+            timeScale: { title: 'มาตราเวลา' },
+            timeScales: { minute: 'นาที', hour: 'ชั่วโมง', day: 'วัน', week: 'สัปดาห์', month: 'เดือน' },
+            category: { title: 'เงื่อนไขจัดกลุ่ม' },
+            display: { title: 'คอลัมน์ที่แสดง' },
+            dateRange: 'ช่วงวันที่',
+            quickDate: { today: 'วันนี้', yesterday: 'เมื่อวาน', last7days: '7 วันล่าสุด', last30days: '30 วันล่าสุด', thisMonth: 'เดือนนี้' },
+            actions: { clearFilters: 'ล้างเงื่อนไข', downloadImage: 'ดาวน์โหลดรูป', exportExcel: 'ส่งออก Excel', print: 'พิมพ์' },
+            summary: { totalQty: 'ของดีรวม', avgDailyQty: 'ผลผลิตเฉลี่ยต่อวัน', totalStopTime: 'เวลาหยุดรวม', avgSpeed: 'ความเร็วเฉลี่ย', recordsCount: 'จำนวนรายการ' }
+        },
+        modals: {
+            finishOrder: { title: 'ยืนยันปิดงาน', goodQty: 'จำนวนของดี', defectQty: 'จำนวนของเสีย', operator: 'พนักงาน', notes: 'หมายเหตุ', confirm: 'ยืนยันปิดงาน', cancel: 'ยกเลิก' },
+            productDetail: { title: 'รายละเอียดสเปกสินค้า' },
+            orderDetails: { title: 'รายละเอียดออเดอร์', orderNo: 'เลขที่ออเดอร์', customer: 'ชื่อลูกค้า', boxNo: 'รหัสกล่อง', productName: 'ชื่อสินค้า', boxType: 'ประเภทกล่อง', qty: 'จำนวน', status: 'สถานะ', close: 'ปิด' },
+            productForm: { title: 'ฟอร์มสินค้า', addProduct: 'เพิ่มสินค้า', editProduct: 'แก้ไขสินค้า', boxNo: 'รหัสกล่อง', productName: 'ชื่อสินค้า', boxType: 'ประเภทกล่อง', customer: 'ลูกค้า', length: 'ความยาว', width: 'ความกว้าง', height: 'ความสูง', save: 'บันทึก', cancel: 'ยกเลิก' },
+            stopReason: { title: 'สาเหตุหยุดเครื่อง', selectReason: 'เลือกสาเหตุหยุด', customReason: 'สาเหตุกำหนดเอง', startTime: 'เวลาเริ่ม', duration: 'ระยะเวลา', confirm: 'ยืนยัน', cancel: 'ยกเลิก' },
+            help: { title: 'คำอธิบายการใช้งาน', fkeys: 'คำอธิบายปุ่มฟังก์ชัน', close: 'ปิด' }
+        },
+        ui: {
+            buttons: { save: 'บันทึก', cancel: 'ยกเลิก', delete: 'ลบ', edit: 'แก้ไข', add: 'เพิ่ม', confirm: 'ยืนยัน', close: 'ปิด', search: 'ค้นหา', reset: 'รีเซ็ต', export: 'ส่งออก', import: 'นำเข้า', upload: 'อัปโหลด', download: 'ดาวน์โหลด' },
+            status: { idle: 'รอทำงาน', running: 'กำลังทำงาน', stopped: 'หยุดแล้ว', completed: 'เสร็จแล้ว', error: 'ผิดพลาด', warning: 'เตือน', normal: 'ปกติ' },
+            messages: { saveSuccess: 'บันทึกสำเร็จ', saveFailed: 'บันทึกล้มเหลว', deleteSuccess: 'ลบสำเร็จ', deleteFailed: 'ลบล้มเหลว', updateSuccess: 'อัปเดตสำเร็จ', updateFailed: 'อัปเดตล้มเหลว', loading: 'กำลังโหลด...', noData: 'ไม่มีข้อมูล', confirmDelete: 'ยืนยันลบ?', confirmAction: 'ยืนยันดำเนินการนี้?' }
+        }
     }
 };
 
