@@ -59,7 +59,7 @@ const OrderDetailsModal = ({ isOpen, onClose, order, onSave }) => {
      */
     const handleCancel = () => {
         if (isDirty) {
-            if (!confirm(t('ui.messages.unsavedWarning'))) {
+            if (!confirm(t('fix.unsavedWarning'))) {
                 return;
             }
         }
@@ -71,7 +71,7 @@ const OrderDetailsModal = ({ isOpen, onClose, order, onSave }) => {
             <div className={styles.modal}>
                 {/* Header */}
                 <div className={styles.header}>
-                    <span>{t('modals.orderDetails.title')} {isDirty && `(${t('ui.messages.modified')})`}</span>
+                    <span>{t('modals.orderDetails.title')} {isDirty && `(${t('fix.modified')})`}</span>
                     <div className={styles.winControls}>
                         <button onClick={handleCancel} className={styles.closeBtn}>×</button>
                     </div>
@@ -88,7 +88,7 @@ const OrderDetailsModal = ({ isOpen, onClose, order, onSave }) => {
                         color: '#856404',
                         border: '1px solid #ffeeba'
                     }}>
-                        💡 {t('modals.orderDetails.editNote')}
+                        💡 {t('fix.editNote')}
                     </div>
 
                     {/* Top Form Section */}

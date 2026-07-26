@@ -99,7 +99,7 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
                     {/* Left Column: Form Info */}
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('dashboard.monitor.operator')}</label>
+                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('fix.monitorOperator')}</label>
                             <input
                                 name="operator"
                                 value={formData.operator}
@@ -108,7 +108,7 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
                             />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('dashboard.monitor.shift')}</label>
+                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('fix.monitorShift')}</label>
                             <input
                                 name="shift"
                                 value={formData.shift}
@@ -127,7 +127,7 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
                             />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('modals.finishOrder.splitCount')}</label>
+                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('fix.splitCount')}</label>
                             <input
                                 type="number"
                                 name="splitCount"
@@ -137,7 +137,7 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
                             />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('modals.finishOrder.shortageWen')}</label>
+                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('fix.shortageWen')}</label>
                             <input
                                 type="number"
                                 name="shortageWen"
@@ -147,7 +147,7 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
                             />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('modals.finishOrder.shortageWu')}</label>
+                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('fix.shortageWu')}</label>
                             <input
                                 type="number"
                                 name="shortageWu"
@@ -157,7 +157,7 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
                             />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('modals.finishOrder.shortageReason')}</label>
+                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('fix.shortageReason')}</label>
                             <select
                                 name="shortageReason"
                                 value={formData.shortageReason}
@@ -170,7 +170,7 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
                             </select>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('modals.finishOrder.processType')}</label>
+                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('fix.processType')}</label>
                             <select
                                 name="processType"
                                 value={formData.processType}
@@ -184,13 +184,13 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
                         </div>
                         <div style={{ paddingLeft: '90px' }}>
                             <label style={{ display: 'block' }}>
-                                <input type="checkbox" name="isSplit" checked={formData.isSplit} onChange={handleInputChange} /> {t('modals.finishOrder.isSplit')}
+                                <input type="checkbox" name="isSplit" checked={formData.isSplit} onChange={handleInputChange} /> {t('fix.isSplit')}
                             </label>
                             <label style={{ display: 'block' }}>
-                                <input type="checkbox" name="isFinished" checked={formData.isFinished} onChange={handleInputChange} /> {t('modals.finishOrder.isFinished')}
+                                <input type="checkbox" name="isFinished" checked={formData.isFinished} onChange={handleInputChange} /> {t('fix.isFinished')}
                             </label>
                             <label style={{ display: 'block' }}>
-                                <input type="checkbox" name="saveOptimized" checked={formData.saveOptimized} onChange={handleInputChange} /> {t('modals.finishOrder.saveOptimized')}
+                                <input type="checkbox" name="saveOptimized" checked={formData.saveOptimized} onChange={handleInputChange} /> {t('fix.saveOptimized')}
                             </label>
                         </div>
                     </div>
@@ -200,7 +200,7 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
                         <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #ccc' }}>
                             <thead style={{ backgroundColor: '#f0f0f0' }}>
                                 <tr>
-                                    <th style={{ border: '1px solid #ccc', padding: '5px', textAlign: 'left' }}>{t('reports.table.reason')}</th>
+                                    <th style={{ border: '1px solid #ccc', padding: '5px', textAlign: 'left' }}>{t('fix.tableReason')}</th>
                                     <th style={{ border: '1px solid #ccc', padding: '5px', width: '60px' }}>{t('reports.table.qty')}</th>
                                 </tr>
                             </thead>

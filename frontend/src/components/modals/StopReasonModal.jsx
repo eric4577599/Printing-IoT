@@ -7,12 +7,12 @@ const StopReasonModal = ({ isOpen, onClose, onSelect }) => {
     const [selectedCode, setSelectedCode] = useState(null);
 
     const STOP_REASONS = [
-        { code: '001', name: t('dashboard.stopReasons.001') || '送紙歪斜 (Feed Skew)' },
-        { code: '002', name: t('dashboard.stopReasons.002') || '印刷不清 (Print Blurry)' },
-        { code: '003', name: t('dashboard.stopReasons.003') || '紙張破裂 (Paper Tear)' },
-        { code: '004', name: t('dashboard.stopReasons.004') || '油墨不足 (Low Ink)' },
-        { code: '005', name: t('dashboard.stopReasons.005') || '機械故障 (Mechanical Failure)' },
-        { code: '006', name: t('dashboard.stopReasons.006') || '其他 (Other)' },
+        { code: '001', name: t('fix.stop001') || '送紙歪斜 (Feed Skew)' },
+        { code: '002', name: t('fix.stop002') || '印刷不清 (Print Blurry)' },
+        { code: '003', name: t('fix.stop003') || '紙張破裂 (Paper Tear)' },
+        { code: '004', name: t('fix.stop004') || '油墨不足 (Low Ink)' },
+        { code: '005', name: t('fix.stop005') || '機械故障 (Mechanical Failure)' },
+        { code: '006', name: t('fix.stop006') || '其他 (Other)' },
     ];
 
     if (!isOpen) return null;
