@@ -19,11 +19,12 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
         targetQty: 0,
     });
 
+    // 不良類別以 i18n 鍵儲存,渲染時再翻譯,語言切換即時反映
     const [defects, setDefects] = useState([
-        { id: 'A01', reason: '不良平板', qty: 0 },
-        { id: 'A02', reason: '不良印製', qty: 0 },
-        { id: 'A03', reason: '不良本身', qty: 0 },
-        { id: 'A04', reason: '超製', qty: 0 },
+        { id: 'A01', reasonKey: 'modalExt.finishOrder.defectFlat', qty: 0 },
+        { id: 'A02', reasonKey: 'modalExt.finishOrder.defectPrint', qty: 0 },
+        { id: 'A03', reasonKey: 'modalExt.finishOrder.defectSelf', qty: 0 },
+        { id: 'A04', reasonKey: 'modalExt.finishOrder.defectOver', qty: 0 },
     ]);
 
     // 修正:原 effect 依賴 [isOpen, initialData],父層(Dashboard)每秒重建 initialData 物件,
@@ -77,7 +78,7 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
         }
 
         if (shortageGap > 0 && shortageGap > threshold && !formData.shortageReason) {
-            alert(`未達目標產量 (${formData.targetQty}) 且差異大於 ${threshold}，請輸入欠量原因 (Shortage Reason Required)`);
+            alert(`${t('modalExt.finishOrder.shortageAlertPre')} (${formData.targetQty}) ${t('modalExt.finishOrder.shortageAlertMid')} ${threshold}${t('modalExt.finishOrder.shortageAlertPost')}`);
             return;
         }
 
@@ -163,9 +164,9 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
                                 onChange={handleInputChange}
                                 style={{ flex: 1, padding: '4px' }}
                             >
-                                <option value="">請選擇</option>
-                                <option value="Reason A">原因 A</option>
-                                <option value="Reason B">原因 B</option>
+                                <option value="">{t('modalExt.finishOrder.pleaseSelect')}</option>
+                                <option value="Reason A">{t('modalExt.finishOrder.reasonA')}</option>
+                                <option value="Reason B">{t('modalExt.finishOrder.reasonB')}</option>
                             </select>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -176,9 +177,9 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
                                 onChange={handleInputChange}
                                 style={{ flex: 1, padding: '4px' }}
                             >
-                                <option value="">請選擇</option>
-                                <option value="Type A">類別 A</option>
-                                <option value="Type B">類別 B</option>
+                                <option value="">{t('modalExt.finishOrder.pleaseSelect')}</option>
+                                <option value="Type A">{t('modalExt.finishOrder.typeA')}</option>
+                                <option value="Type B">{t('modalExt.finishOrder.typeB')}</option>
                             </select>
                         </div>
                         <div style={{ paddingLeft: '90px' }}>
@@ -206,7 +207,7 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
                             <tbody>
                                 {defects.map(d => (
                                     <tr key={d.id}>
-                                        <td style={{ border: '1px solid #ccc', padding: '5px' }}>{d.id} {d.reason}</td>
+                                        <td style={{ border: '1px solid #ccc', padding: '5px' }}>{d.id} {t(d.reasonKey)}</td>
                                         <td style={{ border: '1px solid #ccc', padding: '0' }}>
                                             <input
                                                 type="number"

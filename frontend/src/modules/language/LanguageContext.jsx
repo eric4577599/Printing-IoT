@@ -4,6 +4,34 @@ const LanguageContext = createContext();
 
 export const translations = {
     tw: {
+        modalExt: {
+            params: {
+                gapFeedFront: '送紙前擋板間隙', gapFeedProg: '送紙進紙輪間隙', gapFeedRubber: '送紙皮帶輪間隙',
+                gapFormFront: '成型部前導間隙', dieCutPhase: '模切部相位', dieCutFeedGap: '模切部送紙輪間隙',
+                slotGuide: '開槽導紙輪', slotFront: '開槽部壓線', slotAux: '開槽部輔助壓線', midKnife: '中刀位置',
+                printSection: '印刷部', press: '印壓', pos: '位置', beltGap: '皮帶間隙', plateGap: '版座間隙',
+                ink: '印墨', belt: '皮帶', crease: '壓線', unit1: '一', unit2: '二', unit3: '三', unit4: '四'
+            },
+            finishOrder: {
+                defectFlat: '不良平板', defectPrint: '不良印製', defectSelf: '不良本身', defectOver: '超製',
+                reasonA: '原因 A', reasonB: '原因 B', typeA: '類別 A', typeB: '類別 B', pleaseSelect: '請選擇',
+                shortageAlertPre: '未達目標產量', shortageAlertMid: '且差異大於', shortageAlertPost: '，請輸入欠量原因'
+            },
+            productForm: {
+                title: '產品資料', flute: '楞', thicknessHint: '厚度依據楞別自動設定', bundleCount: '捆個數',
+                uploadHint: '請在設定頁面上傳盒型圖片並設定欄位位置'
+            },
+            addSchedule: {
+                title: '新增排程', orderNoPlaceholder: '12碼, 不可重複', useOptimized: '是否使用最佳化參數',
+                alertOrderNoRequired: '請輸入訂單號碼', alertQtyRequired: '請輸入有效數量', alertDuplicate: '訂單號碼重複'
+            },
+            orderDetails: {
+                foldSheets: '張摺數'
+            },
+            ordersAlert: { cannotMoveRunning: '無法移動正在生產中的工單！', cannotDeleteSpeedNotZero: '❌ 無法刪除：車速不為 0\n當前車速: {speed} m/min\n\n請先停止生產後再試。', cannotDeleteQtyRemaining: '❌ 無法刪除：未生產量不為 0\n剩餘數量: {qty} 張\n\n請完成生產後再試。', selectToShowDiagram: '請選取左側排程以顯示紙箱展開圖', confirmDeleteProduct: '確認刪除此產品資料？' },
+            help: { title: '操作說明', items: { monitor: '1. 即時監控', schedule: '2. 生產排程', reports: '3. 生產報表', analysis: '4. 生產分析', settings: '5. 系統設定' } }
+        },
+        docs: { category: { workflow: '作業流程', design: '設計文件', deploy: '部署與運維', refactor: '重構紀錄', testing: '測試與品質', meeting: '會議紀錄' }, file: { manual: '操作說明書', sasd: 'SASD 說明書', dev: '開發說明書', mqtt: 'MQTT 訊息處理流程', maintenance: '維護保養開發設計書', handover: '移交文件 (Handover)', projectStatus: '專案狀態', refactorLog: '重構變更紀錄', testCases: '測試案例', stressTest: '壓力測試報告', review: '專案審查', meeting1: '維修管理系統分離', meeting2: '苗栗保養計劃' }, header: { title: '文件入口' }, tab: { liveLog: '即時操作紀錄' }, liveLog: { title: '即時操作紀錄 (Live Operation Logs)', desc: '顯示來自 Dashboard 的即時操作記錄,包含 F-Key 操作、訂單異動、系統事件等。', empty: '尚無操作紀錄 — 開始使用 Dashboard 後紀錄會自動產生' }, welcome: { title: 'Printing IoT 文件系統', subtitle: '從左側選擇文件開始瀏覽', desc: '包含作業流程、設計文件、操作紀錄、重構日誌與測試報告' }, loading: '載入中...', error: { label: '錯誤:', hint: '提示:此功能將在 Phase 3 後端整合時完成,需要後端 API 端點', loadFail: '無法載入文件' } },
         nav: { monitor: '即時監控', schedule: '排程', reports: '報表', settings: '設定', analysis: '生產分析', docs: '文件', language: '語言' },
         layout: { sim: { label: '模擬生產:', modeTitle: '選擇模擬模式: 本地(直接顯示) vs 遠端(經由 MQTT 迴路)', stop: '停止', standard: '標準', max: '極速', stopShort: '停', speed: '速度' }, help: { title: '操作說明', button: '說明' }, logout: '登出', status: { state: '狀態: Idle', connected: '連線', disconnected: '斷線', disabled: '未啟用' } },
         boxDiagram: { empty: '請選取左側排程以顯示紙箱展開圖', unit: '尺寸單位: mm', hsc: '半槽箱(無上蓋)', rsc: '常規開槽箱' },
@@ -359,6 +387,34 @@ export const translations = {
         }
     },
     cn: {
+        modalExt: {
+            params: {
+                gapFeedFront: '送纸前挡板间隙', gapFeedProg: '送纸进纸轮间隙', gapFeedRubber: '送纸皮带轮间隙',
+                gapFormFront: '成型部前导间隙', dieCutPhase: '模切部相位', dieCutFeedGap: '模切部送纸轮间隙',
+                slotGuide: '开槽导纸轮', slotFront: '开槽部压线', slotAux: '开槽部辅助压线', midKnife: '中刀位置',
+                printSection: '印刷部', press: '印压', pos: '位置', beltGap: '皮带间隙', plateGap: '版座间隙',
+                ink: '印墨', belt: '皮带', crease: '压线', unit1: '一', unit2: '二', unit3: '三', unit4: '四'
+            },
+            finishOrder: {
+                defectFlat: '不良平板', defectPrint: '不良印制', defectSelf: '不良本身', defectOver: '超制',
+                reasonA: '原因 A', reasonB: '原因 B', typeA: '类别 A', typeB: '类别 B', pleaseSelect: '请选择',
+                shortageAlertPre: '未达目标产量', shortageAlertMid: '且差异大于', shortageAlertPost: '，请输入欠量原因'
+            },
+            productForm: {
+                title: '产品资料', flute: '楞', thicknessHint: '厚度依据楞别自动设置', bundleCount: '捆个数',
+                uploadHint: '请在设置页上传盒型图片并设置栏位位置'
+            },
+            addSchedule: {
+                title: '新增排程', orderNoPlaceholder: '12码, 不可重复', useOptimized: '是否使用优化参数',
+                alertOrderNoRequired: '请输入订单号码', alertQtyRequired: '请输入有效数量', alertDuplicate: '订单号码重复'
+            },
+            orderDetails: {
+                foldSheets: '张折数'
+            },
+            ordersAlert: { cannotMoveRunning: '无法移动正在生产中的工单！', cannotDeleteSpeedNotZero: '❌ 无法删除：车速不为 0\n当前车速: {speed} m/min\n\n请先停止生产后再试。', cannotDeleteQtyRemaining: '❌ 无法删除：未生产量不为 0\n剩余数量: {qty} 张\n\n请完成生产后再试。', selectToShowDiagram: '请选取左侧排程以显示纸箱展开图', confirmDeleteProduct: '确认删除此产品资料？' },
+            help: { title: '操作说明', items: { monitor: '1. 实时监控', schedule: '2. 生产排程', reports: '3. 生产报表', analysis: '4. 生产分析', settings: '5. 系统设定' } }
+        },
+        docs: { category: { workflow: '作业流程', design: '设计文件', deploy: '部署与运维', refactor: '重构记录', testing: '测试与质量', meeting: '会议记录' }, file: { manual: '操作说明书', sasd: 'SASD 说明书', dev: '开发说明书', mqtt: 'MQTT 消息处理流程', maintenance: '维护保养开发设计书', handover: '移交文件 (Handover)', projectStatus: '项目状态', refactorLog: '重构变更记录', testCases: '测试案例', stressTest: '压力测试报告', review: '项目审查', meeting1: '维修管理系统分离', meeting2: '苗栗保养计划' }, header: { title: '文件入口' }, tab: { liveLog: '实时操作记录' }, liveLog: { title: '实时操作记录 (Live Operation Logs)', desc: '显示来自 Dashboard 的实时操作记录,包含 F-Key 操作、订单异动、系统事件等。', empty: '尚无操作记录 — 开始使用 Dashboard 后记录会自动产生' }, welcome: { title: 'Printing IoT 文件系统', subtitle: '从左侧选择文件开始浏览', desc: '包含作业流程、设计文件、操作记录、重构日志与测试报告' }, loading: '加载中...', error: { label: '错误:', hint: '提示:此功能将在 Phase 3 后端集成时完成,需要后端 API 端点', loadFail: '无法加载文件' } },
         nav: { monitor: '实时监控', schedule: '排程', reports: '报表', settings: '设置', analysis: '生产分析', docs: '文件', language: '语言' },
         layout: { sim: { label: '模拟生产:', modeTitle: '选择模拟模式: 本地(直接显示) vs 远端(经由 MQTT 回路)', stop: '停止', standard: '标准', max: '极速', stopShort: '停', speed: '速度' }, help: { title: '操作说明', button: '说明' }, logout: '登出', status: { state: '状态: Idle', connected: '连线', disconnected: '断线', disabled: '未启用' } },
         boxDiagram: { empty: '请选取左侧排程以显示纸箱展开图', unit: '尺寸单位: mm', hsc: '半槽箱(无上盖)', rsc: '常规开槽箱' },
@@ -714,6 +770,34 @@ export const translations = {
         }
     },
     en: {
+        modalExt: {
+            params: {
+                gapFeedFront: 'Feed Front Guard Gap', gapFeedProg: 'Feed Roller Gap', gapFeedRubber: 'Feed Belt Roller Gap',
+                gapFormFront: 'Forming Lead Gap', dieCutPhase: 'Die-Cut Phase', dieCutFeedGap: 'Die-Cut Feed Roller Gap',
+                slotGuide: 'Slotter Guide Roller', slotFront: 'Slotter Crease', slotAux: 'Slotter Aux Crease', midKnife: 'Center Knife Position',
+                printSection: 'Print Section', press: 'Print Pressure', pos: 'Position', beltGap: 'Belt Gap', plateGap: 'Plate Base Gap',
+                ink: 'Ink', belt: 'Belt', crease: 'Crease', unit1: '1', unit2: '2', unit3: '3', unit4: '4'
+            },
+            finishOrder: {
+                defectFlat: 'Defective Blank', defectPrint: 'Defective Print', defectSelf: 'Defective Body', defectOver: 'Overproduction',
+                reasonA: 'Reason A', reasonB: 'Reason B', typeA: 'Type A', typeB: 'Type B', pleaseSelect: 'Please select',
+                shortageAlertPre: 'Target output not reached', shortageAlertMid: 'and gap exceeds', shortageAlertPost: ', please enter shortage reason'
+            },
+            productForm: {
+                title: 'Product Specs', flute: 'Flute', thicknessHint: 'Thickness auto-set by flute type', bundleCount: 'Bundle Qty',
+                uploadHint: 'Please upload box image and configure field positions in Settings'
+            },
+            addSchedule: {
+                title: 'Add Schedule', orderNoPlaceholder: '12 digits, no duplicates', useOptimized: 'Use optimized parameters',
+                alertOrderNoRequired: 'Order No. is required', alertQtyRequired: 'Valid Qty is required', alertDuplicate: 'Order No. already exists'
+            },
+            orderDetails: {
+                foldSheets: 'Fold Sheets'
+            },
+            ordersAlert: { cannotMoveRunning: 'Cannot move the running order!', cannotDeleteSpeedNotZero: '❌ Cannot delete: line speed is not 0\nCurrent speed: {speed} m/min\n\nPlease stop production first.', cannotDeleteQtyRemaining: '❌ Cannot delete: unfinished quantity is not 0\nRemaining: {qty} sheets\n\nPlease finish production first.', selectToShowDiagram: 'Select a schedule on the left to display the box diagram', confirmDeleteProduct: 'Delete this product record?' },
+            help: { title: 'User Guide', items: { monitor: '1. Live Monitor', schedule: '2. Production Schedule', reports: '3. Production Reports', analysis: '4. Production Analysis', settings: '5. System Settings' } }
+        },
+        docs: { category: { workflow: 'Workflows', design: 'Design Docs', deploy: 'Deployment & Ops', refactor: 'Refactoring Log', testing: 'Testing & Quality', meeting: 'Meeting Notes' }, file: { manual: 'Operation Manual', sasd: 'SASD Guide', dev: 'Development Guide', mqtt: 'MQTT Message Flow', maintenance: 'Maintenance Design Doc', handover: 'Handover', projectStatus: 'Project Status', refactorLog: 'Refactoring Change Log', testCases: 'Test Cases', stressTest: 'Stress Test Report', review: 'Project Review', meeting1: 'Maintenance System Split', meeting2: 'Miaoli Maintenance Plan' }, header: { title: 'Document Portal' }, tab: { liveLog: 'Live Operation Logs' }, liveLog: { title: 'Live Operation Logs', desc: 'Shows real-time operation records from the Dashboard, including F-Key actions, order changes, and system events.', empty: 'No operation records yet — records are generated automatically once you start using the Dashboard.' }, welcome: { title: 'Printing IoT Document System', subtitle: 'Select a document on the left to start browsing', desc: 'Includes workflows, design docs, operation logs, refactoring logs, and test reports' }, loading: 'Loading...', error: { label: 'Error:', hint: 'Tip: This feature will be completed in Phase 3 backend integration. It requires the backend API endpoint', loadFail: 'Failed to load document' } },
         nav: { monitor: 'Monitor', schedule: 'Schedule', reports: 'Reports', settings: 'Settings', analysis: 'Analysis', docs: 'Docs', language: 'Language' },
         layout: { sim: { label: 'Simulate:', modeTitle: 'Select sim mode: Local (direct) vs Remote (via MQTT)', stop: 'Stop', standard: 'Standard', max: 'Max', stopShort: 'Stop', speed: 'Speed' }, help: { title: 'Help', button: 'Help' }, logout: 'Logout', status: { state: 'Status: Idle', connected: 'Connected', disconnected: 'Disconnected', disabled: 'Disabled' } },
         boxDiagram: { empty: 'Select an order on the left to display the box diagram', unit: 'Unit: mm', hsc: 'HSC (no top flap)', rsc: 'RSC (regular slotted)' },
@@ -1069,6 +1153,34 @@ export const translations = {
         }
     },
     vn: {
+        modalExt: {
+            params: {
+                gapFeedFront: 'Khe chắn trước cấp giấy', gapFeedProg: 'Khe bánh cấp giấy', gapFeedRubber: 'Khe bánh đai cấp giấy',
+                gapFormFront: 'Khe dẫn trước bộ tạo hình', dieCutPhase: 'Pha bộ bế', dieCutFeedGap: 'Khe bánh cấp giấy bộ bế',
+                slotGuide: 'Bánh dẫn giấy bộ xẻ rãnh', slotFront: 'Đường lằn bộ xẻ rãnh', slotAux: 'Đường lằn phụ bộ xẻ rãnh', midKnife: 'Vị trí dao giữa',
+                printSection: 'Bộ in', press: 'Áp lực in', pos: 'Vị trí', beltGap: 'Khe đai', plateGap: 'Khe đế bản',
+                ink: 'Mực in', belt: 'Đai', crease: 'Đường lằn', unit1: '1', unit2: '2', unit3: '3', unit4: '4'
+            },
+            finishOrder: {
+                defectFlat: 'Tấm lỗi', defectPrint: 'In lỗi', defectSelf: 'Thân lỗi', defectOver: 'Sản xuất dư',
+                reasonA: 'Lý do A', reasonB: 'Lý do B', typeA: 'Loại A', typeB: 'Loại B', pleaseSelect: 'Vui lòng chọn',
+                shortageAlertPre: 'Chưa đạt sản lượng mục tiêu', shortageAlertMid: 'và chênh lệch vượt quá', shortageAlertPost: ', vui lòng nhập lý do thiếu hụt'
+            },
+            productForm: {
+                title: 'Thông tin sản phẩm', flute: 'Sóng', thicknessHint: 'Độ dày tự động theo loại sóng', bundleCount: 'Số lượng bó',
+                uploadHint: 'Vui lòng tải ảnh hộp và cấu hình vị trí trường trong Cài đặt'
+            },
+            addSchedule: {
+                title: 'Thêm lịch trình', orderNoPlaceholder: '12 ký tự, không trùng lặp', useOptimized: 'Sử dụng tham số tối ưu',
+                alertOrderNoRequired: 'Vui lòng nhập số đơn hàng', alertQtyRequired: 'Vui lòng nhập số lượng hợp lệ', alertDuplicate: 'Số đơn hàng bị trùng'
+            },
+            orderDetails: {
+                foldSheets: 'Số tờ gấp'
+            },
+            ordersAlert: { cannotMoveRunning: 'Không thể di chuyển lệnh đang sản xuất!', cannotDeleteSpeedNotZero: '❌ Không thể xóa: tốc độ chạy khác 0\nTốc độ hiện tại: {speed} m/min\n\nVui lòng dừng sản xuất trước.', cannotDeleteQtyRemaining: '❌ Không thể xóa: sản lượng chưa hoàn thành khác 0\nCòn lại: {qty} tờ\n\nVui lòng hoàn thành sản xuất trước.', selectToShowDiagram: 'Chọn một lịch bên trái để hiển thị sơ đồ khai triển thùng', confirmDeleteProduct: 'Xóa dữ liệu sản phẩm này?' },
+            help: { title: 'Hướng dẫn sử dụng', items: { monitor: '1. Giám sát thời gian thực', schedule: '2. Lịch sản xuất', reports: '3. Báo cáo sản xuất', analysis: '4. Phân tích sản xuất', settings: '5. Cài đặt hệ thống' } }
+        },
+        docs: { category: { workflow: 'Quy trình vận hành', design: 'Tài liệu thiết kế', deploy: 'Triển khai & Vận hành', refactor: 'Nhật ký tái cấu trúc', testing: 'Kiểm thử & Chất lượng', meeting: 'Biên bản họp' }, file: { manual: 'Hướng dẫn vận hành', sasd: 'Tài liệu SASD', dev: 'Tài liệu phát triển', mqtt: 'Luồng xử lý tin nhắn MQTT', maintenance: 'Tài liệu thiết kế bảo trì', handover: 'Bàn giao', projectStatus: 'Trạng thái dự án', refactorLog: 'Nhật ký thay đổi tái cấu trúc', testCases: 'Trường hợp kiểm thử', stressTest: 'Báo cáo kiểm thử tải', review: 'Đánh giá dự án', meeting1: 'Tách hệ thống quản lý bảo trì', meeting2: 'Kế hoạch bảo trì Miêu Lật' }, header: { title: 'Cổng tài liệu' }, tab: { liveLog: 'Nhật ký thao tác thời gian thực' }, liveLog: { title: 'Nhật ký thao tác thời gian thực (Live Operation Logs)', desc: 'Hiển thị bản ghi thao tác thời gian thực từ Dashboard, bao gồm thao tác F-Key, thay đổi đơn hàng và sự kiện hệ thống.', empty: 'Chưa có bản ghi thao tác — bản ghi sẽ tự động tạo khi bắt đầu dùng Dashboard.' }, welcome: { title: 'Hệ thống tài liệu Printing IoT', subtitle: 'Chọn tài liệu ở bên trái để bắt đầu xem', desc: 'Bao gồm quy trình vận hành, tài liệu thiết kế, nhật ký thao tác, nhật ký tái cấu trúc và báo cáo kiểm thử' }, loading: 'Đang tải...', error: { label: 'Lỗi:', hint: 'Gợi ý: Tính năng này sẽ hoàn thành trong tích hợp backend Phase 3. Cần điểm cuối API backend', loadFail: 'Không thể tải tài liệu' } },
         nav: { monitor: 'Giám sát', schedule: 'Lịch trình', reports: 'Báo cáo', settings: 'Cài đặt', analysis: 'Phân tích', docs: 'Tài liệu', language: 'Ngôn ngữ' },
         layout: { sim: { label: 'Mô phỏng:', modeTitle: 'Chọn chế độ mô phỏng: Cục bộ (hiển thị trực tiếp) vs Từ xa (qua MQTT)', stop: 'Dừng', standard: 'Chuẩn', max: 'Tối đa', stopShort: 'Dừng', speed: 'Tốc độ' }, help: { title: 'Hướng dẫn', button: 'Trợ giúp' }, logout: 'Đăng xuất', status: { state: 'Trạng thái: Idle', connected: 'Đã kết nối', disconnected: 'Mất kết nối', disabled: 'Chưa bật' } },
         boxDiagram: { empty: 'Chọn một lệnh bên trái để hiển thị bản khai triển thùng', unit: 'Đơn vị: mm', hsc: 'Thùng nắp hở (không nắp trên)', rsc: 'Thùng khe thường' },
@@ -1176,6 +1288,34 @@ export const translations = {
         }
     },
     th: {
+        modalExt: {
+            params: {
+                gapFeedFront: 'ระยะแผ่นกั้นหน้าป้อนกระดาษ', gapFeedProg: 'ระยะลูกกลิ้งป้อนกระดาษ', gapFeedRubber: 'ระยะลูกกลิ้งสายพานป้อนกระดาษ',
+                gapFormFront: 'ระยะนำหน้าชุดขึ้นรูป', dieCutPhase: 'เฟสชุดไดคัท', dieCutFeedGap: 'ระยะลูกกลิ้งป้อนชุดไดคัท',
+                slotGuide: 'ลูกกลิ้งนำกระดาษชุดเซาะร่อง', slotFront: 'เส้นพับชุดเซาะร่อง', slotAux: 'เส้นพับเสริมชุดเซาะร่อง', midKnife: 'ตำแหน่งมีดกลาง',
+                printSection: 'ชุดพิมพ์', press: 'แรงกดพิมพ์', pos: 'ตำแหน่ง', beltGap: 'ระยะสายพาน', plateGap: 'ระยะฐานแม่พิมพ์',
+                ink: 'หมึกพิมพ์', belt: 'สายพาน', crease: 'เส้นพับ', unit1: '1', unit2: '2', unit3: '3', unit4: '4'
+            },
+            finishOrder: {
+                defectFlat: 'แผ่นเสีย', defectPrint: 'พิมพ์เสีย', defectSelf: 'ตัวกล่องเสีย', defectOver: 'ผลิตเกิน',
+                reasonA: 'สาเหตุ A', reasonB: 'สาเหตุ B', typeA: 'ประเภท A', typeB: 'ประเภท B', pleaseSelect: 'กรุณาเลือก',
+                shortageAlertPre: 'ผลิตไม่ถึงเป้าหมาย', shortageAlertMid: 'และส่วนต่างเกิน', shortageAlertPost: ' กรุณาระบุสาเหตุที่ขาด'
+            },
+            productForm: {
+                title: 'ข้อมูลสินค้า', flute: 'ลอน', thicknessHint: 'ความหนาตั้งอัตโนมัติตามชนิดลอน', bundleCount: 'จำนวนมัด',
+                uploadHint: 'กรุณาอัปโหลดรูปกล่องและตั้งค่าตำแหน่งฟิลด์ในหน้าตั้งค่า'
+            },
+            addSchedule: {
+                title: 'เพิ่มกำหนดการ', orderNoPlaceholder: '12 หลัก ห้ามซ้ำ', useOptimized: 'ใช้พารามิเตอร์ที่ปรับเหมาะสม',
+                alertOrderNoRequired: 'กรุณาระบุเลขที่ออเดอร์', alertQtyRequired: 'กรุณาระบุจำนวนที่ถูกต้อง', alertDuplicate: 'เลขที่ออเดอร์ซ้ำ'
+            },
+            orderDetails: {
+                foldSheets: 'จำนวนแผ่นพับ'
+            },
+            ordersAlert: { cannotMoveRunning: 'ไม่สามารถย้ายใบสั่งงานที่กำลังผลิตอยู่!', cannotDeleteSpeedNotZero: '❌ ไม่สามารถลบ: ความเร็วไม่เป็น 0\nความเร็วปัจจุบัน: {speed} m/min\n\nกรุณาหยุดการผลิตก่อน', cannotDeleteQtyRemaining: '❌ ไม่สามารถลบ: จำนวนที่ยังไม่ผลิตไม่เป็น 0\nคงเหลือ: {qty} แผ่น\n\nกรุณาผลิตให้เสร็จก่อน', selectToShowDiagram: 'เลือกตารางผลิตด้านซ้ายเพื่อแสดงแผนผังกล่อง', confirmDeleteProduct: 'ลบข้อมูลผลิตภัณฑ์นี้?' },
+            help: { title: 'คู่มือการใช้งาน', items: { monitor: '1. การตรวจสอบเรียลไทม์', schedule: '2. ตารางการผลิต', reports: '3. รายงานการผลิต', analysis: '4. การวิเคราะห์การผลิต', settings: '5. การตั้งค่าระบบ' } }
+        },
+        docs: { category: { workflow: 'ขั้นตอนการทำงาน', design: 'เอกสารออกแบบ', deploy: 'การปรับใช้และปฏิบัติการ', refactor: 'บันทึกการรีแฟคเตอร์', testing: 'การทดสอบและคุณภาพ', meeting: 'บันทึกการประชุม' }, file: { manual: 'คู่มือการใช้งาน', sasd: 'คู่มือ SASD', dev: 'คู่มือการพัฒนา', mqtt: 'กระบวนการจัดการข้อความ MQTT', maintenance: 'เอกสารออกแบบการบำรุงรักษา', handover: 'เอกสารส่งมอบ', projectStatus: 'สถานะโครงการ', refactorLog: 'บันทึกการเปลี่ยนแปลงการรีแฟคเตอร์', testCases: 'กรณีทดสอบ', stressTest: 'รายงานการทดสอบภาระ', review: 'การตรวจทานโครงการ', meeting1: 'การแยกระบบจัดการซ่อมบำรุง', meeting2: 'แผนบำรุงรักษาเมี่ยวลี่' }, header: { title: 'ประตูเอกสาร' }, tab: { liveLog: 'บันทึกการทำงานแบบเรียลไทม์' }, liveLog: { title: 'บันทึกการทำงานแบบเรียลไทม์ (Live Operation Logs)', desc: 'แสดงบันทึกการทำงานแบบเรียลไทม์จาก Dashboard รวมถึงการใช้ F-Key การเปลี่ยนแปลงคำสั่งซื้อ และเหตุการณ์ระบบ', empty: 'ยังไม่มีบันทึกการทำงาน — บันทึกจะถูกสร้างอัตโนมัติเมื่อเริ่มใช้ Dashboard' }, welcome: { title: 'ระบบเอกสาร Printing IoT', subtitle: 'เลือกเอกสารจากด้านซ้ายเพื่อเริ่มเรียกดู', desc: 'ประกอบด้วยขั้นตอนการทำงาน เอกสารออกแบบ บันทึกการทำงาน บันทึกการรีแฟคเตอร์ และรายงานการทดสอบ' }, loading: 'กำลังโหลด...', error: { label: 'ข้อผิดพลาด:', hint: 'คำแนะนำ: ฟีเจอร์นี้จะเสร็จสมบูรณ์ในการรวมแบ็กเอนด์ Phase 3 ต้องใช้ปลายทาง API แบ็กเอนด์', loadFail: 'ไม่สามารถโหลดเอกสารได้' } },
         nav: { monitor: 'จอภาพ', schedule: 'กำหนดการ', reports: 'รายงาน', settings: 'การตั้งค่า', analysis: 'วิเคราะห์', docs: 'เอกสาร', language: 'ภาษา' },
         layout: { sim: { label: 'จำลอง:', modeTitle: 'เลือกโหมดจำลอง: ในเครื่อง (แสดงตรง) vs ระยะไกล (ผ่าน MQTT)', stop: 'หยุด', standard: 'มาตรฐาน', max: 'สูงสุด', stopShort: 'หยุด', speed: 'ความเร็ว' }, help: { title: 'วิธีใช้', button: 'ช่วยเหลือ' }, logout: 'ออกจากระบบ', status: { state: 'สถานะ: Idle', connected: 'เชื่อมต่อ', disconnected: 'ตัดการเชื่อมต่อ', disabled: 'ปิดใช้งาน' } },
         boxDiagram: { empty: 'เลือกออเดอร์ทางซ้ายเพื่อแสดงแบบแผ่นคลี่กล่อง', unit: 'หน่วย: mm', hsc: 'กล่องฝาเปิด (ไม่มีฝาบน)', rsc: 'กล่องร่องมาตรฐาน' },

@@ -127,7 +127,7 @@ const Schedule = () => {
         const idx = orders.findIndex(o => o.id === selectedScheduleId);
 
         if (idx === 0) {
-            alert('無法移動正在生產中的工單 (Cannot move Running Order)!');
+            alert(t('modalExt.ordersAlert.cannotMoveRunning'));
             return;
         }
 
@@ -165,12 +165,12 @@ const Schedule = () => {
             const remainingQty = orderQty - currentQty;
 
             if (lineSpeed > 0) {
-                alert(`❌ 無法刪除：車速不為 0\n當前車速: ${Math.floor(lineSpeed)} m/min\n\n請先停止生產後再試。`);
+                alert(t('modalExt.ordersAlert.cannotDeleteSpeedNotZero').replace('{speed}', Math.floor(lineSpeed)));
                 return;
             }
 
             if (remainingQty > 0) {
-                alert(`❌ 無法刪除：未生產量不為 0\n剩餘數量: ${remainingQty} 張\n\n請完成生產後再試。`);
+                alert(t('modalExt.ordersAlert.cannotDeleteQtyRemaining').replace('{qty}', remainingQty));
                 return;
             }
 
@@ -341,8 +341,7 @@ const Schedule = () => {
                     ) : (
                         <div style={{ color: '#1976d2', fontSize: '1rem', fontWeight: 'bold', textAlign: 'center' }}>
                             <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📦</div>
-                            <div>請選取左側排程以顯示紙箱展開圖</div>
-                            <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px' }}>Select an order from the left to display box diagram</div>
+                            <div>{t('modalExt.ordersAlert.selectToShowDiagram')}</div>
                         </div>
                     )}
                 </div>

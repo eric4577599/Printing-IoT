@@ -24,18 +24,18 @@ const ProductDetailModal = ({ isOpen, onClose, product }) => {
 
     const data = product;
 
-    // 機械參數列定義:[PX 標籤, PX 欄位, 間隙標籤, 間隙欄位](標籤沿用 OrderDetailsModal 慣例)
+    // 機械參數列定義:[PX 標籤, PX 欄位, 間隙標籤(i18n), 間隙欄位](標籤沿用 OrderDetailsModal 慣例)
     const pxRows = [
-        ['PX1', 'px1', '送紙前擋板間隙', 'gapFeedFront'],
-        ['PX2', 'px2', '送紙進紙輪間隙', 'gapFeedProg'],
-        ['PX3', 'px3', '送紙皮帶輪間隙', 'gapFeedRubber'],
-        ['PX4', 'px4', '成型部前導間隙', 'gapFormFront'],
-        ['PX5', 'px5', '模切部相位', 'dieCutPhase'],
-        ['', null, '模切部送紙輪間隙', 'dieCutFeedGap'],
-        ['', null, '開槽導紙輪', 'slotGuide'],
-        ['', null, '開槽部壓線', 'slotFront'],
-        ['', null, '開槽部輔助壓線', 'slotAux'],
-        ['', null, '中刀位置', 'midKnife'],
+        ['PX1', 'px1', t('modalExt.params.gapFeedFront'), 'gapFeedFront'],
+        ['PX2', 'px2', t('modalExt.params.gapFeedProg'), 'gapFeedProg'],
+        ['PX3', 'px3', t('modalExt.params.gapFeedRubber'), 'gapFeedRubber'],
+        ['PX4', 'px4', t('modalExt.params.gapFormFront'), 'gapFormFront'],
+        ['PX5', 'px5', t('modalExt.params.dieCutPhase'), 'dieCutPhase'],
+        ['', null, t('modalExt.params.dieCutFeedGap'), 'dieCutFeedGap'],
+        ['', null, t('modalExt.params.slotGuide'), 'slotGuide'],
+        ['', null, t('modalExt.params.slotFront'), 'slotFront'],
+        ['', null, t('modalExt.params.slotAux'), 'slotAux'],
+        ['', null, t('modalExt.params.midKnife'), 'midKnife'],
     ];
 
     return ReactDOM.createPortal(
@@ -101,17 +101,17 @@ const ProductDetailModal = ({ isOpen, onClose, product }) => {
 
                             {/* 印刷部 */}
                             <div className={styles.printSection}>
-                                <div>印刷部</div>
+                                <div>{t('modalExt.params.printSection')}</div>
                                 <table className={styles.printTable}>
                                     <thead>
-                                        <tr><th></th><th>印壓</th><th>位置</th><th>皮帶間隙</th><th>版座間隙</th></tr>
+                                        <tr><th></th><th>{t('modalExt.params.press')}</th><th>{t('modalExt.params.pos')}</th><th>{t('modalExt.params.beltGap')}</th><th>{t('modalExt.params.plateGap')}</th></tr>
                                     </thead>
                                     <tbody>
                                         {[1, 2, 3, 4].map(i => {
                                             const u = (data.printUnits && data.printUnits[i - 1]) || { ink: 0, pos: 0, gap: 0, press: 0 };
                                             return (
                                                 <tr key={i}>
-                                                    <td>{['一', '二', '三', '四'][i - 1]}</td>
+                                                    <td>{[t('modalExt.params.unit1'), t('modalExt.params.unit2'), t('modalExt.params.unit3'), t('modalExt.params.unit4')][i - 1]}</td>
                                                     <td><input type="number" value={u.ink ?? 0} readOnly /></td>
                                                     <td><input type="number" value={u.pos ?? 0} readOnly /></td>
                                                     <td><input type="number" value={u.gap ?? 0} readOnly /></td>

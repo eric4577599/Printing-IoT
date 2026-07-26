@@ -154,7 +154,7 @@ const OrderDetailsModal = ({ isOpen, onClose, order, onSave }) => {
                             style={{ width: '80px', marginRight: '20px' }}
                         />
 
-                        <label>張摺數</label>
+                        <label>{t('modalExt.orderDetails.foldSheets')}</label>
                         <input
                             type="number"
                             value={data.bundleCount || 0}
@@ -189,66 +189,66 @@ const OrderDetailsModal = ({ isOpen, onClose, order, onSave }) => {
                                 <div className={styles.pxRow}>
                                     <span>PX1</span>
                                     <input value={data.px1 || 0} onChange={e => handleChange('px1', Number(e.target.value))} type="number" />
-                                    <span>送紙前擋板間隙</span>
+                                    <span>{t('modalExt.params.gapFeedFront')}</span>
                                     <input value={data.gapFeedFront || 0} onChange={e => handleChange('gapFeedFront', Number(e.target.value))} type="number" />
                                 </div>
                                 <div className={styles.pxRow}>
                                     <span>PX2</span>
                                     <input value={data.px2 || 0} onChange={e => handleChange('px2', Number(e.target.value))} type="number" />
-                                    <span>送紙進紙輪間隙</span>
+                                    <span>{t('modalExt.params.gapFeedProg')}</span>
                                     <input value={data.gapFeedProg || 0} onChange={e => handleChange('gapFeedProg', Number(e.target.value))} type="number" />
                                 </div>
                                 <div className={styles.pxRow}>
                                     <span>PX3</span>
                                     <input value={data.px3 || 0} onChange={e => handleChange('px3', Number(e.target.value))} type="number" />
-                                    <span>送紙皮帶輪間隙</span>
+                                    <span>{t('modalExt.params.gapFeedRubber')}</span>
                                     <input value={data.gapFeedRubber || 0} onChange={e => handleChange('gapFeedRubber', Number(e.target.value))} type="number" />
                                 </div>
                                 <div className={styles.pxRow}>
                                     <span>PX4</span>
                                     <input value={data.px4 || 0} onChange={e => handleChange('px4', Number(e.target.value))} type="number" />
-                                    <span>成型部前導間隙</span>
+                                    <span>{t('modalExt.params.gapFormFront')}</span>
                                     <input value={data.gapFormFront || 0} onChange={e => handleChange('gapFormFront', Number(e.target.value))} type="number" />
                                 </div>
                                 <div className={styles.pxRow}>
                                     <span>PX5</span>
                                     <input value={data.px5 || 0} onChange={e => handleChange('px5', Number(e.target.value))} type="number" />
-                                    <span>模切部相位</span>
+                                    <span>{t('modalExt.params.dieCutPhase')}</span>
                                     <input value={data.dieCutPhase || 0} onChange={e => handleChange('dieCutPhase', Number(e.target.value))} type="number" />
                                 </div>
                                 <div className={styles.pxRow}>
                                     <span></span><span></span>
-                                    <span>模切部送紙輪間隙</span>
+                                    <span>{t('modalExt.params.dieCutFeedGap')}</span>
                                     <input value={data.dieCutFeedGap || 0} onChange={e => handleChange('dieCutFeedGap', Number(e.target.value))} type="number" />
                                 </div>
                                 <div className={styles.pxRow}>
                                     <span></span><span></span>
-                                    <span>開槽導紙輪</span>
+                                    <span>{t('modalExt.params.slotGuide')}</span>
                                     <input value={data.slotGuide || 0} onChange={e => handleChange('slotGuide', Number(e.target.value))} type="number" />
                                 </div>
                                 <div className={styles.pxRow}>
                                     <span></span><span></span>
-                                    <span>開槽部壓線</span>
+                                    <span>{t('modalExt.params.slotFront')}</span>
                                     <input value={data.slotFront || 0} onChange={e => handleChange('slotFront', Number(e.target.value))} type="number" />
                                 </div>
                                 <div className={styles.pxRow}>
                                     <span></span><span></span>
-                                    <span>開槽部輔助壓線</span>
+                                    <span>{t('modalExt.params.slotAux')}</span>
                                     <input value={data.slotAux || 0} onChange={e => handleChange('slotAux', Number(e.target.value))} type="number" />
                                 </div>
                                 <div className={styles.pxRow}>
                                     <span></span><span></span>
-                                    <span>中刀位置</span>
+                                    <span>{t('modalExt.params.midKnife')}</span>
                                     <input value={data.midKnife || 0} onChange={e => handleChange('midKnife', Number(e.target.value))} type="number" />
                                 </div>
                             </div>
 
                             {/* Print Units */}
                             <div className={styles.printSection}>
-                                <div>印刷部</div>
+                                <div>{t('modalExt.params.printSection')}</div>
                                 <table className={styles.printTable}>
                                     <thead>
-                                        <tr><th></th><th>印壓</th><th>位置</th><th>皮帶間隙</th><th>版座間隙</th></tr>
+                                        <tr><th></th><th>{t('modalExt.params.press')}</th><th>{t('modalExt.params.pos')}</th><th>{t('modalExt.params.beltGap')}</th><th>{t('modalExt.params.plateGap')}</th></tr>
                                     </thead>
                                     <tbody>
                                         {[1, 2, 3, 4].map(i => {
@@ -256,7 +256,7 @@ const OrderDetailsModal = ({ isOpen, onClose, order, onSave }) => {
                                             const printUnit = (data.printUnits && data.printUnits[i - 1]) || { ink: 0, pos: 0, gap: 0, press: 0 };
                                             return (
                                                 <tr key={i}>
-                                                    <td>{['一', '二', '三', '四'][i - 1]}</td>
+                                                    <td>{[t('modalExt.params.unit1'), t('modalExt.params.unit2'), t('modalExt.params.unit3'), t('modalExt.params.unit4')][i - 1]}</td>
                                                     <td><input type="number" value={printUnit.ink} onChange={e => {
                                                         const newUnits = [...(data.printUnits || [{}, {}, {}, {}])];
                                                         newUnits[i - 1] = { ...newUnits[i - 1], ink: Number(e.target.value) };

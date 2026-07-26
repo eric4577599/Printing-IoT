@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from '../../modules/language/LanguageContext';
 import styles from './ModalStyles.module.css';
 
 const ProductFormModal = ({ isOpen, onClose, onSave, initialData }) => {
+    const { t } = useLanguage();
     const [formData, setFormData] = useState({
         boxNo: '',
         customer: '',
@@ -206,7 +208,7 @@ const ProductFormModal = ({ isOpen, onClose, onSave, initialData }) => {
         <div className={styles.overlay}>
             <div className={styles.modal} style={{ width: '1000px', maxWidth: '95vw', height: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 <div className={styles.header}>
-                    <h2>產品資料 (Product Specs)</h2>
+                    <h2>{t('modalExt.productForm.title')}</h2>
                     <button className={styles.closeBtn} onClick={onClose}>×</button>
                 </div>
                 <div className={styles.body} style={{ overflowY: 'auto', padding: '10px' }}>
@@ -215,15 +217,15 @@ const ProductFormModal = ({ isOpen, onClose, onSave, initialData }) => {
                     <div style={{ display: 'flex', gap: '20px', marginBottom: '10px' }}>
                         {/* Info Left */}
                         <div style={{ flex: 2, display: 'grid', gridTemplateColumns: 'auto 1fr auto 1fr', gap: '8px', alignItems: 'center' }}>
-                            <label>紙箱編號</label>
+                            <label>{t('modals.productForm.boxNo')}</label>
                             <input name="boxNo" value={formData.boxNo} onChange={handleChange} />
-                            <label>客戶名稱</label>
+                            <label>{t('dashboard.schedule.customer')}</label>
                             <input name="customer" value={formData.customer} onChange={handleChange} />
 
-                            <label>品名</label>
+                            <label>{t('modals.productForm.productName')}</label>
                             <input name="productName" value={formData.productName} onChange={handleChange} style={{ gridColumn: '2 / 5' }} />
 
-                            <label>盒型</label>
+                            <label>{t('modals.productForm.boxType')}</label>
                             <div style={{ display: 'flex', gap: '5px', gridColumn: '2/3' }}>
                                 <select
                                     name="boxType"
@@ -255,7 +257,7 @@ const ProductFormModal = ({ isOpen, onClose, onSave, initialData }) => {
                             </div>
 
                             <div style={{ gridColumn: '1 / 5', display: 'flex', gap: '10px', alignItems: 'center', marginTop: '5px' }}>
-                                <label>楞</label>
+                                <label>{t('modalExt.productForm.flute')}</label>
                                 <select
                                     name="flute"
                                     value={formData.flute}
@@ -272,16 +274,16 @@ const ProductFormModal = ({ isOpen, onClose, onSave, initialData }) => {
                                         <option key={f.name} value={f.name}>{f.name} ({f.value}mm)</option>
                                     ))}
                                 </select>
-                                <label>厚度</label>
+                                <label>{t('settings.unit.thickness')}</label>
                                 <input
                                     name="thickness"
                                     value={formData.thickness}
                                     onChange={handleChange}
                                     style={{ width: '60px' }}
                                     readOnly
-                                    title="厚度依據楞別自動設定"
+                                    title={t('modalExt.productForm.thicknessHint')}
                                 />
-                                <label>捆個數</label>
+                                <label>{t('modalExt.productForm.bundleCount')}</label>
                                 <input
                                     name="bundleCount"
                                     type="number"
@@ -298,7 +300,7 @@ const ProductFormModal = ({ isOpen, onClose, onSave, initialData }) => {
                                 />
                             </div>
 
-                            <label>備註</label>
+                            <label>{t('dashboard.schedule.notes')}</label>
                             <textarea name="remarks" value={formData.remarks} onChange={handleChange} style={{ gridColumn: '2 / 5', height: '40px' }} />
                         </div>
 
@@ -310,8 +312,8 @@ const ProductFormModal = ({ isOpen, onClose, onSave, initialData }) => {
                             <label>PX4</label><input name="px4" value={formData.px4} onChange={handleChange} />
                             <label>PX5</label><input name="px5" value={formData.px5} onChange={handleChange} />
 
-                            <label>送紙前擋間隙</label><input name="gapFeedFront" value={formData.gapFeedFront} onChange={handleChange} />
-                            <label>中刀位置</label><input name="midKnife" value={formData.midKnife} onChange={handleChange} />
+                            <label>{t('modalExt.params.gapFeedFront')}</label><input name="gapFeedFront" value={formData.gapFeedFront} onChange={handleChange} />
+                            <label>{t('modalExt.params.midKnife')}</label><input name="midKnife" value={formData.midKnife} onChange={handleChange} />
                         </div>
                     </div>
 
@@ -397,22 +399,22 @@ const ProductFormModal = ({ isOpen, onClose, onSave, initialData }) => {
                             ) : (
                                 /* Fallback Text */
                                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#666' }}>
-                                    請在設定頁面上傳盒型圖片並設定欄位位置 (Please upload box image and configure fields in Settings)
+                                    {t('modalExt.productForm.uploadHint')}
                                 </div>
                             )}
                         </div>
 
                         {/* Print Units Table */}
                         <div style={{ flex: 1, border: '1px solid #ccc', padding: '5px' }}>
-                            <h4>印刷部</h4>
+                            <h4>{t('modalExt.params.printSection')}</h4>
                             <table style={{ width: '100%' }}>
                                 <thead>
-                                    <tr><th></th><th>印墨</th><th>位置</th><th>皮帶</th><th>壓線</th></tr>
+                                    <tr><th></th><th>{t('modalExt.params.ink')}</th><th>{t('modalExt.params.pos')}</th><th>{t('modalExt.params.belt')}</th><th>{t('modalExt.params.crease')}</th></tr>
                                 </thead>
                                 <tbody>
                                     {formData.printUnits.map((u, i) => (
                                         <tr key={u.id}>
-                                            <td>{['一', '二', '三', '四'][i]}</td>
+                                            <td>{[t('modalExt.params.unit1'), t('modalExt.params.unit2'), t('modalExt.params.unit3'), t('modalExt.params.unit4')][i]}</td>
                                             <td><input value={u.ink} onChange={(e) => handlePrintChange(i, 'ink', e.target.value)} style={{ width: '40px' }} /></td>
                                             <td><input value={u.pos} onChange={(e) => handlePrintChange(i, 'pos', e.target.value)} style={{ width: '40px' }} /></td>
                                             <td><input value={u.gap} onChange={(e) => handlePrintChange(i, 'gap', e.target.value)} style={{ width: '40px' }} /></td>
@@ -426,8 +428,8 @@ const ProductFormModal = ({ isOpen, onClose, onSave, initialData }) => {
 
                 </div>
                 <div className={styles.footer} style={{ justifyContent: 'flex-end', gap: '10px' }}>
-                    <button className={styles.primaryBtn} onClick={handleSave}>確定 (Save)</button>
-                    <button className={styles.secondaryBtn} onClick={onClose}>取消 (Cancel)</button>
+                    <button className={styles.primaryBtn} onClick={handleSave}>{t('modals.productForm.save')}</button>
+                    <button className={styles.secondaryBtn} onClick={onClose}>{t('modals.productForm.cancel')}</button>
                 </div>
             </div>
         </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import useProductionStore from '../stores/productionStore';
+import { useLanguage } from '../modules/language/LanguageContext';
 
 /**
  * DocsPortal — 內建文件入口
@@ -10,46 +11,51 @@ import useProductionStore from '../stores/productionStore';
  * Phase 5: 整合測試報告儀表板
  */
 
-const DOC_INDEX = [
-  { category: '📋 作業流程', files: [
-    { name: '操作說明書', path: '操作說明書.md' },
-    { name: 'Operator Manual', path: 'Operator Manual.md' },
-    { name: 'Supervisor Manual', path: 'Supervisor_Manual.md' },
-  ]},
-  { category: '🏗️ 設計文件', files: [
-    { name: 'SASD 說明書', path: 'SASD說明書.md' },
-    { name: '開發說明書', path: '開發說明書.md' },
-    { name: 'MQTT 訊息處理流程', path: 'MQTT訊息處理流程.md' },
-    { name: '維護保養開發設計書', path: '維護保養開發設計書.md' },
-  ]},
-  { category: '🚀 部署與運維', files: [
-    { name: 'Deployment Guide v1', path: 'DEPLOYMENT_GUIDE_v1.md' },
-    { name: 'Flexo HQ Integration', path: 'FLEXO_HQ_INTEGRATION.md' },
-    { name: '移交文件 (Handover)', path: 'HANDOVER.md' },
-    { name: '專案狀態', path: 'PROJECT_STATUS.md' },
-  ]},
-  { category: '🔄 重構紀錄', files: [
-    { name: '重構變更紀錄', path: 'REFACTORING_LOG.md' },
-  ]},
-  { category: '🧪 測試與品質', files: [
-    { name: '測試案例', path: 'TEST_CASES.md' },
-    { name: '壓力測試報告', path: 'STRESS_TEST_REPORT.md' },
-    { name: '專案審查 2026/01/16', path: 'PROJECT_REVIEW_2026_01_16.md' },
-  ]},
-  { category: '📅 會議紀錄', files: [
-    { name: '2026/01/22 維修管理系統分離', path: '20260122_維修管理系統分離_團隊會議議程.md' },
-    // 2026/01/22 Smart Parts 第一階段會議議程:模組已隨 C′ 遷移移入 MM,索引項移除;原始檔仍保留於 doc/
-    { name: '2026/01/22 苗栗保養計劃', path: '20260122正隆苗栗保養計劃討論.md' },
-  ]},
-];
-
 const DocsPortal = () => {
+  const { t } = useLanguage();
   const [selectedFile, setSelectedFile] = useState(null);
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('docs'); // 'docs' | 'logs'
   const logs = useProductionStore((s) => s.logs);
+
+  /**
+   * 文件索引 — 分類與清單顯示名稱走 i18n,path 為資料不翻譯
+   * 輸入:t(語系翻譯函式);輸出:分類/檔案陣列供側欄渲染
+   */
+  const DOC_INDEX = [
+    { category: `📋 ${t('docs.category.workflow')}`, files: [
+      { name: t('docs.file.manual'), path: '操作說明書.md' },
+      { name: 'Operator Manual', path: 'Operator Manual.md' },
+      { name: 'Supervisor Manual', path: 'Supervisor_Manual.md' },
+    ]},
+    { category: `🏗️ ${t('docs.category.design')}`, files: [
+      { name: t('docs.file.sasd'), path: 'SASD說明書.md' },
+      { name: t('docs.file.dev'), path: '開發說明書.md' },
+      { name: t('docs.file.mqtt'), path: 'MQTT訊息處理流程.md' },
+      { name: t('docs.file.maintenance'), path: '維護保養開發設計書.md' },
+    ]},
+    { category: `🚀 ${t('docs.category.deploy')}`, files: [
+      { name: 'Deployment Guide v1', path: 'DEPLOYMENT_GUIDE_v1.md' },
+      { name: 'Flexo HQ Integration', path: 'FLEXO_HQ_INTEGRATION.md' },
+      { name: t('docs.file.handover'), path: 'HANDOVER.md' },
+      { name: t('docs.file.projectStatus'), path: 'PROJECT_STATUS.md' },
+    ]},
+    { category: `🔄 ${t('docs.category.refactor')}`, files: [
+      { name: t('docs.file.refactorLog'), path: 'REFACTORING_LOG.md' },
+    ]},
+    { category: `🧪 ${t('docs.category.testing')}`, files: [
+      { name: t('docs.file.testCases'), path: 'TEST_CASES.md' },
+      { name: t('docs.file.stressTest'), path: 'STRESS_TEST_REPORT.md' },
+      { name: `${t('docs.file.review')} 2026/01/16`, path: 'PROJECT_REVIEW_2026_01_16.md' },
+    ]},
+    { category: `📅 ${t('docs.category.meeting')}`, files: [
+      { name: `2026/01/22 ${t('docs.file.meeting1')}`, path: '20260122_維修管理系統分離_團隊會議議程.md' },
+      // 2026/01/22 Smart Parts 第一階段會議議程:模組已隨 C′ 遷移移入 MM,索引項移除;原始檔仍保留於 doc/
+      { name: `2026/01/22 ${t('docs.file.meeting2')}`, path: '20260122正隆苗栗保養計劃討論.md' },
+    ]},
+  ];
 
   const fetchDocument = async (filePath) => {
     setLoading(true);
@@ -60,7 +66,7 @@ const DocsPortal = () => {
       const text = await response.text();
       setContent(text);
     } catch (err) {
-      setError(`無法載入文件: ${err.message}`);
+      setError(`${t('docs.error.loadFail')}: ${err.message}`);
       setContent('');
     } finally {
       setLoading(false);
@@ -95,7 +101,7 @@ const DocsPortal = () => {
           fontWeight: '700',
           color: 'var(--primary-blue, #1976d2)',
         }}>
-          📖 文件入口
+          📖 {t('docs.header.title')}
         </h2>
 
         {/* Operation Logs Button */}
@@ -119,7 +125,7 @@ const DocsPortal = () => {
             transition: 'all 0.2s',
           }}
         >
-          🔴 即時操作紀錄 ({logs.length})
+          🔴 {t('docs.tab.liveLog')} ({logs.length})
         </button>
 
         {DOC_INDEX.map((cat) => (
@@ -183,14 +189,14 @@ const DocsPortal = () => {
         {activeTab === 'logs' && (
           <div>
             <h2 style={{ marginTop: 0, color: 'var(--primary-blue, #1976d2)', borderBottom: '2px solid #ff9800', paddingBottom: '8px' }}>
-              🔴 即時操作紀錄 (Live Operation Logs)
+              🔴 {t('docs.liveLog.title')}
             </h2>
             <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '16px' }}>
-              顯示來自 Dashboard 的即時操作記錄，包含 F-Key 操作、訂單異動、系統事件等。
+              {t('docs.liveLog.desc')}
             </p>
             {logs.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px', color: '#aaa' }}>
-                尚無操作紀錄 — 開始使用 Dashboard 後紀錄會自動產生
+                {t('docs.liveLog.empty')}
               </div>
             ) : (
               <div style={{
@@ -230,18 +236,18 @@ const DocsPortal = () => {
           }}>
             <div style={{ fontSize: '3rem', marginBottom: '16px' }}>📖</div>
             <h2 style={{ fontWeight: '600', marginBottom: '8px' }}>
-              Printing IoT 文件系統
+              {t('docs.welcome.title')}
             </h2>
-            <p>從左側選擇文件開始瀏覽</p>
+            <p>{t('docs.welcome.subtitle')}</p>
             <p style={{ fontSize: '0.85rem', marginTop: '16px' }}>
-              包含作業流程、設計文件、操作紀錄、重構日誌與測試報告
+              {t('docs.welcome.desc')}
             </p>
           </div>
         )}
 
         {activeTab === 'docs' && loading && (
           <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
-            載入中...
+            {t('docs.loading')}
           </div>
         )}
 
@@ -253,10 +259,9 @@ const DocsPortal = () => {
             borderRadius: '8px',
             color: '#d32f2f',
           }}>
-            <strong>⚠️ 錯誤：</strong> {error}
+            <strong>⚠️ {t('docs.error.label')}</strong> {error}
             <p style={{ fontSize: '0.85rem', marginTop: '8px', color: '#666' }}>
-              提示：需要後端 API 端點 <code>/api/docs/:filename</code> 來提供文件內容。
-              此功能將在 Phase 3 後端整合時完成。
+              {t('docs.error.hint')} <code>/api/docs/:filename</code>
             </p>
           </div>
         )}

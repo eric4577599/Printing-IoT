@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from '../language/LanguageContext';
 import styles from './AddScheduleModal.module.css';
 
 /**
@@ -10,6 +11,7 @@ import styles from './AddScheduleModal.module.css';
  * @param {array} orders - 現有排程列表 (用於計算預設序號)
  */
 const AddScheduleModal = ({ isOpen, onClose, onSave, product, orders = [] }) => {
+    const { t } = useLanguage();
     // 計算預設序號：現有排程數量 +1 再 ×10
     const getDefaultSeqNo = () => {
         if (!orders || orders.length === 0) return 10;
@@ -37,17 +39,17 @@ const AddScheduleModal = ({ isOpen, onClose, onSave, product, orders = [] }) => 
 
     const handleConfirm = () => {
         if (!formData.orderNo || formData.orderNo.trim() === '') {
-            alert('請輸入訂單號碼 (Order No. is required)');
+            alert(t('modalExt.addSchedule.alertOrderNoRequired'));
             return;
         }
         if (!formData.qty || formData.qty < 1) {
-            alert('請輸入有效數量 (Valid Qty is required)');
+            alert(t('modalExt.addSchedule.alertQtyRequired'));
             return;
         }
         // 修正:輸入框標示「不可重複」但原無檢查。比對現有排程,拒絕重複訂單號碼。
         const inputNo = formData.orderNo.trim();
         if (orders.some(o => (o.orderNo || '').trim() === inputNo)) {
-            alert(`訂單號碼重複 (Order No. "${inputNo}" already exists)`);
+            alert(`${t('modalExt.addSchedule.alertDuplicate')} (${inputNo})`);
             return;
         }
         onSave(formData);
@@ -57,22 +59,22 @@ const AddScheduleModal = ({ isOpen, onClose, onSave, product, orders = [] }) => 
         <div className={styles.overlay}>
             <div className={styles.modal}>
                 <div className={styles.header}>
-                    <span>新增排程</span>
+                    <span>{t('modalExt.addSchedule.title')}</span>
                     <button onClick={onClose} className={styles.closeBtn}>×</button>
                 </div>
                 <div className={styles.content}>
                     <div className={styles.row}>
-                        <label>訂單號碼</label>
+                        <label>{t('dashboard.schedule.orderNo')}</label>
                         <input
                             type="text"
-                            placeholder="12碼, 不可重複"
+                            placeholder={t('modalExt.addSchedule.orderNoPlaceholder')}
                             maxLength={12}
                             value={formData.orderNo}
                             onChange={e => setFormData(prev => ({ ...prev, orderNo: e.target.value }))}
                         />
                     </div>
                     <div className={styles.row}>
-                        <label>數量</label>
+                        <label>{t('dashboard.schedule.qty')}</label>
                         <input
                             type="number"
                             value={formData.qty}
@@ -95,12 +97,12 @@ const AddScheduleModal = ({ isOpen, onClose, onSave, product, orders = [] }) => 
                             checked={formData.isOptimized}
                             onChange={e => setFormData(prev => ({ ...prev, isOptimized: e.target.checked }))}
                         />
-                        <label htmlFor="optimize" style={{ width: 'auto', marginLeft: '5px' }}>是否使用最佳化參數</label>
+                        <label htmlFor="optimize" style={{ width: 'auto', marginLeft: '5px' }}>{t('modalExt.addSchedule.useOptimized')}</label>
                     </div>
                 </div>
                 <div className={styles.footer}>
-                    <button onClick={handleConfirm}>確定</button>
-                    <button onClick={onClose}>取消</button>
+                    <button onClick={handleConfirm}>{t('ui.buttons.confirm')}</button>
+                    <button onClick={onClose}>{t('ui.buttons.cancel')}</button>
                 </div>
             </div>
         </div>

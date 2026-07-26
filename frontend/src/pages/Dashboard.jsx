@@ -603,7 +603,7 @@ const Dashboard = () => {
                     }
                     break;
                 case 'F12':
-                    if (confirm('確定離開?')) {
+                    if (confirm(t('dashboard.alerts.confirmExit'))) {
                         addLog('F12: Exit System');
                         window.close();
                     }
