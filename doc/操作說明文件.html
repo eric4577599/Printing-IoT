@@ -270,6 +270,7 @@
       <li><a href="#two-parts">分辨指南:備品庫存 vs 零件主檔</a></li>
       <li><a href="#flows">作業流程圖(含判斷分支)</a></li>
       <li><a href="#trouble">故障排除總覽</a></li>
+      <li><a href="#roadmap">開發藍圖:尚未執行的任務</a></li>
     </ol>
   </nav>
 
@@ -1599,8 +1600,71 @@
     </ul>
   </section>
 
+  <!-- ═══ 21. 開發藍圖:尚未執行的任務 ═══ -->
+  <section id="roadmap">
+    <h2>21. 開發藍圖:尚未執行的任務</h2>
+    <p class="sec-sub">以下五項功能已完成需求規格與設計評估,但<b>尚未落地實作</b>,列於此供規劃與交接參考。基準文件:<code>docs/spec20260713-1.md</code>(規格)、<code>docs/report20260713-1.md</code>(設計走查)、<code>tests/report-20260713-1.md</code>(測試矩陣)。</p>
+
+    <div class="note">
+      <b>閱讀提醒</b>
+      本章描述的是「還沒做」的功能,<b>非現行操作步驟</b>。實際操作請看第 1–20 章。任一項要動工時,以 <code>spec20260713-1.md</code> 對應 S 段為需求基準,另起實作回合並補真測試。</div>
+
+    <h3>21.0 總覽</h3>
+    <div class="tbl-scroll"><table>
+      <thead><tr><th>代號</th><th>項目</th><th>類型</th><th>狀態</th><th>前置 / 相依</th></tr></thead>
+      <tbody>
+        <tr><td><b>S1</b></td><td>Cloudflare 301 轉址(<code>smartparts</code>→<code>mms</code>)</td><td>Infra / 選配</td><td>待 Eric 手動設定儀表板</td><td><code>smartparts</code> DNS CNAME 須保留且為 Proxied</td></tr>
+        <tr><td><b>S2</b></td><td>排程列表拖拉排序(Drag &amp; Drop)</td><td>前端功能</td><td>Phase 1 可直接開工;Phase 2 待後端對齊</td><td>dnd-kit 已安裝、後端 <code>/api/orders/reorder</code> 已存在</td></tr>
+        <tr><td><b>S3</b></td><td>多語系擴充:越南文 / 泰文</td><td>前端資料</td><td>stub 已存在,待補約 225+ 鍵/語</td><td>純翻譯,不需改架構</td></tr>
+        <tr><td><b>S4</b></td><td>實體 WISE 訊號特徵驗證</td><td>後端 / OT 風險</td><td>待硬體到位,現僅模擬走查</td><td>需 OT 現場擷取,牽涉停機掛表</td></tr>
+        <tr><td><b>S5</b></td><td>Redis 單機 → Cluster 擴充</td><td>Infra / 擴充</td><td>非急迫(10+ 產線才需),已備計畫</td><td>程式面幾乎免改,主要在 infra</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3 id="r-s1">21.1 S1 — Cloudflare 301 轉址</h3>
+    <p><b>要達成:</b>使用者開舊網址 <code>smartparts.ericchh.work</code> 時,網址列<b>自動換成</b> <code>mms.ericchh.work</code>(HTTP 301 永久轉址)。目前兩個網址雖都能回到 MM 畫面,但 301 尚未設定。</p>
+    <p><b>怎麼做:</b>在 Cloudflare <code>ericchh.work</code> zone → Rules → Redirect Rules 建一條:命中 <code>Hostname 等於 smartparts.ericchh.work</code> → Dynamic redirect,運算式 <code>concat("https://mms.ericchh.work", http.request.uri.path)</code>,狀態碼 301,勾選保留查詢字串。</p>
+    <div class="warn">
+      <b>前置條件</b>
+      轉址規則放 <b>Cloudflare</b>(非 nginx / 程式)。<code>smartparts</code> 的 DNS CNAME 須<b>保留且為 Proxied(橘雲)</b>,301 才會被 proxy 攔截觸發;若先前刪 hostname 連帶刪了 CNAME,須補建 CNAME → <code>60b8d51b-…f1ae62f.cfargotunnel.com</code>。執行者:Eric(手動,儀表板)。生效前以本機入口 <code>http://localhost:5301</code> 過渡。</div>
+
+    <h3 id="r-s2">21.2 S2 — 排程列表拖拉排序</h3>
+    <p><b>要達成:</b>排程列表目前用「上移 / 下移」按鈕調順序,改為<b>滑鼠直接拖拉列</b>重新排序;保留商規:第一列(執行中訂單)鎖定不可移動。</p>
+    <p><b>怎麼做:</b>用已安裝的 dnd-kit(<code>@dnd-kit/core、sortable、utilities</code>)包住排程表 <code>tbody</code>,放開後同步重編顯示序號(10、20、30…),並保留鍵盤操作。</p>
+    <div class="note">
+      <b>分兩階段</b>
+      <b>Phase 1(前端純 UI 替換,免後端)</b>可獨立交付。<b>Phase 2(後端持久化)</b>需先解「前端 localStorage 字串 id ↔ 後端 GUID」與 <code>OrderDto</code> 未曝 <code>Sequence</code> 的落差;後端端點 <code>POST /api/orders/reorder</code> 已存在僅前端未接。注意 <code>productionStore.js</code> 有一份未使用的平行 <code>moveOrder</code> 死碼,勿誤改。</div>
+
+    <h3 id="r-s3">21.3 S3 — 越南文 / 泰文完整化</h3>
+    <p><b>要達成:</b>介面越南文、泰文從「只有骨架(約 30–40 鍵)」補到與繁中 / 簡中 / 英文同等完整(265 鍵全翻譯)。語言切換器已可選這兩種語言。</p>
+    <p><b>怎麼做:</b>i18n 是自製 React Context(<b>真來源在 <code>LanguageContext.jsx</code> 內嵌物件</b>,非 <code>locales/</code> 死碼)。補齊 <code>vn</code>、<code>th</code> 兩塊至與 <code>tw</code> 同構的 10 大節、265 leaf keys,每語約 225+ 鍵待補;主工作是<b>翻譯內容</b>,非程式架構,可交付純資料 PR。</p>
+    <div class="warn">
+      <b>注意</b>
+      程式用 <code>vn</code> 代表越南語(需求寫 ISO <code>vi</code>);本階段沿用 <code>vn</code>,未來若標準化為 <code>vi</code> 須同步改切換器與所有呼叫。補齊前先「以 <code>tw</code> 為準」做鍵集合 diff,避免 stub 漂移造成缺鍵。</div>
+
+    <h3 id="r-s4">21.4 S4 — 實體 WISE 訊號特徵驗證</h3>
+    <p><b>要達成:</b>目前即時速度 / 長度計算僅以<b>模擬器</b>驗證,實體 Advantech WISE 模組的訊號特徵(DI 計數、脈衝、抖動、重置、rollover)尚未實測。需接真機側錄 ≥30 分鐘 <code>di1</code> 序列(涵蓋開機、加速、穩定、停機、換單),比對模擬器假設與真機實測。</p>
+    <div class="warn">
+      <b>高風險落差(預判)</b>
+      ① <code>SpeedCalculator</code> 以「計數變小」判定重置,真機 counter <b>rollover / 接點彈跳</b>可能被誤判;② 單次通過產生多個 edge 恐灌高計數(現無 debounce);③「每 100 米一脈衝」換算比未經真機驗證;④ WISE 訂閱為 QoS0,真機是否需 QoS1 保證不丟。以上皆直接影響速度 / 長度準確性,強依賴硬體到位,須與產線協調停機掛表。</div>
+
+    <h3 id="r-s5">21.5 S5 — Redis 單機 → Cluster</h3>
+    <p><b>要達成:</b>為未來擴充至 10+ 產線預作準備,評估單機 Redis 升 Cluster 的相容性與工作量。</p>
+    <p><b>結論先行:</b>應用程式碼<b>幾乎免改</b> — 現況只有單鍵字串快取(<code>factory/monitor</code>、<code>config/communication</code>、<code>config/box-types</code>),無 pub/sub、無跨鍵交易、無 KEYS/Lua,<b>本質 cluster-safe</b>。主要工作在連線設定與基礎設施拓樸:建 3 主 3 從 Cluster、連線改多節點、合併 Worker 兩條重複 multiplexer、統一設定命名 <code>Redis__ConnectionString</code>。</p>
+    <div class="note">
+      <b>防未來踩雷</b>
+      本項非急迫,先備計畫。若日後需跨 <code>config/*</code> 或 <code>factory/*</code> 多鍵原子操作,鍵名須加 hash tag(如 <code>config/{cfg}/communication</code>)使同 slot;現階段先立此文件約定,不改鍵名。</div>
+
+    <h3>21.6 其他選配(非上述五項)</h3>
+    <ul>
+      <li><b>模擬故障注入 / 接真 WISE 訊號:</b>機台部位狀態燈現況模擬預設 di3~di10=0(無故障)→ 運轉顯 RUN;未來可加模擬故障注入或接真 WISE 訊號,DI 達故障值即點紅。</li>
+      <li><b>零件展示種子資料:</b>若需展示用零件資料,須另立「種子資料策略」需求(不屬既有回歸範圍)。</li>
+      <li><b>低庫存自動採購建議:</b>「低庫存自動產生採購建議」在未來版本規劃中,目前請依 MM 🔩 頁籤紅色警示人工發動採購。</li>
+    </ul>
+  </section>
+
   <footer class="doc">
-    <span>印刷 IoT 系統操作說明書 · v3.0(定稿 2026-07-07)· 含全 UI 畫面線框(27 畫面)+ 組織圖 + 流程圖</span>
-    <span>沿革:v1.0(2026-01-18 單一系統)→ v2.x(保養移出為 MM)→ v3.0(零件管理併入 MM;2026-07-07 定稿)</span>
+    <span>印刷 IoT 系統操作說明書 · v3.0(定稿 2026-07-07)· 含全 UI 畫面線框(27 畫面)+ 組織圖 + 流程圖 · 2026-07-25 增訂第 21 章「開發藍圖:尚未執行的任務」</span>
+    <span>沿革:v1.0(2026-01-18 單一系統)→ v2.x(保養移出為 MM)→ v3.0(零件管理併入 MM;2026-07-07 定稿)→ 2026-07-25 增訂 backlog 章節</span>
   </footer>
 </div>

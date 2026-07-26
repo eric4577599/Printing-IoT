@@ -1,8 +1,30 @@
 # Handoff — Claude(Printing IoT)
-> 最後更新:2026-07-24 08:55(UI 對抗性稽核:16/16 確認缺陷全修完,含 #5 DI 狀態燈;已上線+push)
+> 最後更新:2026-07-26(S2 排程拖拉排序 Phase 1+2 全部完成並上線驗證;**未 push**)
 
 ## Current Task
-**UI 對抗性稽核與修正 — 確認缺陷全數收工**。/loop workflow:7 獵手(6 UI 頁 + api-contract)→ 每筆發現三視角(repro/correctness/impact)反駁投票 ≥2 存活。**16 筆確認缺陷全數修正(3 於 3693556、12 於 b9e4123、#5 於 c0e92c7),容器均已重建上線,分支已 push 至 origin。** 尚有 ~20 筆待驗證項(票數不足,非被反駁),需 resume workflow 才能收尾。
+**S2 排程列表拖拉排序 — Phase 1(前端拖拉)+ Phase 2(後端全量鏡像同步)全部完成**。
+
+### Phase 1(前端拖拉,report20260726-1)
+- `utils/scheduleDnd.js` 純函式(`spliceMove`/`renumberSeq`/`resolveDragReorder`)+ Schedule.jsx 用 dnd-kit(`SortableOrderRow`);`moveOrder` 改 splice(相鄰=交換,對 Dashboard/MaintenancePage 上下移零影響);執行中訂單(index 0)鎖定;保留鍵盤+按鈕。17 單元測試。已重建 frontend 容器上線。
+
+### Phase 2(後端持久化 = 全量鏡像同步,report20260726-2)
+- **關鍵發現**:前端排程/產品庫本是 **localStorage-only 離線設計**,與後端 Orders/Products 表**沒連動**;後端 `Order` schema 比前端瘦(缺 BoxDiagram ~25 規格欄);訂單狀態還被 Dashboard 完工/佇列 + `useFKeyHandler` 直接 `setOrders`(6+ 處)。
+- **經 Eric 三輪確認的架構決策**:(1) 後端加 `SpecJson` text 欄保存前端完整規格(改 DB,migration `20260726075633_AddOrderSpecJson`,加法式);(2) **全量鏡像同步**:前端每次 orders 變動 debounce(800ms)POST `/api/orders/sync`,後端 upsert(Sequence=index)+ 刪除清單外的列 → 單一整合點涵蓋拖拉/完工/佇列/F 鍵全部,免逐一改 Dashboard。
+- 後端:`SpecJson` 欄 + `SyncScheduleAsync`(空清單保護)+ `PUT /api/orders/{id}` + `POST /api/orders/sync`;5 xUnit。
+- 前端:`utils/orderMapper.js`(SpecJson round-trip、狀態數字化、GUID 身分)、`api.syncSchedule`、MainLayout(開頁 GET 載入 + 首次匯入 localStorage + 身分正規化為 GUID + debounced 鏡像同步);`saveOrder` 新 id 改 `crypto.randomUUID()`。**Schedule.jsx 免再改**。17 單元測試。
+- **驗證**:前端 vitest 82 passed、後端 5 passed、vite/dotnet build ✓;curl 線上(生產 Orders 原 0 筆,印證從未持久化)—— SpecJson round-trip、sync 依序 upsert、鏡像刪除全通過;瀏覽器實測拖拉→重載→後端還原順序保留(GIF 已交付),示範資料已清回 0 筆。
+- 已重建 `printingiot-backend-api-1`(自動套 migration)+ `printingiot-frontend-1` 上線。
+
+### 待辦 / 注意
+- **未 push**(全域紅線;Phase 1+2 commit 尚未建立,工作區有未提交變更 + docs/report20260726-1、-2)。
+- **建議 Eric 實機走完工→重整→順序/狀態正確**(完工/模擬迴圈涉生產監控核心,curl 已驗後端邏輯但未跑完整 UI 完工流程)。
+- dnd-kit 拖拉在自動化中需**鍵盤/真實事件**(合成滑鼠/JS pointer 事件不觸發);實機滑鼠正常。
+- 每次整頁重載都會跳班別選擇視窗(既有設計)。
+- 產品庫仍 localStorage-only(本次只遷訂單)。
+
+---
+## (歷史)2026-07-24 UI 對抗性稽核與修正 — 確認缺陷全數收工
+/loop workflow:7 獵手(6 UI 頁 + api-contract)→ 每筆發現三視角(repro/correctness/impact)反駁投票 ≥2 存活。**16 筆確認缺陷全數修正(3 於 3693556、12 於 b9e4123、#5 於 c0e92c7),容器均已重建上線,分支已 push 至 origin。**
 
 ### 稽核結果現況
 - **已修正並驗證 15/16 筆**:
