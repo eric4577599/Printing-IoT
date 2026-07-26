@@ -27,9 +27,9 @@ const UnitTab = () => {
     };
 
     const handleAddFlute = () => {
-        const name = prompt('請輸入楞別名稱 (Enter Flute Name):', 'E');
+        const name = prompt(t('settingsExt.unit.enterFluteName'), 'E');
         if (!name) return;
-        const valStr = prompt(`請輸入 ${name} 楞厚度 (Enter Thickness):`, '2.0');
+        const valStr = prompt(`${t('settingsExt.unit.enterThicknessPre')} ${name} ${t('settingsExt.unit.enterThicknessPost')}`, '2.0');
         if (!valStr) return;
 
         const newFlutes = [...unitSettings.flutes, { name, value: parseFloat(valStr) || 0 }];
@@ -43,7 +43,7 @@ const UnitTab = () => {
     };
 
     const handleDeleteFlute = (index) => {
-        if (confirm('確定刪除此楞別? (Delete Flute?)')) {
+        if (confirm(t('settingsExt.unit.confirmDeleteFlute'))) {
             const newFlutes = unitSettings.flutes.filter((_, i) => i !== index);
             handleUnitChange('flutes', newFlutes);
         }
@@ -116,7 +116,7 @@ const UnitTab = () => {
                                         <span> {unitSettings.unit}</span>
                                     </td>
                                     <td className={styles.td}>
-                                        <button className={styles.miniBtn} onClick={() => handleDeleteFlute(idx)}>刪除 (Delete)</button>
+                                        <button className={styles.miniBtn} onClick={() => handleDeleteFlute(idx)}>{t('settingsExt.common.delete')}</button>
                                     </td>
                                 </tr>
                             ))}

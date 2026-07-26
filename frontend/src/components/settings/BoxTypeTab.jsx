@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from '../../modules/language/LanguageContext';
 import styles from '../../pages/SettingsPage.module.css';
 import { getBoxTypes, updateBoxTypes } from '../../services/api';
 
@@ -28,6 +29,7 @@ const DEFAULT_BOX_TYPES = [
 ];
 
 const BoxTypeTab = () => {
+    const { t } = useLanguage();
 
     // --- Box Type State ---
     const [boxTypes, setBoxTypes] = useState([]);
@@ -56,7 +58,7 @@ const BoxTypeTab = () => {
 
     // --- Box Type Handlers ---
     const handleAddBoxType = () => {
-        const name = prompt('請輸入盒型名稱 (Enter Box Type Name):');
+        const name = prompt(t('settingsExt.boxType.enterName'));
         if (!name) return;
 
         const newBox = {
@@ -90,7 +92,7 @@ const BoxTypeTab = () => {
     const handleEditBoxType = () => {
         if (!selectedBoxTypeId) return;
         const box = boxTypes.find(b => b.id === selectedBoxTypeId);
-        const newName = prompt('修改盒型名稱 (Rename Box Type):', box.name);
+        const newName = prompt(t('settingsExt.boxType.renamePrompt'), box.name);
         if (newName && newName !== box.name) {
             handleUpdateBoxType(box.id, 'name', newName); // This calls update
         }
@@ -98,7 +100,7 @@ const BoxTypeTab = () => {
 
     const handleDeleteBoxType = () => {
         if (!selectedBoxTypeId) return;
-        if (confirm('確定刪除此盒型? (Delete this Box Type?)')) {
+        if (confirm(t('settingsExt.boxType.deleteConfirm'))) {
             const newTypes = boxTypes.filter(b => b.id !== selectedBoxTypeId);
             setBoxTypes(newTypes);
             updateBoxTypes(newTypes).catch(console.error);
@@ -161,14 +163,14 @@ const BoxTypeTab = () => {
 
         return (
             <div className={styles.tabContent} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <h3>盒型設定 (Box Type Settings)</h3>
+                <h3>{t('settingsExt.boxType.title')}</h3>
                 <div className={styles.twoColumnLayout}>
                     {/* Left: List with Toolbar */}
                     <div className={styles.leftPanel}>
                         <div className={styles.buttonGroup} style={{ marginBottom: '10px' }}>
-                            <button className={styles.actionButton} onClick={handleAddBoxType}>新增 (Add)</button>
-                            <button className={styles.actionButton} onClick={handleEditBoxType} disabled={!selectedBoxTypeId}>修改 (Edit)</button>
-                            <button className={styles.actionButton} onClick={handleDeleteBoxType} disabled={!selectedBoxTypeId} style={{ color: 'red', borderColor: 'red' }}>刪除 (Del)</button>
+                            <button className={styles.actionButton} onClick={handleAddBoxType}>{t('settingsExt.common.add')}</button>
+                            <button className={styles.actionButton} onClick={handleEditBoxType} disabled={!selectedBoxTypeId}>{t('settingsExt.common.edit')}</button>
+                            <button className={styles.actionButton} onClick={handleDeleteBoxType} disabled={!selectedBoxTypeId} style={{ color: 'red', borderColor: 'red' }}>{t('settingsExt.common.delete')}</button>
                         </div>
                         <div className={styles.listBox}>
                             {boxTypes.map(box => (
@@ -188,16 +190,16 @@ const BoxTypeTab = () => {
                         {selectedBox ? (
                             <div>
                                 <div className={styles.settingGroup}>
-                                    <h4>基本資訊 (Basic Info)</h4>
+                                    <h4>{t('settingsExt.boxType.basicInfo')}</h4>
                                     <div className={styles.inputRow}>
-                                        <label>盒型名稱 (Name):</label>
+                                        <label>{t('settingsExt.boxType.nameLabel')}:</label>
                                         <input
                                             value={selectedBox.name}
                                             onChange={(e) => handleUpdateBoxType(selectedBox.id, 'name', e.target.value)}
                                         />
                                     </div>
                                     <div className={styles.inputRow}>
-                                        <label>ERP 別名 (ERP Alias):</label>
+                                        <label>{t('settingsExt.boxType.erpAlias')}:</label>
                                         <input
                                             value={selectedBox.erpAlias || ''}
                                             onChange={(e) => handleUpdateBoxType(selectedBox.id, 'erpAlias', e.target.value)}
@@ -206,16 +208,16 @@ const BoxTypeTab = () => {
                                         />
                                     </div>
                                     <div className={styles.inputRow}>
-                                        <label>對應文字敘述 (Desc):</label>
+                                        <label>{t('settingsExt.boxType.descLabel')}:</label>
                                         <input
                                             value={selectedBox.description || ''}
                                             onChange={(e) => handleUpdateBoxType(selectedBox.id, 'description', e.target.value)}
-                                            placeholder="e.g. 長*寬*高 = S2*S3*H"
+                                            placeholder={t('settingsExt.boxType.descPlaceholder')}
                                             style={{ flex: 1 }}
                                         />
                                     </div>
                                     <div className={styles.inputRow}>
-                                        <label>對應公式 (Formulas):</label>
+                                        <label>{t('settingsExt.boxType.formulasLabel')}:</label>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
                                             <div style={{ display: 'flex', alignItems: 'center' }}>
                                                 <span style={{ width: '40px' }}>L =</span>
@@ -254,13 +256,13 @@ const BoxTypeTab = () => {
                                                     style={{ flex: 1, borderColor: 'green' }}
                                                 />
                                             </div>
-                                            <span style={{ fontSize: '0.8rem', color: '#666' }}>支援 +, -, *, /, ( ) 與欄位變數 (S1, L, W...)</span>
+                                            <span style={{ fontSize: '0.8rem', color: '#666' }}>{t('settingsExt.boxType.formulaSupport')}</span>
                                         </div>
                                     </div>
 
                                     {/* Length Config */}
                                     <div className={styles.subSection} style={{ marginTop: '10px' }}>
-                                        <h4>長度定義 (Length Definition)</h4>
+                                        <h4>{t('settingsExt.boxType.lengthDef')}</h4>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                             {['S1', 'S2', 'S3', 'S4', 'S5'].map(s => (
                                                 <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -273,7 +275,7 @@ const BoxTypeTab = () => {
                                                         {s}
                                                     </label>
                                                     <input
-                                                        placeholder="標籤 (Label e.g. 長/寬)"
+                                                        placeholder={t('settingsExt.boxType.labelLenPlaceholder')}
                                                         value={selectedBox[`label${s}`] || ''}
                                                         onChange={(e) => handleUpdateBoxType(selectedBox.id, `label${s}`, e.target.value)}
                                                         style={{ padding: '4px', width: '100px', fontSize: '0.9rem' }}
@@ -281,24 +283,24 @@ const BoxTypeTab = () => {
                                                 </div>
                                             ))}
                                             <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px', borderTop: '1px dashed #ccc', paddingTop: '8px' }}>
-                                                <label style={{ width: 'auto', color: '#d32f2f' }}>修正值 (Correction):</label>
+                                                <label style={{ width: 'auto', color: '#d32f2f' }}>{t('settingsExt.boxType.correction')}:</label>
                                                 <input
                                                     type="number"
                                                     value={selectedBox.lenCorrection || 0}
                                                     onChange={(e) => handleUpdateBoxType(selectedBox.id, 'lenCorrection', e.target.value)}
                                                     style={{ width: '80px' }}
                                                 />
-                                                <span style={{ fontSize: '0.8rem', color: '#666' }}>mm (加減值)</span>
+                                                <span style={{ fontSize: '0.8rem', color: '#666' }}>{t('settingsExt.boxType.mmAddSub')}</span>
                                             </div>
                                         </div>
                                         <p style={{ color: '#1890ff', fontWeight: 'bold', marginTop: '10px' }}>
-                                            公式: {getLengthFormula(selectedBox)}
+                                            {t('settingsExt.boxType.formula')}: {getLengthFormula(selectedBox)}
                                         </p>
                                     </div>
 
                                     {/* Width Config */}
                                     <div className={styles.subSection} style={{ marginTop: '10px' }}>
-                                        <h4>寬度定義 (Width Definition)</h4>
+                                        <h4>{t('settingsExt.boxType.widthDef')}</h4>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                             {[
                                                 { key: 'useLeading', labelKey: 'labelLeading', defaultName: 'Leading' },
@@ -315,7 +317,7 @@ const BoxTypeTab = () => {
                                                         {item.defaultName}
                                                     </label>
                                                     <input
-                                                        placeholder="標籤 (Label)"
+                                                        placeholder={t('settingsExt.boxType.labelPlaceholder')}
                                                         value={selectedBox[item.labelKey] || ''}
                                                         onChange={(e) => handleUpdateBoxType(selectedBox.id, item.labelKey, e.target.value)}
                                                         style={{ padding: '4px', width: '120px', fontSize: '0.9rem' }}
@@ -323,27 +325,27 @@ const BoxTypeTab = () => {
                                                 </div>
                                             ))}
                                             <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px', borderTop: '1px dashed #ccc', paddingTop: '8px' }}>
-                                                <label style={{ width: 'auto', color: '#d32f2f' }}>修正值 (Correction):</label>
+                                                <label style={{ width: 'auto', color: '#d32f2f' }}>{t('settingsExt.boxType.correction')}:</label>
                                                 <input
                                                     type="number"
                                                     value={selectedBox.widCorrection || 0}
                                                     onChange={(e) => handleUpdateBoxType(selectedBox.id, 'widCorrection', e.target.value)}
                                                     style={{ width: '80px' }}
                                                 />
-                                                <span style={{ fontSize: '0.8rem', color: '#666' }}>mm (加減值)</span>
+                                                <span style={{ fontSize: '0.8rem', color: '#666' }}>{t('settingsExt.boxType.mmAddSub')}</span>
                                             </div>
                                         </div>
                                         <p style={{ color: '#1890ff', fontWeight: 'bold', marginTop: '10px' }}>
-                                            公式: {getWidthFormula(selectedBox)}
+                                            {t('settingsExt.boxType.formula')}: {getWidthFormula(selectedBox)}
                                         </p>
                                     </div>
 
 
                                     {/* Diagram Position Settings */}
                                     <div className={styles.subSection} style={{ marginTop: '10px', borderTop: '2px solid #eee', paddingTop: '10px' }}>
-                                        <h4>圖面欄位位置設定 (Diagram Position Settings)</h4>
+                                        <h4>{t('settingsExt.boxType.diagramPosSettings')}</h4>
                                         <div style={{ marginBottom: '10px', fontSize: '0.9rem', color: '#666' }}>
-                                            選取下方欄位，點擊圖面以設定顯示位置 (Select field below, then click image to set position)
+                                            {t('settingsExt.boxType.diagramPosHint')}
                                         </div>
 
                                         {/* Field Selector */}
@@ -368,7 +370,7 @@ const BoxTypeTab = () => {
                                         </div>
 
                                         <div className={styles.inputRow}>
-                                            <label>盒型圖示 (Image):</label>
+                                            <label>{t('settingsExt.boxType.imageLabel')}:</label>
                                             <input type="file" accept="image/*" onChange={(e) => handleImageUpload(selectedBox.id, e)} />
                                         </div>
 
@@ -378,7 +380,7 @@ const BoxTypeTab = () => {
                                                     style={{ position: 'relative', display: 'inline-block', cursor: 'crosshair' }}
                                                     onClick={(e) => {
                                                         if (!selectedPositionField) {
-                                                            alert('請先選擇要設定位置的欄位 (Please select a field first)');
+                                                            alert(t('settingsExt.boxType.selectFieldFirst'));
                                                             return;
                                                         }
                                                         const rect = e.currentTarget.getBoundingClientRect();
@@ -418,7 +420,7 @@ const BoxTypeTab = () => {
                                                     ))}
                                                 </div>
                                             ) : (
-                                                <span style={{ color: '#999' }}>請上傳圖片 (Please upload image)</span>
+                                                <span style={{ color: '#999' }}>{t('settingsExt.boxType.uploadImage')}</span>
                                             )}
                                         </div>
                                     </div>
@@ -426,7 +428,7 @@ const BoxTypeTab = () => {
                             </div>
                         ) : (
                             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#999' }}>
-                                請選擇或新增盒型 (Select or Add Box Type)
+                                {t('settingsExt.boxType.selectOrAdd')}
                             </div>
                         )}
                     </div>

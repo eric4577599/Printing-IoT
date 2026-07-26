@@ -197,7 +197,7 @@ const CommunicationTab = () => {
                                     />
                                 </div>
                                 <div className={styles.inputRow} style={{ marginTop: '10px' }}>
-                                    <label>監控更新頻率 (Monitor Interval):</label>
+                                    <label>{t('settingsExt.comm.monitorInterval')}:</label>
                                     <div style={{ display: 'flex', alignItems: 'center' }}>
                                         <input
                                             type="range"
@@ -217,7 +217,7 @@ const CommunicationTab = () => {
                                             onChange={e => handleCommChange('plc', 'monitor_interval', parseFloat(e.target.value))}
                                             style={{ width: '60px', borderRadius: '4px', border: '1px solid #ccc', padding: '2px 5px' }}
                                         />
-                                        <span style={{ marginLeft: '5px' }}>秒 (Default: 1.0s)</span>
+                                        <span style={{ marginLeft: '5px' }}>{t('settingsExt.comm.secondsDefault')}</span>
                                     </div>
                                 </div>
                             </>
@@ -306,15 +306,15 @@ const CommunicationTab = () => {
                                     cursor: 'pointer'
                                 }}
                             >
-                                📊 監控訊息 (Direct)
+                                📊 {t('settingsExt.comm.monitorMsg')}
                             </button>
                         </div>
                     </div>
                 </div>
 
                 <div style={{ marginTop: '15px', padding: '10px', background: '#e3f2fd', borderRadius: '4px', fontSize: '0.9rem', color: '#0d47a1' }}>
-                    ℹ️ <strong>模擬控制 (Simulation Controls):</strong><br />
-                    請使用畫面上方工具列的 <strong>[模擬生產]</strong> 與 <strong>[Power ON/OFF]</strong> 開關進行測試。
+                    ℹ️ <strong>{t('settingsExt.comm.simControlTitle')}:</strong><br />
+                    {t('settingsExt.comm.simControlHintPre')} <strong>[{t('settingsExt.comm.simProduction')}]</strong> {t('settingsExt.comm.simControlHintMid')} <strong>[Power ON/OFF]</strong> {t('settingsExt.comm.simControlHintPost')}
                 </div>
 
                 {/* MQTT Debug Monitor Modal (Updated to match DebugDashboard Logic) */}
@@ -332,7 +332,7 @@ const CommunicationTab = () => {
                     🏢 {t('settings.comm.erpTitle')}
                 </h4>
                 <div style={{ marginBottom: '15px', fontSize: '0.9rem', color: '#666' }}>
-                    建立對應「生產排程的產品檔、訂單」的協定介面
+                    {t('settingsExt.comm.erpDesc')}
                 </div>
 
                 <div className={styles.inputRow}>
@@ -355,7 +355,7 @@ const CommunicationTab = () => {
                                 type="radio"
                                 checked={commSettings.erp.connectionType === 'none'}
                                 onChange={() => handleCommChange('erp', 'connectionType', 'none')}
-                            /> 無連線 (None)
+                            /> {t('settingsExt.comm.connNone')}
                         </label>
                         <label>
                             <input
@@ -377,14 +377,14 @@ const CommunicationTab = () => {
                 {commSettings.erp.connectionType === 'tcp' ? (
                     <div style={{ marginLeft: '20px' }}>
                         <div className={styles.inputRow}>
-                            <label>伺服器 IP (Host):</label>
+                            <label>{t('settingsExt.comm.serverIp')}:</label>
                             <input
                                 value={commSettings.erp.host}
                                 onChange={e => handleCommChange('erp', 'host', e.target.value)}
                             />
                         </div>
                         <div className={styles.inputRow}>
-                            <label>連接埠 (Port):</label>
+                            <label>{t('settingsExt.comm.port')}:</label>
                             <input
                                 type="number"
                                 value={commSettings.erp.port}
@@ -396,7 +396,7 @@ const CommunicationTab = () => {
                 ) : (
                     <div style={{ marginLeft: '20px' }}>
                         <div className={styles.inputRow}>
-                            <label>輸入路徑 (Input Dir):</label>
+                            <label>{t('settingsExt.comm.inputDir')}:</label>
                             <input
                                 value={commSettings.erp.inputDir}
                                 onChange={e => handleCommChange('erp', 'inputDir', e.target.value)}
@@ -405,7 +405,7 @@ const CommunicationTab = () => {
                             />
                         </div>
                         <div className={styles.inputRow}>
-                            <label>輸出路徑 (Output Dir):</label>
+                            <label>{t('settingsExt.comm.outputDir')}:</label>
                             <input
                                 value={commSettings.erp.outputDir}
                                 onChange={e => handleCommChange('erp', 'outputDir', e.target.value)}
@@ -420,13 +420,13 @@ const CommunicationTab = () => {
             {/* Data Logging Settings */}
             <div className={styles.settingGroup} style={{ marginTop: '20px', border: '1px solid #c5e1a5', background: '#f1f8e9', padding: '15px', borderRadius: '8px' }}>
                 <h4 style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: 0 }}>
-                    💾 數據記錄設定 (Data Logging Settings)
+                    💾 {t('settingsExt.comm.dataLogTitle')}
                 </h4>
                 <div style={{ marginBottom: '15px', fontSize: '0.9rem', color: '#666' }}>
-                    控制 MQTT 數據寫入資料庫的頻率。當機台狀態改變時會立即寫入，其他時候依據設定的時間間隔定期寫入。
+                    {t('settingsExt.comm.dataLogDesc')}
                 </div>
                 <div className={styles.inputRow}>
-                    <label>定時寫入間隔 (Log Interval):</label>
+                    <label>{t('settingsExt.comm.logInterval')}:</label>
                     <input
                         type="number"
                         value={Math.floor(commSettings.dataLogInterval / 60)}
@@ -460,24 +460,24 @@ const CommunicationTab = () => {
                         }}
                         style={{ width: '80px' }}
                     />
-                    <span>分鐘 (minutes)</span>
+                    <span>{t('settingsExt.comm.minutes')}</span>
                     <span style={{ marginLeft: '10px', fontSize: '0.85rem', color: '#666' }}>
-                        目前: {Math.floor(commSettings.dataLogInterval / 60)} 分鐘 ({commSettings.dataLogInterval} 秒)
+                        {t('settingsExt.comm.current')}: {Math.floor(commSettings.dataLogInterval / 60)} {t('settingsExt.comm.minutes')} ({commSettings.dataLogInterval} {t('settingsExt.comm.seconds')})
                     </span>
                 </div>
                 <div style={{ marginTop: '10px', padding: '10px', background: '#fff', borderRadius: '4px', fontSize: '0.85rem' }}>
-                    <strong>說明：</strong>
+                    <strong>{t('settingsExt.comm.note')}：</strong>
                     <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
-                        <li>狀態改變時（RUN ↔ STOP ↔ JOG）會立即寫入資料庫</li>
-                        <li>非狀態改變期間，依據此間隔定期寫入</li>
-                        <li>建議設定：3-10 分鐘</li>
+                        <li>{t('settingsExt.comm.noteItem1')}</li>
+                        <li>{t('settingsExt.comm.noteItem2')}</li>
+                        <li>{t('settingsExt.comm.noteItem3')}</li>
                     </ul>
                 </div>
 
                 {/* Machine ID Setting */}
                 <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed #c5e1a5' }}>
                     <div className={styles.inputRow}>
-                        <label>🏭 機台識別碼 (Machine ID):</label>
+                        <label>🏭 {t('settingsExt.comm.machineId')}:</label>
                         <input
                             type="text"
                             value={commSettings.machineId || 'MACHINE_01'}
@@ -511,7 +511,7 @@ const CommunicationTab = () => {
                             placeholder="MACHINE_01"
                         />
                         <span style={{ marginLeft: '10px', fontSize: '0.85rem', color: '#666' }}>
-                            用於識別本機台的唯一編碼，會記錄在生產日誌中
+                            {t('settingsExt.comm.machineIdHint')}
                         </span>
                     </div>
                 </div>
@@ -540,12 +540,12 @@ const CommunicationTab = () => {
                         };
                         await updateCommunicationSettings(payload);
                         localStorage.setItem('communicationSettings', JSON.stringify(commSettings));
-                        alert('✅ 通訊設定已儲存至伺服器 (Settings saved to server!)');
+                        alert('✅ ' + t('settingsExt.comm.saveSuccess'));
                     } catch (error) {
                         console.error('Failed to save settings:', error);
-                        alert('❌ 儲存失敗 (Save failed): ' + error.message);
+                        alert('❌ ' + t('settingsExt.comm.saveFailed') + ': ' + error.message);
                     }
-                }}>儲存 (Save)</button>
+                }}>{t('settingsExt.common.save')}</button>
             </div>
         </div>
     );

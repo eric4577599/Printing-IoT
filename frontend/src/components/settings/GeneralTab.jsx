@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import styles from '../../pages/SettingsPage.module.css';
+import { useLanguage } from '../../modules/language/LanguageContext';
 
 const GeneralTab = () => {
+    // i18n:取得翻譯函式,提供本頁所有畫面文字
+    const { t } = useLanguage();
 
     // --- 公司抬頭設定 State ---
     const [companySettings, setCompanySettings] = useState(() => {
@@ -72,7 +75,7 @@ const GeneralTab = () => {
     // --- User Handlers ---
     const handleAddUser = () => {
         if (!newUserCode || !newUserName || !newUserPassword) {
-            alert('請完整輸入使用者資訊 (Please fill all user fields)');
+            alert(t('settingsExt.general.alertFillUser'));
             return;
         }
         const newUser = {
@@ -89,7 +92,7 @@ const GeneralTab = () => {
         const editingId = selectedUserId;
         // 編輯時若把代碼改成與「其他」既有使用者相同 → 阻止,避免覆蓋別人或製造重複
         if (editingId != null && newUserCode !== editingId && users.some(u => u.id === newUserCode)) {
-            alert(`代碼 ${newUserCode} 已存在於其他使用者 (Duplicate user code)`);
+            alert(t('settingsExt.general.alertDuplicateUser').replace('{code}', newUserCode));
             return;
         }
         const existingIdx = editingId != null
@@ -104,7 +107,7 @@ const GeneralTab = () => {
         }
         setUsers(newUsers);
         localStorage.setItem('appUsers', JSON.stringify(newUsers));
-        alert('使用者已儲存 (User Saved)');
+        alert(t('settingsExt.general.alertUserSaved'));
 
         // Reset inputs
         setNewUserCode('');
@@ -115,7 +118,7 @@ const GeneralTab = () => {
     };
 
     const handleDeleteUser = (id) => {
-        if (confirm('確定刪除此使用者? (Delete User?)')) {
+        if (confirm(t('settingsExt.general.confirmDeleteUser'))) {
             const newUsers = users.filter(u => u.id !== id);
             setUsers(newUsers);
             localStorage.setItem('appUsers', JSON.stringify(newUsers));
@@ -130,14 +133,14 @@ const GeneralTab = () => {
         setNewUserName(u.name);
         setNewUserPassword(u.password || '');
         setNewUserShift(u.shift || '');
-        // We need to unlock ID editing restriction or handle it? 
+        // We need to unlock ID editing restriction or handle it?
         // For simplicity, we allow overwriting by ID.
     };
 
     // --- Shift Handlers ---
     const handleAddShift = () => {
         if (!newShiftName || !newShiftStart || !newShiftEnd) {
-            alert('請完整輸入班別資訊 (Please fill all shift fields)');
+            alert(t('settingsExt.general.alertFillShift'));
             return;
         }
         const newShift = {
@@ -156,7 +159,7 @@ const GeneralTab = () => {
 
         setShifts(newShifts);
         localStorage.setItem('appShifts', JSON.stringify(newShifts));
-        alert('班別已儲存 (Shift Saved)');
+        alert(t('settingsExt.general.alertShiftSaved'));
 
         // Reset
         setNewShiftName('');
@@ -166,7 +169,7 @@ const GeneralTab = () => {
     };
 
     const handleDeleteShift = (idx) => {
-        if (confirm('確定刪除此班別? (Delete Shift?)')) {
+        if (confirm(t('settingsExt.general.confirmDeleteShift'))) {
             const newShifts = shifts.filter((_, i) => i !== idx);
             setShifts(newShifts);
             localStorage.setItem('appShifts', JSON.stringify(newShifts));
@@ -186,7 +189,7 @@ const GeneralTab = () => {
 
     const renderUserSection = () => (
         <div className={styles.settingGroup}>
-            <h4>使用者設定 (User Settings)</h4>
+            <h4>{t('settingsExt.general.userSettings')}</h4>
 
             <div className={styles.radioGroup}>
                 <label>
@@ -197,7 +200,7 @@ const GeneralTab = () => {
                         checked={userSource === 'inherit'}
                         onChange={e => setUserSource(e.target.value)}
                     />
-                    繼承遠端IP設定 (Inherit Remote IP)
+                    {t('settingsExt.general.inheritRemoteIp')}
                 </label>
                 <label>
                     <input
@@ -207,17 +210,17 @@ const GeneralTab = () => {
                         checked={userSource === 'custom'}
                         onChange={e => setUserSource(e.target.value)}
                     />
-                    自訂 (Custom)
+                    {t('settingsExt.general.custom')}
                 </label>
             </div>
 
             {userSource === 'inherit' && (
                 <div className={styles.inputRow}>
-                    <label>遠端 IP (Remote IP):</label>
+                    <label>{t('settingsExt.general.remoteIp')}</label>
                     <input
                         value={userRemoteIP}
                         onChange={e => setUserRemoteIP(e.target.value)}
-                        placeholder="e.g. 192.168.1.100"
+                        placeholder={t('settingsExt.general.remoteIpPlaceholder')}
                     />
                 </div>
             )}
@@ -226,10 +229,10 @@ const GeneralTab = () => {
                 <table className={styles.table}>
                     <thead>
                         <tr>
-                            <th className={styles.th}>使用者 (User)</th>
-                            <th className={styles.th}>密碼 (Password)</th>
-                            <th className={styles.th}>代碼 (ID)</th>
-                            <th className={styles.th}>操作 (Actions)</th>
+                            <th className={styles.th}>{t('settingsExt.general.colUser')}</th>
+                            <th className={styles.th}>{t('settingsExt.general.colPassword')}</th>
+                            <th className={styles.th}>{t('settingsExt.general.colId')}</th>
+                            <th className={styles.th}>{t('settingsExt.general.colActions')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -248,7 +251,7 @@ const GeneralTab = () => {
                                         className={styles.miniBtn}
                                         onClick={(e) => { e.stopPropagation(); handleDeleteUser(u.id); }}
                                         disabled={userSource === 'inherit'}
-                                    >刪除</button>
+                                    >{t('settingsExt.common.delete')}</button>
                                 </td>
                             </tr>
                         ))}
@@ -256,16 +259,16 @@ const GeneralTab = () => {
                 </table>
 
                 <div className={styles.editRow}>
-                    <input placeholder="使用者 (name)" value={newUserName} onChange={e => setNewUserName(e.target.value)} disabled={userSource === 'inherit'} />
-                    <input placeholder="密碼 (pwd)" value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} disabled={userSource === 'inherit'} />
-                    <input placeholder="代碼 (ID)" value={newUserCode} onChange={e => setNewUserCode(e.target.value)} disabled={userSource === 'inherit'} style={{ width: '80px' }} />
+                    <input placeholder={t('settingsExt.general.userNamePlaceholder')} value={newUserName} onChange={e => setNewUserName(e.target.value)} disabled={userSource === 'inherit'} />
+                    <input placeholder={t('settingsExt.general.passwordPlaceholder')} value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} disabled={userSource === 'inherit'} />
+                    <input placeholder={t('settingsExt.general.idPlaceholder')} value={newUserCode} onChange={e => setNewUserCode(e.target.value)} disabled={userSource === 'inherit'} style={{ width: '80px' }} />
                     <button className={styles.actionButton} onClick={handleAddUser} disabled={userSource === 'inherit'}>
-                        {selectedUserId ? '修改 (Update)' : '新增 (Add)'}
+                        {selectedUserId ? t('settingsExt.common.update') : t('settingsExt.common.add')}
                     </button>
                     {selectedUserId && (
                         <button className={styles.actionButton} onClick={() => {
                             setSelectedUserId(null); setNewUserName(''); setNewUserCode(''); setNewUserPassword('');
-                        }}>取消 (Cancel)</button>
+                        }}>{t('settingsExt.common.cancel')}</button>
                     )}
                 </div>
             </div>
@@ -274,7 +277,7 @@ const GeneralTab = () => {
 
     const renderShiftSection = () => (
         <div className={styles.settingGroup}>
-            <h4>班別時間設定 (Shift Time Settings)</h4>
+            <h4>{t('settingsExt.general.shiftSettings')}</h4>
 
             <div className={styles.radioGroup}>
                 <label>
@@ -285,7 +288,7 @@ const GeneralTab = () => {
                         checked={shiftSource === 'inherit'}
                         onChange={e => setShiftSource(e.target.value)}
                     />
-                    繼承遠端IP設定 (Inherit Remote IP)
+                    {t('settingsExt.general.inheritRemoteIp')}
                 </label>
                 <label>
                     <input
@@ -295,17 +298,17 @@ const GeneralTab = () => {
                         checked={shiftSource === 'custom'}
                         onChange={e => setShiftSource(e.target.value)}
                     />
-                    自訂 (Custom)
+                    {t('settingsExt.general.custom')}
                 </label>
             </div>
 
             {shiftSource === 'inherit' && (
                 <div className={styles.inputRow}>
-                    <label>遠端 IP (Remote IP):</label>
+                    <label>{t('settingsExt.general.remoteIp')}</label>
                     <input
                         value={shiftRemoteIP}
                         onChange={e => setShiftRemoteIP(e.target.value)}
-                        placeholder="e.g. 192.168.1.100"
+                        placeholder={t('settingsExt.general.remoteIpPlaceholder')}
                     />
                 </div>
             )}
@@ -314,10 +317,10 @@ const GeneralTab = () => {
                 <table className={styles.table}>
                     <thead>
                         <tr>
-                            <th className={styles.th}>班別 (Shift)</th>
-                            <th className={styles.th}>時間起 (Start)</th>
-                            <th className={styles.th}>迄 (End)</th>
-                            <th className={styles.th}>操作 (Actions)</th>
+                            <th className={styles.th}>{t('settingsExt.general.colShift')}</th>
+                            <th className={styles.th}>{t('settingsExt.general.colStart')}</th>
+                            <th className={styles.th}>{t('settingsExt.general.colEnd')}</th>
+                            <th className={styles.th}>{t('settingsExt.general.colActions')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -336,7 +339,7 @@ const GeneralTab = () => {
                                         className={styles.miniBtn}
                                         onClick={(e) => { e.stopPropagation(); handleDeleteShift(idx); }}
                                         disabled={shiftSource === 'inherit'}
-                                    >刪除</button>
+                                    >{t('settingsExt.common.delete')}</button>
                                 </td>
                             </tr>
                         ))}
@@ -344,17 +347,17 @@ const GeneralTab = () => {
                 </table>
 
                 <div className={styles.editRow}>
-                    <input placeholder="班別 (Name)" value={newShiftName} onChange={e => setNewShiftName(e.target.value)} disabled={shiftSource === 'inherit'} style={{ width: '80px' }} />
+                    <input placeholder={t('settingsExt.general.shiftNamePlaceholder')} value={newShiftName} onChange={e => setNewShiftName(e.target.value)} disabled={shiftSource === 'inherit'} style={{ width: '80px' }} />
                     <input type="time" value={newShiftStart} onChange={e => setNewShiftStart(e.target.value)} disabled={shiftSource === 'inherit'} />
                     <span>~</span>
                     <input type="time" value={newShiftEnd} onChange={e => setNewShiftEnd(e.target.value)} disabled={shiftSource === 'inherit'} />
                     <button className={styles.actionButton} onClick={handleAddShift} disabled={shiftSource === 'inherit'}>
-                        {selectedShiftIdx !== null ? '修改 (Update)' : '新增 (Add)'}
+                        {selectedShiftIdx !== null ? t('settingsExt.common.update') : t('settingsExt.common.add')}
                     </button>
                     {selectedShiftIdx !== null && (
                         <button className={styles.actionButton} onClick={() => {
                             setSelectedShiftIdx(null); setNewShiftName(''); setNewShiftStart('08:00'); setNewShiftEnd('18:00');
-                        }}>取消 (Cancel)</button>
+                        }}>{t('settingsExt.common.cancel')}</button>
                     )}
                 </div>
             </div>
@@ -391,7 +394,7 @@ const GeneralTab = () => {
     // --- Reason Handlers ---
     const handleAddStopReason = () => {
         if (!newStopId || !newStopReason) {
-            alert('請輸入編號與原因 (Please enter ID and Reason)');
+            alert(t('settingsExt.general.alertEnterIdReason'));
             return;
         }
         const newList = [...stopReasonsList, { id: newStopId, reason: newStopReason, category: newStopCategory || 'General' }];
@@ -405,7 +408,7 @@ const GeneralTab = () => {
     };
 
     const handleDeleteStopReason = (id) => {
-        if (confirm('確定刪除? (Delete Reason?)')) {
+        if (confirm(t('settingsExt.general.confirmDeleteReason'))) {
             const newList = stopReasonsList.filter(r => r.id !== id);
             setStopReasonsList(newList);
             localStorage.setItem('stopReasonsList', JSON.stringify(newList));
@@ -413,7 +416,7 @@ const GeneralTab = () => {
     };
 
     const handleImportStopReasons = () => {
-        alert('模擬由 Excel 匯入成功! (Simulated Import from Excel)');
+        alert(t('settingsExt.general.alertImportSuccess'));
         const newList = [
             ...stopReasonsList,
             { id: '003', reason: '機械故障 (Imported)', category: 'Machine' },
@@ -425,7 +428,7 @@ const GeneralTab = () => {
 
     const handleAddDefectReason = () => {
         if (!newDefectId || !newDefectReason) {
-            alert('請輸入編號與原因 (Please enter ID and Reason)');
+            alert(t('settingsExt.general.alertEnterIdReason'));
             return;
         }
         const newList = [...defectReasonsList, { id: newDefectId, reason: newDefectReason, category: newDefectCategory || 'General' }];
@@ -439,7 +442,7 @@ const GeneralTab = () => {
     };
 
     const handleDeleteDefectReason = (id) => {
-        if (confirm('確定刪除? (Delete Reason?)')) {
+        if (confirm(t('settingsExt.general.confirmDeleteReason'))) {
             const newList = defectReasonsList.filter(r => r.id !== id);
             setDefectReasonsList(newList);
             localStorage.setItem('defectReasonsList', JSON.stringify(newList));
@@ -447,7 +450,7 @@ const GeneralTab = () => {
     };
 
     const handleImportDefectReasons = () => {
-        alert('模擬由 Excel 匯入成功! (Simulated Import from Excel)');
+        alert(t('settingsExt.general.alertImportSuccess'));
         const newList = [
             ...defectReasonsList,
             { id: 'D02', reason: '顏色偏差 (Imported)', category: 'Color' }
@@ -461,62 +464,62 @@ const GeneralTab = () => {
     // --- Render Logic ---
     return (
         <div className={styles.tabContent} style={{ height: '100%', overflowY: 'auto' }}>
-            <h3>一般設定 (General Settings)</h3>
+            <h3>{t('settingsExt.general.title')}</h3>
 
             {/* 公司抬頭設定 */}
             <div className={styles.settingGroup}>
-                <h4>公司抬頭設定 (Company Header)</h4>
+                <h4>{t('settingsExt.general.companyHeader')}</h4>
                 <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '15px' }}>
-                    此設定將用於報表列印時的公司抬頭顯示
+                    {t('settingsExt.general.companyHeaderHint')}
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                     <div>
                         <div className={styles.inputRow}>
-                            <label>公司名稱 (中文):</label>
+                            <label>{t('settingsExt.general.companyNameZh')}</label>
                             <input
                                 value={companySettings.companyName}
                                 onChange={e => handleCompanyChange('companyName', e.target.value)}
-                                placeholder="例：台灣紙箱股份有限公司"
+                                placeholder={t('settingsExt.general.companyNameZhPlaceholder')}
                                 style={{ flex: 1 }}
                             />
                         </div>
                         <div className={styles.inputRow}>
-                            <label>公司名稱 (英文):</label>
+                            <label>{t('settingsExt.general.companyNameEn')}</label>
                             <input
                                 value={companySettings.companyNameEn}
                                 onChange={e => handleCompanyChange('companyNameEn', e.target.value)}
-                                placeholder="e.g. Taiwan Carton Co., Ltd."
+                                placeholder={t('settingsExt.general.companyNameEnPlaceholder')}
                                 style={{ flex: 1 }}
                             />
                         </div>
                         <div className={styles.inputRow}>
-                            <label>公司地址:</label>
+                            <label>{t('settingsExt.general.companyAddress')}</label>
                             <input
                                 value={companySettings.address}
                                 onChange={e => handleCompanyChange('address', e.target.value)}
-                                placeholder="例：台北市信義區信義路一段100號"
+                                placeholder={t('settingsExt.general.companyAddressPlaceholder')}
                                 style={{ flex: 1 }}
                             />
                         </div>
                         <div className={styles.inputRow}>
-                            <label>電話:</label>
+                            <label>{t('settingsExt.general.phone')}</label>
                             <input
                                 value={companySettings.phone}
                                 onChange={e => handleCompanyChange('phone', e.target.value)}
-                                placeholder="例：02-1234-5678"
+                                placeholder={t('settingsExt.general.phonePlaceholder')}
                                 style={{ width: '150px' }}
                             />
-                            <label style={{ marginLeft: '20px' }}>傳真:</label>
+                            <label style={{ marginLeft: '20px' }}>{t('settingsExt.general.fax')}</label>
                             <input
                                 value={companySettings.fax}
                                 onChange={e => handleCompanyChange('fax', e.target.value)}
-                                placeholder="例：02-1234-5679"
+                                placeholder={t('settingsExt.general.faxPlaceholder')}
                                 style={{ width: '150px' }}
                             />
                         </div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <label style={{ marginBottom: '10px', fontWeight: 'bold' }}>公司標誌 (Logo)</label>
+                        <label style={{ marginBottom: '10px', fontWeight: 'bold' }}>{t('settingsExt.general.companyLogo')}</label>
                         {companySettings.logo ? (
                             <div style={{ position: 'relative' }}>
                                 <img
@@ -551,7 +554,7 @@ const GeneralTab = () => {
                                 justifyContent: 'center',
                                 color: '#999'
                             }}>
-                                <span>尚未上傳</span>
+                                <span>{t('settingsExt.general.noUpload')}</span>
                             </div>
                         )}
                         <input
@@ -568,19 +571,19 @@ const GeneralTab = () => {
             {renderShiftSection()}
 
             <div className={styles.settingGroup}>
-                <h4>停車原因設定 (Stop Reason Settings)</h4>
+                <h4>{t('settingsExt.general.stopReasonSettings')}</h4>
                 <div className={styles.buttonGroup}>
                     {/* <button className={styles.actionButton} onClick={handleAddStopReason}>新增原因 (Add Reason)</button> */}
-                    <button className={styles.actionButton} onClick={handleImportStopReasons}>匯入 (Import)</button>
+                    <button className={styles.actionButton} onClick={handleImportStopReasons}>{t('settingsExt.common.import')}</button>
                 </div>
                 <div className={styles.tableContainer}>
                     <table className={styles.table}>
                         <thead>
                             <tr>
                                 <th className={styles.th}>ID</th>
-                                <th className={styles.th}>原因 (Reason)</th>
-                                <th className={styles.th}>類別 (Category)</th>
-                                <th className={styles.th}>操作 (Actions)</th>
+                                <th className={styles.th}>{t('settingsExt.general.colReason')}</th>
+                                <th className={styles.th}>{t('settingsExt.general.colCategory')}</th>
+                                <th className={styles.th}>{t('settingsExt.general.colActions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -590,7 +593,7 @@ const GeneralTab = () => {
                                     <td className={styles.td}>{reason.reason}</td>
                                     <td className={styles.td}>{reason.category}</td>
                                     <td className={styles.td}>
-                                        <button className={styles.miniBtn} onClick={() => handleDeleteStopReason(reason.id)}>刪除 (Delete)</button>
+                                        <button className={styles.miniBtn} onClick={() => handleDeleteStopReason(reason.id)}>{t('settingsExt.common.delete')}</button>
                                     </td>
                                 </tr>
                             ))}
@@ -599,27 +602,27 @@ const GeneralTab = () => {
 
                     <div className={styles.editRow}>
                         <input placeholder="ID" value={newStopId} onChange={e => setNewStopId(e.target.value)} style={{ width: '60px' }} />
-                        <input placeholder="原因 (Reason)" value={newStopReason} onChange={e => setNewStopReason(e.target.value)} />
-                        <input placeholder="類別 (Category)" value={newStopCategory} onChange={e => setNewStopCategory(e.target.value)} />
-                        <button className={styles.actionButton} onClick={handleAddStopReason}>新增 (Add)</button>
+                        <input placeholder={t('settingsExt.general.reasonPlaceholder')} value={newStopReason} onChange={e => setNewStopReason(e.target.value)} />
+                        <input placeholder={t('settingsExt.general.categoryPlaceholder')} value={newStopCategory} onChange={e => setNewStopCategory(e.target.value)} />
+                        <button className={styles.actionButton} onClick={handleAddStopReason}>{t('settingsExt.common.add')}</button>
                     </div>
                 </div>
             </div>
 
             <div className={styles.settingGroup}>
-                <h4>不良原因設定 (Defect Reason Settings)</h4>
+                <h4>{t('settingsExt.general.defectReasonSettings')}</h4>
                 <div className={styles.buttonGroup}>
                     {/* <button className={styles.actionButton} onClick={handleAddDefectReason}>新增原因 (Add Reason)</button> */}
-                    <button className={styles.actionButton} onClick={handleImportDefectReasons}>匯入 (Import)</button>
+                    <button className={styles.actionButton} onClick={handleImportDefectReasons}>{t('settingsExt.common.import')}</button>
                 </div>
                 <div className={styles.tableContainer}>
                     <table className={styles.table}>
                         <thead>
                             <tr>
                                 <th className={styles.th}>ID</th>
-                                <th className={styles.th}>原因 (Reason)</th>
-                                <th className={styles.th}>類別 (Category)</th>
-                                <th className={styles.th}>操作 (Actions)</th>
+                                <th className={styles.th}>{t('settingsExt.general.colReason')}</th>
+                                <th className={styles.th}>{t('settingsExt.general.colCategory')}</th>
+                                <th className={styles.th}>{t('settingsExt.general.colActions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -629,7 +632,7 @@ const GeneralTab = () => {
                                     <td className={styles.td}>{reason.reason}</td>
                                     <td className={styles.td}>{reason.category}</td>
                                     <td className={styles.td}>
-                                        <button className={styles.miniBtn} onClick={() => handleDeleteDefectReason(reason.id)}>刪除 (Delete)</button>
+                                        <button className={styles.miniBtn} onClick={() => handleDeleteDefectReason(reason.id)}>{t('settingsExt.common.delete')}</button>
                                     </td>
                                 </tr>
                             ))}
@@ -638,9 +641,9 @@ const GeneralTab = () => {
 
                     <div className={styles.editRow}>
                         <input placeholder="ID" value={newDefectId} onChange={e => setNewDefectId(e.target.value)} style={{ width: '60px' }} />
-                        <input placeholder="原因 (Reason)" value={newDefectReason} onChange={e => setNewDefectReason(e.target.value)} />
-                        <input placeholder="類別 (Category)" value={newDefectCategory} onChange={e => setNewDefectCategory(e.target.value)} />
-                        <button className={styles.actionButton} onClick={handleAddDefectReason}>新增 (Add)</button>
+                        <input placeholder={t('settingsExt.general.reasonPlaceholder')} value={newDefectReason} onChange={e => setNewDefectReason(e.target.value)} />
+                        <input placeholder={t('settingsExt.general.categoryPlaceholder')} value={newDefectCategory} onChange={e => setNewDefectCategory(e.target.value)} />
+                        <button className={styles.actionButton} onClick={handleAddDefectReason}>{t('settingsExt.common.add')}</button>
                     </div>
                 </div>
             </div>

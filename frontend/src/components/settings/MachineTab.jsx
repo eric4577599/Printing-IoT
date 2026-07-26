@@ -89,7 +89,7 @@ const MachineTab = () => {
      */
     const handleAddSection = async () => {
         if (!newSectionName) {
-            alert('請輸入部位名稱 (Please enter Section Name)');
+            alert(t('settingsExt.machine.enterSectionName'));
             return;
         }
         const name = newSectionName;
@@ -119,7 +119,7 @@ const MachineTab = () => {
             setNewSectionName('');
         } catch (error) {
             console.error("Failed to create section:", error);
-            alert("新增失敗 (Failed to create section)");
+            alert(t('settingsExt.machine.addFailed'));
         }
     };
 
@@ -132,7 +132,7 @@ const MachineTab = () => {
      * @param {string} sectionId - 部位ID
             */
     const handleDeleteSection = async (sectionId) => {
-        if (!confirm('確定刪除此部位? (Delete Section?)')) return;
+        if (!confirm(t('settingsExt.machine.confirmDeleteSection'))) return;
 
         try {
             await apiDeleteSection(sectionId); // API Call
@@ -149,7 +149,7 @@ const MachineTab = () => {
             }
         } catch (error) {
             console.error("Failed to delete section:", error);
-            alert("刪除失敗 (Failed to delete section)");
+            alert(t('settingsExt.machine.deleteFailed'));
         }
     };
 
@@ -196,7 +196,7 @@ const MachineTab = () => {
             ]);
         } catch (error) {
             console.error("Failed to update section order:", error);
-            alert("順序更新失敗 (Failed to update order)");
+            alert(t('settingsExt.machine.orderUpdateFailed'));
         }
     };
 
@@ -204,7 +204,7 @@ const MachineTab = () => {
      * 重置為預設部位
      */
     const handleResetDefaults = async () => {
-        if (!confirm('確定重置? 這將刪除現有部位並建立預設值。 (Reset to Defaults?)')) return;
+        if (!confirm(t('settingsExt.machine.confirmReset'))) return;
 
         try {
             // Delete all existing
@@ -222,10 +222,10 @@ const MachineTab = () => {
             setMachineSettings(prev => ({ ...prev, sections: created }));
             localStorage.setItem('machineSettings', JSON.stringify({ ...machineSettings, sections: created }));
             setSelectedSectionId(created.length > 0 ? created[0].id : null);
-            alert('已重置為預設值 (Reset Complete)');
+            alert(t('settingsExt.machine.resetComplete'));
         } catch (err) {
             console.error(err);
-            alert('重置失敗 (Reset Failed)');
+            alert(t('settingsExt.machine.resetFailed'));
         }
     };
 
@@ -278,7 +278,7 @@ const MachineTab = () => {
                             onChange={e => handleMachineChange('maxSpeed', Number(e.target.value))}
                             style={{ width: '100px' }}
                         />
-                        <span>張/分 ({t('common.speed')} unit)</span>
+                        <span>{t('settingsExt.machine.sheetsPerMin')} ({t('common.speed')} unit)</span>
                     </div>
                 </div>
 
@@ -286,7 +286,7 @@ const MachineTab = () => {
                 <div className={styles.settingGroup}>
                     <h4>{t('settings.machine.sections')}</h4>
                     <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '10px' }}>
-                        這些部位將用於機器狀態顯示和保養維修的部位選項
+                        {t('settingsExt.machine.sectionsHint')}
                     </p>
 
                     <div className={styles.twoColumnLayout}>
@@ -304,12 +304,12 @@ const MachineTab = () => {
                                     className={styles.actionButton}
                                     onClick={() => handleResetDefaults()}
                                     style={{ backgroundColor: '#666', borderColor: '#666' }}
-                                >預設 (Defaults)</button>
+                                >{t('settingsExt.machine.defaults')}</button>
                             </div>
                             <div style={{ marginBottom: '5px' }}>
                                 <button className={styles.actionButton} onClick={() => handleMoveSection(selectedSectionId, 'up')} disabled={!selectedSectionId}>▲</button>
                                 <button className={styles.actionButton} onClick={() => handleMoveSection(selectedSectionId, 'down')} disabled={!selectedSectionId}>▼</button>
-                                <button className={styles.actionButton} onClick={() => handleDeleteSection(selectedSectionId)} disabled={!selectedSectionId} style={{ color: 'red' }}>刪除 (Del)</button>
+                                <button className={styles.actionButton} onClick={() => handleDeleteSection(selectedSectionId)} disabled={!selectedSectionId} style={{ color: 'red' }}>{t('settingsExt.common.delete')}</button>
                             </div>
 
                             <div className={styles.listBox} style={{ minHeight: '300px' }}>
@@ -327,7 +327,7 @@ const MachineTab = () => {
                                 ))}
                                 {sortedSections.length === 0 && (
                                     <div style={{ padding: '20px', color: '#999', textAlign: 'center' }}>
-                                        尚無部位，請點擊「新增」按鈕
+                                        {t('settingsExt.machine.noSections')}
                                     </div>
                                 )}
                             </div>
@@ -337,7 +337,7 @@ const MachineTab = () => {
                         <div className={styles.rightPanel}>
                             {selectedSection ? (
                                 <div className={styles.settingGroup}>
-                                    <h4>部位詳情 (Section Details)</h4>
+                                    <h4>{t('settingsExt.machine.sectionDetails')}</h4>
                                     <div className={styles.inputRow}>
                                         <label>{t('settings.machine.sectionName')}:</label>
                                         <input
@@ -347,11 +347,11 @@ const MachineTab = () => {
                                         />
                                     </div>
                                     <div className={styles.inputRow}>
-                                        <label>順序 (Order):</label>
+                                        <label>{t('settingsExt.machine.order')}:</label>
                                         <span style={{ fontWeight: 'bold' }}>{selectedSection.displayOrder}</span>
                                     </div>
                                     <div className={styles.inputRow}>
-                                        <label>故障訊號 (Fault Signal):</label>
+                                        <label>{t('settingsExt.machine.faultSignal')}:</label>
                                         <select
                                             value={selectedSection.errorSignal || ''}
                                             onChange={(e) => handleUpdateSectionField(selectedSection.id, 'errorSignal', e.target.value)}
@@ -367,7 +367,7 @@ const MachineTab = () => {
                                         />
                                     </div>
                                     <div className={styles.inputRow}>
-                                        <label>運作訊號 (Run Signal):</label>
+                                        <label>{t('settingsExt.machine.runSignal')}:</label>
                                         <select
                                             value={selectedSection.runSignal || ''}
                                             onChange={(e) => handleUpdateSectionField(selectedSection.id, 'runSignal', e.target.value)}
@@ -389,7 +389,7 @@ const MachineTab = () => {
                                 </div>
                             ) : (
                                 <div style={{ padding: '40px', color: '#999', textAlign: 'center' }}>
-                                    請從左側選擇一個部位以查看詳情
+                                    {t('settingsExt.machine.selectSectionHint')}
                                 </div>
                             )}
                         </div>
