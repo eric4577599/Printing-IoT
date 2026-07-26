@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './LoginModal.module.css';
 import { useAuth } from './AuthContext';
+import { useLanguage } from '../language/LanguageContext';
 
 const LoginModal = ({ isOpen, onClose }) => {
     const { login, loginDirect } = useAuth();
+    const { t } = useLanguage(); // 取得翻譯函式,依當前語系回傳對應字串
     const navigate = useNavigate();
 
     // -- State --
@@ -84,7 +86,7 @@ const LoginModal = ({ isOpen, onClose }) => {
 
     const handleLogin = () => {
         if (!selectedUserId) {
-            alert('請選擇操作員 (Please select an operator)');
+            alert(t('login.alert.selectOperator'));
             return;
         }
         const user = users.find(u => u.id === selectedUserId);
@@ -109,7 +111,7 @@ const LoginModal = ({ isOpen, onClose }) => {
     // I will replace only the top section and handleLogin.
 
     const handleAddUser = () => {
-        if (!newUserCode || !newUserName) return alert("請輸入代碼與名稱");
+        if (!newUserCode || !newUserName) return alert(t('login.alert.enterCodeName'));
         const newUser = { id: newUserCode, name: newUserName, username: newUserName, password: '123', role: 'OPERATOR', shift: newUserShift.toUpperCase() };
 
         // Upsert
@@ -125,7 +127,7 @@ const LoginModal = ({ isOpen, onClose }) => {
 
     const handleDeleteUser = () => {
         if (!selectedUserId) return;
-        if (!confirm('確定刪除?')) return;
+        if (!confirm(t('login.confirm.delete'))) return;
         const newUsers = users.filter(u => u.id !== selectedUserId);
         setUsers(newUsers);
         localStorage.setItem('appUsers', JSON.stringify(newUsers));
@@ -168,7 +170,7 @@ const LoginModal = ({ isOpen, onClose }) => {
             onClose();
             navigate('/');
         } else {
-            alert('帳號或密碼錯誤 (Invalid Credentials)');
+            alert(t('login.alert.invalidCredentials'));
         }
     };
 
@@ -179,9 +181,9 @@ const LoginModal = ({ isOpen, onClose }) => {
             <div className={styles.windowContainer} style={{ position: 'relative' }}>
                 {/* Part 1: Top Buttons */}
                 <div className={styles.topBar}>
-                    <button className={styles.largeBtn} onClick={() => setShowAdminLogin(true)} style={{ marginRight: 'auto' }}>管理者 (Admin)</button>
-                    <button className={styles.largeBtn} onClick={handleLogin}>選取 (Select)</button>
-                    <button className={styles.largeBtn} onClick={onClose}>離開 (Exit)</button>
+                    <button className={styles.largeBtn} onClick={() => setShowAdminLogin(true)} style={{ marginRight: 'auto' }}>{t('login.btn.admin')}</button>
+                    <button className={styles.largeBtn} onClick={handleLogin}>{t('login.btn.select')}</button>
+                    <button className={styles.largeBtn} onClick={onClose}>{t('login.btn.exit')}</button>
                 </div>
 
                 {/* ... (Existing InfoBar, Tables, Footer logic remains same) ... */}
@@ -190,7 +192,7 @@ const LoginModal = ({ isOpen, onClose }) => {
                 <div className={styles.infoBar}>
                     {/* NEW: Shift Selection Dropdown */}
                     <div className={styles.infoField} style={{ flex: 1.5 }}>
-                        <label style={{ color: 'var(--primary-blue)', fontWeight: 'bold' }}>當前班別 (Current Shift)</label>
+                        <label style={{ color: 'var(--primary-blue)', fontWeight: 'bold' }}>{t('login.label.currentShift')}</label>
                         <select
                             value={currentSessionShift?.name}
                             onChange={(e) => {
@@ -206,17 +208,17 @@ const LoginModal = ({ isOpen, onClose }) => {
                     </div>
 
                     <div className={styles.infoField}>
-                        <label>操作員</label>
+                        <label>{t('login.label.operator')}</label>
                         <input value={newUserName} onChange={e => setNewUserName(e.target.value)} />
                     </div>
                     {/*
                     <div className={styles.infoField}>
-                        <label>工作時段</label>
-                        <input disabled placeholder="自動" style={{ background: '#eee' }} />
+                        <label>{t('login.label.workPeriod')}</label>
+                        <input disabled placeholder={t('login.placeholder.auto')} style={{ background: '#eee' }} />
                     </div>
                     */}
                     <div className={styles.infoField}>
-                        <label>代碼</label>
+                        <label>{t('login.label.code')}</label>
                         <input value={newUserCode} onChange={e => setNewUserCode(e.target.value)} style={{ width: '80px' }} />
                     </div>
                     <div className={styles.infoField}>
@@ -231,9 +233,9 @@ const LoginModal = ({ isOpen, onClose }) => {
                         <table className={styles.table}>
                             <thead className={styles.thead}>
                                 <tr>
-                                    <th className={styles.th}>代碼</th>
-                                    <th className={styles.th}>班別</th>
-                                    <th className={styles.th}>操作員</th>
+                                    <th className={styles.th}>{t('login.col.code')}</th>
+                                    <th className={styles.th}>{t('login.col.shift')}</th>
+                                    <th className={styles.th}>{t('login.col.operator')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -253,8 +255,8 @@ const LoginModal = ({ isOpen, onClose }) => {
                         </table>
                     </div>
                     <div className={styles.sideButtons}>
-                        <button className={styles.sideBtn} onClick={handleAddUser}>新增</button>
-                        <button className={styles.sideBtn} onClick={handleDeleteUser}>刪除</button>
+                        <button className={styles.sideBtn} onClick={handleAddUser}>{t('login.btn.add')}</button>
+                        <button className={styles.sideBtn} onClick={handleDeleteUser}>{t('login.btn.delete')}</button>
                     </div>
                 </div>
 
@@ -264,9 +266,9 @@ const LoginModal = ({ isOpen, onClose }) => {
                         <table className={styles.table}>
                             <thead className={styles.thead}>
                                 <tr>
-                                    <th className={styles.th}>開始時間</th>
-                                    <th className={styles.th}>結束時間</th>
-                                    <th className={styles.th}>人數</th>
+                                    <th className={styles.th}>{t('login.col.startTime')}</th>
+                                    <th className={styles.th}>{t('login.col.endTime')}</th>
+                                    <th className={styles.th}>{t('login.col.people')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -286,7 +288,7 @@ const LoginModal = ({ isOpen, onClose }) => {
                         </table>
                     </div>
                     <div className={styles.sideButtons}>
-                        <button className={styles.sideBtn} onClick={handleDeleteShift}>刪除</button>
+                        <button className={styles.sideBtn} onClick={handleDeleteShift}>{t('login.btn.delete')}</button>
                     </div>
                 </div>
 
@@ -300,21 +302,21 @@ const LoginModal = ({ isOpen, onClose }) => {
                     <span>:</span>
                     <select value={endMin} onChange={e => setEndMin(e.target.value)}>{Array.from({ length: 60 }, (_, i) => <option key={i} value={String(i).padStart(2, '0')}>{String(i).padStart(2, '0')}</option>)}</select>
 
-                    <span style={{ marginLeft: '10px' }}>人數:</span>
+                    <span style={{ marginLeft: '10px' }}>{t('login.label.people')}</span>
                     <input type="number" min="1" value={shiftPeople} onChange={e => setShiftPeople(e.target.value)} style={{ width: '50px' }} />
 
-                    <button className={styles.largeBtn} onClick={handleAddShift} style={{ marginLeft: 'auto', fontSize: '0.9rem', padding: '2px 10px' }}>新增時段</button>
-                    <button className={styles.largeBtn} style={{ marginLeft: '5px', fontSize: '0.9rem', padding: '2px 10px' }}>自訂時段</button>
+                    <button className={styles.largeBtn} onClick={handleAddShift} style={{ marginLeft: 'auto', fontSize: '0.9rem', padding: '2px 10px' }}>{t('login.btn.addPeriod')}</button>
+                    <button className={styles.largeBtn} style={{ marginLeft: '5px', fontSize: '0.9rem', padding: '2px 10px' }}>{t('login.btn.customPeriod')}</button>
                 </div>
 
                 {/* Admin Modal Overlay */}
                 {showAdminLogin && (
                     <div className={styles.adminOverlay}>
                         <div className={styles.adminModal}>
-                            <h3>管理者登入 (Admin Login)</h3>
+                            <h3>{t('login.admin.title')}</h3>
                             <input
                                 type="text"
-                                placeholder="帳號 (Username)"
+                                placeholder={t('login.placeholder.username')}
                                 className={styles.adminInput}
                                 value={adminUser}
                                 onChange={e => setAdminUser(e.target.value)}
@@ -322,14 +324,14 @@ const LoginModal = ({ isOpen, onClose }) => {
                             />
                             <input
                                 type="password"
-                                placeholder="密碼 (Password)"
+                                placeholder={t('login.placeholder.password')}
                                 className={styles.adminInput}
                                 value={adminPass}
                                 onChange={e => setAdminPass(e.target.value)}
                             />
                             <div className={styles.adminButtons}>
-                                <button className={`${styles.adminBtn} ${styles.adminBtnCancel}`} onClick={() => setShowAdminLogin(false)}>取消</button>
-                                <button className={styles.adminBtn} onClick={handleAdminLogin}>登入</button>
+                                <button className={`${styles.adminBtn} ${styles.adminBtnCancel}`} onClick={() => setShowAdminLogin(false)}>{t('login.btn.cancel')}</button>
+                                <button className={styles.adminBtn} onClick={handleAdminLogin}>{t('login.btn.login')}</button>
                             </div>
                         </div>
                     </div>

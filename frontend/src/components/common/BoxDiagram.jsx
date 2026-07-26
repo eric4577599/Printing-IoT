@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from './BoxDiagram.module.css';
+import { useLanguage } from '../../modules/language/LanguageContext';
 
 /**
  * BoxDiagram - 紙箱展開圖元件
@@ -16,6 +17,7 @@ import styles from './BoxDiagram.module.css';
  * @returns {JSX.Element} 紙箱展開圖 SVG
  */
 const BoxDiagram = ({ data = {} }) => {
+    const { t } = useLanguage();
     // 判斷是否有有效資料
     // 改為檢測 order 是否存在（有 id 或 boxNo），而非依賴尺寸欄位
     // 因為使用者可能未填入尺寸，但仍希望顯示展開圖框架
@@ -78,10 +80,7 @@ const BoxDiagram = ({ data = {} }) => {
                     fontSize: '1rem'
                 }}>
                     <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📦</div>
-                    <div>請選取左側排程以顯示紙箱展開圖</div>
-                    <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px' }}>
-                        Select an order from the left to display box diagram
-                    </div>
+                    <div>{t('boxDiagram.empty')}</div>
                 </div>
             </div>
         );
@@ -112,7 +111,7 @@ const BoxDiagram = ({ data = {} }) => {
             <div className={styles.absInput} style={{ bottom: '5%', left: '50%', transform: 'translateX(-50%)' }}>
                 <input value={totalW} style={{ width: '60px' }} readOnly />
             </div>
-            <div className={styles.unitText}>尺寸單位: mm</div>
+            <div className={styles.unitText}>{t('boxDiagram.unit')}</div>
 
             {/* SVG Drawing — 依盒型繪製:RSC 上下蓋俱全;HSC(半槽箱)無上蓋,箱身自 y=140 起、頂緣為開口 */}
             <svg width="100%" height="100%" viewBox="0 0 600 350" style={{ pointerEvents: 'none' }}>
@@ -151,7 +150,7 @@ const BoxDiagram = ({ data = {} }) => {
                             {/* 盒型標示 */}
                             {boxType && (
                                 <text x="60" y={topY - 10} fontSize="14" fontWeight="bold" fill="#1976d2">
-                                    {isHSC ? `${boxType}・半槽箱(無上蓋)` : `${boxType}・常規開槽箱`}
+                                    {isHSC ? `${boxType}・${t('boxDiagram.hsc')}` : `${boxType}・${t('boxDiagram.rsc')}`}
                                 </text>
                             )}
                         </>

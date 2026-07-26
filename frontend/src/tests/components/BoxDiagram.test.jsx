@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
+import { render as rtlRender } from '@testing-library/react';
 import BoxDiagram from '../../components/common/BoxDiagram';
+import { LanguageProvider } from '../../modules/language/LanguageContext';
+
+// BoxDiagram 現用 useLanguage(),測試需包在 LanguageProvider 內才能取得 t()
+const render = (ui) => rtlRender(<LanguageProvider>{ui}</LanguageProvider>);
 
 /**
  * BoxDiagram 面數與尺寸欄對齊回歸測試(spec-v1 §A3-2)

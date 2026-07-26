@@ -15,12 +15,14 @@ import {
 import DailyReportView from './DailyReportView';
 import MonthlyReportView from './MonthlyReportView';
 import StopReasonView from './StopReasonView';
+import { useLanguage } from '../language/LanguageContext';
 
+// 報表類型清單:label 於元件內以 t('reportView.tab.<id>') 動態取得
 const reportTypes = [
-    { id: 'details', label: '生產明細 (Production Details)' },
-    { id: 'daily', label: '生產日報表 (Daily Report)' },
-    { id: 'monthly', label: '生產月報表 (Monthly Report)' },
-    { id: 'stop', label: '停車原因 (Stop Reasons)' },
+    { id: 'details' },
+    { id: 'daily' },
+    { id: 'monthly' },
+    { id: 'stop' },
 ];
 
 // 格式化完工時間戳為 YYYY/MM/DD HH:mm:ss(顯示用)
@@ -34,6 +36,7 @@ const formatFinishedAt = (isoString) => {
 
 const ReportsPage = () => {
     const navigate = useNavigate();
+    const { t } = useLanguage();
     const [activeReport, setActiveReport] = useState('details');
 
     // 設定預設日期為今天
@@ -88,7 +91,7 @@ const ReportsPage = () => {
 
     const handleOpenUpload = () => {
         if (!selectedOrderId) {
-            alert('請先選擇一筆訂單 (Please select an order first)');
+            alert(t('reportView.alert.selectOrder'));
             return;
         }
         const record = productionHistory.find(r => r.id === selectedOrderId);
@@ -116,7 +119,7 @@ const ReportsPage = () => {
     // 匯出生產明細為 CSV(修正:原「匯出」按鈕無 handler)
     const handleExport = () => {
         if (detailRecords.length === 0) {
-            alert('查詢區間內無生產紀錄可匯出 (No records to export)');
+            alert(t('reportView.alert.noExport'));
             return;
         }
         const headers = ['序號', '客戶名稱', '訂單號碼', '品名', '班別', '車速', '數量', '計件數', '良品', '不良', '完工時間', 'OEE'];
@@ -153,7 +156,7 @@ const ReportsPage = () => {
                 <div className={styles.controlBar}>
                     <div className={styles.topRow}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                            <span className={styles.label}>生產日期 (Date):</span>
+                            <span className={styles.label}>{t('reportView.label.date')}:</span>
                             <input
                                 type="date"
                                 className={styles.dateInput}
@@ -167,13 +170,13 @@ const ReportsPage = () => {
                                 value={endDate}
                                 onChange={e => setEndDate(e.target.value)}
                             />
-                            <button className={styles.btn} onClick={() => { setAppliedRange({ start: startDate, end: endDate }); setSelectedOrderId(null); }}>確認 (Confirm)</button>
+                            <button className={styles.btn} onClick={() => { setAppliedRange({ start: startDate, end: endDate }); setSelectedOrderId(null); }}>{t('reportView.btn.confirm')}</button>
                         </div>
 
                         <div className={styles.actionButtons}>
-                            <button className={styles.btn} onClick={handleOpenUpload}>手動上傳報工</button>
-                            <button className={styles.btn} onClick={handleExport}>匯出 (Export)</button>
-                            <button className={styles.btn} onClick={handleLeave}>離開</button>
+                            <button className={styles.btn} onClick={handleOpenUpload}>{t('reportView.btn.manualUpload')}</button>
+                            <button className={styles.btn} onClick={handleExport}>{t('reportView.btn.export')}</button>
+                            <button className={styles.btn} onClick={handleLeave}>{t('reportView.btn.leave')}</button>
                         </div>
                     </div>
                 </div>
@@ -181,23 +184,23 @@ const ReportsPage = () => {
                 {/* Upper Grid: Order List */}
                 <div className={styles.upperGridContainer}>
                     <div className={styles.tableHeader}>
-                        <div className={styles.headerCell} style={{ width: 30 }}>選</div>
-                        <div className={styles.headerCell} style={{ width: 50 }}>序號</div>
-                        <div className={styles.headerCell} style={{ width: 120 }}>客戶名稱</div>
-                        <div className={styles.headerCell} style={{ width: 140 }}>訂單號碼</div>
-                        <div className={styles.headerCell} style={{ flex: 1 }}>品名</div>
-                        <div className={styles.headerCell} style={{ width: 40 }}>班別</div>
-                        <div className={styles.headerCell} style={{ width: 50 }}>車速</div>
-                        <div className={styles.headerCell} style={{ width: 60 }}>數量</div>
-                        <div className={styles.headerCell} style={{ width: 60 }}>計件數</div>
-                        <div className={styles.headerCell} style={{ width: 60 }}>良品</div>
-                        <div className={styles.headerCell} style={{ width: 60 }}>不良</div>
-                        <div className={styles.headerCell} style={{ width: 150 }}>完工時間</div>
+                        <div className={styles.headerCell} style={{ width: 30 }}>{t('reportView.col.select')}</div>
+                        <div className={styles.headerCell} style={{ width: 50 }}>{t('reportView.col.seq')}</div>
+                        <div className={styles.headerCell} style={{ width: 120 }}>{t('reportView.col.customer')}</div>
+                        <div className={styles.headerCell} style={{ width: 140 }}>{t('reportView.col.orderNo')}</div>
+                        <div className={styles.headerCell} style={{ flex: 1 }}>{t('reportView.col.productName')}</div>
+                        <div className={styles.headerCell} style={{ width: 40 }}>{t('reportView.col.shift')}</div>
+                        <div className={styles.headerCell} style={{ width: 50 }}>{t('reportView.col.speed')}</div>
+                        <div className={styles.headerCell} style={{ width: 60 }}>{t('reportView.col.qty')}</div>
+                        <div className={styles.headerCell} style={{ width: 60 }}>{t('reportView.col.countQty')}</div>
+                        <div className={styles.headerCell} style={{ width: 60 }}>{t('reportView.col.good')}</div>
+                        <div className={styles.headerCell} style={{ width: 60 }}>{t('reportView.col.defect')}</div>
+                        <div className={styles.headerCell} style={{ width: 150 }}>{t('reportView.col.finishedAt')}</div>
                         <div className={styles.headerCell} style={{ width: 50 }}>OEE</div>
                     </div>
                     <div className={styles.tableBody}>
                         {detailRecords.length === 0 ? (
-                            <div style={{ padding: 10, textAlign: 'center', color: '#888' }}>查詢區間內無生產紀錄</div>
+                            <div style={{ padding: 10, textAlign: 'center', color: '#888' }}>{t('reportView.empty.noRecords')}</div>
                         ) : detailRecords.map((record, index) => {
                             const isSelected = selectedOrderId === record.id;
                             const rowStyle = `${styles.tableRow} ${isSelected ? styles.selectedRow : ''}`;
@@ -231,13 +234,13 @@ const ReportsPage = () => {
                 {/* Lower Grid: Stop Logs */}
                 <div className={styles.lowerGridContainer}>
                     <div className={styles.tableHeader}>
-                        <div className={styles.headerCell} style={{ flex: 1 }}>停車開始</div>
-                        <div className={styles.headerCell} style={{ flex: 1 }}>持續時間</div>
-                        <div className={styles.headerCell} style={{ flex: 3 }}>停車原因</div>
+                        <div className={styles.headerCell} style={{ flex: 1 }}>{t('reportView.col.stopStart')}</div>
+                        <div className={styles.headerCell} style={{ flex: 1 }}>{t('reportView.col.duration')}</div>
+                        <div className={styles.headerCell} style={{ flex: 3 }}>{t('reportView.col.stopReason')}</div>
                     </div>
                     <div className={styles.tableBody}>
                         {selectedLogs.length === 0 ? (
-                            <div style={{ padding: 10, textAlign: 'center', color: '#888' }}>{selectedOrderId ? '此筆紀錄無停車記錄' : ''}</div>
+                            <div style={{ padding: 10, textAlign: 'center', color: '#888' }}>{selectedOrderId ? t('reportView.empty.noStopRecords') : ''}</div>
                         ) : (
                             selectedLogs.map((log, idx) => (
                                 <div key={idx} className={styles.tableRow} style={{ backgroundColor: '#fff' }}>
@@ -259,7 +262,7 @@ const ReportsPage = () => {
                             </div>
                             <div className={styles.modalBody}>
                                 <div className={styles.inputField}>
-                                    <span className={styles.inputLabel}>良品</span>
+                                    <span className={styles.inputLabel}>{t('reportView.label.good')}</span>
                                     <input
                                         type="number" className={styles.textInput}
                                         value={editData.good}
@@ -267,7 +270,7 @@ const ReportsPage = () => {
                                     />
                                 </div>
                                 <div className={styles.inputField}>
-                                    <span className={styles.inputLabel}>不良</span>
+                                    <span className={styles.inputLabel}>{t('reportView.label.defect')}</span>
                                     <input
                                         type="number" className={styles.textInput}
                                         value={editData.bad}
@@ -275,8 +278,8 @@ const ReportsPage = () => {
                                     />
                                 </div>
                                 <div className={styles.modalFooter}>
-                                    <button className={styles.btn} onClick={handleSaveUpload}>確定</button>
-                                    <button className={styles.btn} onClick={() => setShowUploadModal(false)}>取消</button>
+                                    <button className={styles.btn} onClick={handleSaveUpload}>{t('reportView.btn.ok')}</button>
+                                    <button className={styles.btn} onClick={() => setShowUploadModal(false)}>{t('reportView.btn.cancel')}</button>
                                 </div>
                             </div>
                         </div>
@@ -289,14 +292,14 @@ const ReportsPage = () => {
     return (
         <div className={styles.container}>
             <div className={styles.sidebar}>
-                <div className={styles.sidebarHeader}>報表類型</div>
+                <div className={styles.sidebarHeader}>{t('reportView.label.reportType')}</div>
                 {reportTypes.map(rt => (
                     <div
                         key={rt.id}
                         className={`${styles.menuItem} ${activeReport === rt.id ? styles.active : ''}`}
                         onClick={() => setActiveReport(rt.id)}
                     >
-                        {rt.label}
+                        {t(`reportView.tab.${rt.id}`)}
                     </div>
                 ))}
             </div>

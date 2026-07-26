@@ -7,12 +7,14 @@ import {
     formatPercent,
     minutesToHHMM
 } from '../../utils/reportUtils';
+import { useLanguage } from '../language/LanguageContext';
 
 /**
  * 生產月報表元件
  * 按月份彙總顯示每日生產統計，並計算月度總計
  */
 const MonthlyReportView = ({ productionHistory }) => {
+    const { t } = useLanguage();
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth() + 1;
 
@@ -47,7 +49,7 @@ const MonthlyReportView = ({ productionHistory }) => {
 
     // 匯出 Excel（待實作）
     const handleExport = () => {
-        alert('匯出 Excel 功能開發中...');
+        alert(t('reportView.alert.exportWip'));
     };
 
     // 列印
@@ -60,7 +62,7 @@ const MonthlyReportView = ({ productionHistory }) => {
             {/* 控制列 */}
             <div className={styles.controlBar}>
                 <div className={styles.filters}>
-                    <span className={styles.label}>📅 月份選擇:</span>
+                    <span className={styles.label}>📅 {t('reportView.monthly.selectMonth')}:</span>
                     <select
                         className={styles.select}
                         value={selectedYear}
@@ -70,7 +72,7 @@ const MonthlyReportView = ({ productionHistory }) => {
                             <option key={y} value={y}>{y}</option>
                         ))}
                     </select>
-                    <span className={styles.label}>年</span>
+                    <span className={styles.label}>{t('reportView.monthly.year')}</span>
                     <select
                         className={styles.select}
                         value={selectedMonth}
@@ -80,17 +82,17 @@ const MonthlyReportView = ({ productionHistory }) => {
                             <option key={m} value={m}>{m}</option>
                         ))}
                     </select>
-                    <span className={styles.label}>月</span>
+                    <span className={styles.label}>{t('reportView.monthly.month')}</span>
                 </div>
                 <div className={styles.actions}>
-                    <button className={styles.btn} onClick={handleExport}>📊 匯出 Excel</button>
-                    <button className={styles.btn} onClick={handlePrint}>🖨️ 列印</button>
+                    <button className={styles.btn} onClick={handleExport}>📊 {t('reportView.btn.exportExcel')}</button>
+                    <button className={styles.btn} onClick={handlePrint}>🖨️ {t('reportView.btn.print')}</button>
                 </div>
             </div>
 
             {/* 報表標題 */}
             <div className={styles.reportHeader}>
-                <h2>📈 {selectedYear} 年 {selectedMonth} 月 生產月報表</h2>
+                <h2>📈 {selectedYear} {t('reportView.monthly.year')} {selectedMonth} {t('reportView.monthly.month')} {t('reportView.monthly.title')}</h2>
             </div>
 
             {/* 資料表格 */}
@@ -98,23 +100,23 @@ const MonthlyReportView = ({ productionHistory }) => {
                 <table className={styles.table}>
                     <thead>
                         <tr>
-                            <th>日期</th>
-                            <th>筆數</th>
-                            <th>生產量</th>
-                            <th>良品</th>
-                            <th>不良</th>
-                            <th>良率</th>
-                            <th>平均車速</th>
-                            <th>生產時間</th>
-                            <th>停車時間</th>
-                            <th>稼動率</th>
+                            <th>{t('reportView.col.date')}</th>
+                            <th>{t('reportView.col.orderCount')}</th>
+                            <th>{t('reportView.col.totalQty')}</th>
+                            <th>{t('reportView.col.good')}</th>
+                            <th>{t('reportView.col.defect')}</th>
+                            <th>{t('reportView.col.yieldRate')}</th>
+                            <th>{t('reportView.col.avgSpeed')}</th>
+                            <th>{t('reportView.col.prodTime')}</th>
+                            <th>{t('reportView.col.stopTime')}</th>
+                            <th>{t('reportView.col.utilization')}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {dailyRows.length === 0 ? (
                             <tr>
                                 <td colSpan={10} className={styles.emptyRow}>
-                                    本月無生產記錄
+                                    {t('reportView.empty.noMonth')}
                                 </td>
                             </tr>
                         ) : (
@@ -137,7 +139,7 @@ const MonthlyReportView = ({ productionHistory }) => {
                     {dailyRows.length > 0 && (
                         <tfoot>
                             <tr className={styles.totalRow}>
-                                <td><strong>月度總計</strong></td>
+                                <td><strong>{t('reportView.monthly.total')}</strong></td>
                                 <td><strong>{totals.orderCount}</strong></td>
                                 <td><strong>{formatNumber(totals.totalQty)}</strong></td>
                                 <td><strong>{formatNumber(totals.goodQty)}</strong></td>

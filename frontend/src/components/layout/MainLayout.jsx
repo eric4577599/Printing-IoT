@@ -24,6 +24,7 @@ const genOrderId = () =>
 import DebugPanel from '../debug/DebugPanel';
 import { useLanguage } from '../../modules/language/LanguageContext';
 import LanguageSwitcher from '../../modules/language/LanguageSwitcher';
+import LanguageNavMenu from '../../modules/language/LanguageNavMenu';
 import { useAuth } from '../../modules/auth/AuthContext';
 import LoginModal from '../../modules/auth/LoginModal';
 import HelpModal from '../modals/HelpModal';
@@ -351,13 +352,14 @@ const MainLayout = () => {
     }, [user, canDebug]);
 
     // Nav Items (Dynamic)
+    // 導覽列改用 i18n,切換語言時同步更換(原為硬編碼中文,永不隨語言變動)
     const navItems = [
-        { path: '/', label: '即時監控 (Monitor)' },
-        { path: '/schedule', label: '生產排程 (Schedule)' },
-        { path: '/reports', label: '生產報表 (Report)' },
-        { path: '/analysis', label: '生產分析 (Analysis)' },
-        { path: '/settings', label: '系統設定 (Settings)' },
-        { path: '/docs', label: '📖 文件 (Docs)' },
+        { path: '/', label: t('nav.monitor') },
+        { path: '/schedule', label: t('nav.schedule') },
+        { path: '/reports', label: t('nav.reports') },
+        { path: '/analysis', label: t('nav.analysis') },
+        { path: '/settings', label: t('nav.settings') },
+        { path: '/docs', label: `📖 ${t('nav.docs')}` },
     ];
 
     // F-Keys (Dynamic)
@@ -370,8 +372,8 @@ const MainLayout = () => {
         { key: 'F6+', label: t('fkeys.f6'), code: 'F6' }, // 修正:同上,派發 F6
         { key: 'F7', label: t('fkeys.f7') },
         { key: 'M/N', label: t('fkeys.f8'), className: styles.pinkBtn, code: 'F8' }, // Manual
-        { key: 'F9', label: '班別' },
-        { key: 'F10', label: '退回' },
+        { key: 'F9', label: t('fkeys.f9') },
+        { key: 'F10', label: t('fkeys.f10') },
         { key: 'F12', label: t('fkeys.f12') },
     ];
 
@@ -394,12 +396,14 @@ const MainLayout = () => {
                             {item.label}
                         </Link>
                     ))}
+                    {/* 語言切換 nav 選單(新增):即時同步切換全站語言 */}
+                    <LanguageNavMenu className={styles.navItem} />
                 </nav>
 
                 {/* Simulation Controls - Only for Admin (Req: Simulation [New] Only Admin) AND if Enabled in Settings */}
                 {canDebug && plcSimulateEnabled && (
                     <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto', marginRight: '10px', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.8rem', color: '#666', marginRight: '5px' }}>模擬生產:</span>
+                        <span style={{ fontSize: '0.8rem', color: '#666', marginRight: '5px' }}>{t('layout.sim.label')}</span>
                         <button
                             onClick={() => setIsSimulating(!isSimulating)}
                             style={{
@@ -430,7 +434,7 @@ const MainLayout = () => {
                                     fontWeight: 'bold',
                                     color: '#333'
                                 }}
-                                title="選擇模擬模式: 本地(直接顯示) vs 遠端(經由MQTT迴路)"
+                                title={t('layout.sim.modeTitle')}
                             >
                                 <option value="local">Local</option>
                                 <option value="remote">Remote</option>
@@ -456,7 +460,7 @@ const MainLayout = () => {
                         {/* 速度調整滑桿 */}
                         {isSimulating && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: '8px' }}>
-                                <span style={{ fontSize: '0.7rem', color: '#666' }}>停止</span>
+                                <span style={{ fontSize: '0.7rem', color: '#666' }}>{t('layout.sim.stop')}</span>
                                 <input
                                     type="range"
                                     min="-1"
@@ -477,16 +481,16 @@ const MainLayout = () => {
                                         cursor: 'pointer',
                                         accentColor: speedFactor < 0 ? '#f44336' : speedFactor > 0 ? '#4caf50' : '#2196f3'
                                     }}
-                                    title={`速度: ${speedFactor === -1 ? '停止' : speedFactor === 0 ? '標準' : speedFactor === 1 ? '極速' : (speedFactor * 100).toFixed(0) + '%'}`}
+                                    title={`${t('layout.sim.speed')}: ${speedFactor === -1 ? t('layout.sim.stop') : speedFactor === 0 ? t('layout.sim.standard') : speedFactor === 1 ? t('layout.sim.max') : (speedFactor * 100).toFixed(0) + '%'}`}
                                 />
-                                <span style={{ fontSize: '0.7rem', color: '#666' }}>極速</span>
+                                <span style={{ fontSize: '0.7rem', color: '#666' }}>{t('layout.sim.max')}</span>
                                 <span style={{
                                     fontSize: '0.7rem',
                                     color: speedFactor < 0 ? '#f44336' : speedFactor > 0 ? '#4caf50' : '#2196f3',
                                     fontWeight: 'bold',
                                     minWidth: '35px'
                                 }}>
-                                    {speedFactor === -1 ? '停' : speedFactor === 0 ? '標準' : speedFactor === 1 ? '極速' : `${(speedFactor * 100).toFixed(0)}%`}
+                                    {speedFactor === -1 ? t('layout.sim.stopShort') : speedFactor === 0 ? t('layout.sim.standard') : speedFactor === 1 ? t('layout.sim.max') : `${(speedFactor * 100).toFixed(0)}%`}
                                 </span>
                             </div>
                         )}
@@ -512,9 +516,9 @@ const MainLayout = () => {
                     }}
                     onMouseOver={(e) => e.target.style.transform = 'scale(1.05)'}
                     onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
-                    title="操作說明"
+                    title={t('layout.help.title')}
                 >
-                    📖 說明
+                    📖 {t('layout.help.button')}
                 </button>
 
                 {/* Language Switcher Component */}
@@ -522,7 +526,7 @@ const MainLayout = () => {
 
                 <div className={styles.systemStatus} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span>User: {user.name}</span>
-                    <button onClick={logout} style={{ padding: '2px 8px', cursor: 'pointer' }}>登出</button>
+                    <button onClick={logout} style={{ padding: '2px 8px', cursor: 'pointer' }}>{t('layout.logout')}</button>
                     <span>Status: OK</span>
                 </div>
             </header>
@@ -605,18 +609,18 @@ const MainLayout = () => {
                 <div className={styles.statusBar}>
                     {/* Left: System Status */}
                     <div className={styles.statusItem}>
-                        <span>狀態: Idle</span>
+                        <span>{t('layout.status.state')}</span>
                     </div>
 
                     {/* Left-Center: Connection Status */}
                     <div className={styles.statusItem}>
                         <div style={{ display: 'flex', alignItems: 'center', marginRight: '15px' }}>
                             <span className={styles.statusIndicator} style={{ backgroundColor: isPlcConnected ? '#4caf50' : '#f44336' }}></span>
-                            <span>PLC: {isPlcConnected ? '連線 (Connected)' : '斷線 (Disconnected)'}</span>
+                            <span>PLC: {isPlcConnected ? t('layout.status.connected') : t('layout.status.disconnected')}</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
                             <span className={styles.statusIndicator} style={{ backgroundColor: erpStatus === 'connected' ? '#4caf50' : '#bdbdbd' }}></span>
-                            <span>ERP: {erpStatus === 'connected' ? '連線 (Connected)' : '未啟用 (Disabled)'}</span>
+                            <span>ERP: {erpStatus === 'connected' ? t('layout.status.connected') : t('layout.status.disabled')}</span>
                         </div>
                     </div>
 
