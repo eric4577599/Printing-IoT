@@ -48,6 +48,14 @@ public class OrdersController : ControllerBase
         return NoContent();
     }
 
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateOrder(Guid id, [FromBody] Order updated)
+    {
+        var success = await _orderService.UpdateOrderAsync(id, updated);
+        if (!success) return NotFound();
+        return NoContent();
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteOrder(Guid id)
     {
@@ -61,5 +69,13 @@ public class OrdersController : ControllerBase
     {
         await _orderService.ReorderSequenceAsync(orderedIds);
         return Ok(new { success = true });
+    }
+
+    // Phase 2(全量鏡像同步):前端上傳整份排程,後端 upsert + 刪除清單外的列,回傳正規清單。
+    [HttpPost("sync")]
+    public async Task<ActionResult<IEnumerable<Order>>> SyncSchedule([FromBody] List<Order> orders)
+    {
+        var result = await _orderService.SyncScheduleAsync(orders);
+        return Ok(result);
     }
 }
