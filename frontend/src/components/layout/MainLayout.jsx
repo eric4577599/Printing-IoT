@@ -1,7 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import styles from './MainLayout.module.css';
-import { updateSimulationSpeed } from '../../services/api';
+import { updateSimulationSpeed, getOrders as apiGetOrders, syncSchedule as apiSyncSchedule } from '../../services/api';
+import { fromBackendOrder, toBackendOrder, sortBySequence, isGuid } from '../../utils/orderMapper';
+
+// 空排程時的等待列(純 UI,id 固定 'placeholder',不上傳後端)
+const PLACEHOLDER_ORDER = {
+    id: 'placeholder',
+    boxNo: 'WAITING',
+    msg: '等待派工 (Waiting)',
+    orderNo: '-',
+    qty: 0,
+    eta: '-',
+    status: 'Idle',
+};
+
+// 產生後端可 upsert 的 GUID 訂單 id(全量鏡像同步以 GUID 為身分真相)
+const genOrderId = () =>
+    (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 6)}`;
 
 import DebugPanel from '../debug/DebugPanel';
 import { useLanguage } from '../../modules/language/LanguageContext';
@@ -10,6 +28,7 @@ import { useAuth } from '../../modules/auth/AuthContext';
 import LoginModal from '../../modules/auth/LoginModal';
 import HelpModal from '../modals/HelpModal';
 import { createSeedProducts } from '../../data/seedProducts';
+import { spliceMove, renumberSeq } from '../../utils/scheduleDnd';
 
 const MainLayout = () => {
     const location = useLocation();
@@ -162,6 +181,76 @@ const MainLayout = () => {
         localStorage.setItem('orders', JSON.stringify(orders));
     }, [orders]);
 
+    // ── Phase 2:全量鏡像同步(後端 Orders 表為跨 session 持久化真相)──────────────
+    // orders 最新值的 ref(供 mount 載入時讀當前 localStorage 訂單而不建立相依)
+    const ordersRef = useRef(orders);
+    useEffect(() => { ordersRef.current = orders; }, [orders]);
+
+    // 是否已完成首次「從後端載入」;完成前不觸發鏡像同步,避免用 localStorage 初值覆寫後端
+    const [ordersLoaded, setOrdersLoaded] = useState(false);
+
+    // 開頁載入:GET 後端 → 還原(含 SpecJson 規格)→ 依 Sequence 排序;
+    // 後端為空則「首次匯入」現有 localStorage 訂單(排除 placeholder,補 GUID)。
+    // 後端無法連線時保留 localStorage 初值(離線容錯)。
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const be = await apiGetOrders();
+                if (cancelled) return;
+                const mapped = sortBySequence((be || []).map(fromBackendOrder));
+                if (mapped.length > 0) {
+                    setOrders(mapped);
+                } else {
+                    const local = (ordersRef.current || []).filter(o => o.id !== 'placeholder');
+                    if (local.length > 0) {
+                        const withGuids = local.map(o => ({ ...o, id: isGuid(o.id) ? o.id : genOrderId() }));
+                        const payload = withGuids.map((o, i) => toBackendOrder(o, i));
+                        const synced = await apiSyncSchedule(payload);
+                        if (cancelled) return;
+                        const remapped = sortBySequence((synced || []).map(fromBackendOrder));
+                        setOrders(remapped.length ? remapped : [PLACEHOLDER_ORDER]);
+                    }
+                    // 後端空且本地也空 → 維持 placeholder 初值
+                }
+            } catch (e) {
+                console.warn('[orders] 後端載入失敗,改用 localStorage 離線初值', e);
+            } finally {
+                if (!cancelled) setOrdersLoaded(true);
+            }
+        })();
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // 身分正規化:確保每筆非 placeholder 訂單都有 GUID id(任何程式路徑新增的訂單皆納入),
+    // 讓鏡像同步能穩定 upsert 而非重複新建。
+    useEffect(() => {
+        if (!ordersLoaded) return;
+        let changed = false;
+        const normalized = orders.map(o => {
+            if (o.id !== 'placeholder' && !isGuid(o.id)) { changed = true; return { ...o, id: genOrderId() }; }
+            return o;
+        });
+        if (changed) setOrders(normalized);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [orders, ordersLoaded]);
+
+    // debounced 鏡像同步:orders 任何變動(拖拉、完工、佇列推進、F 鍵、新增/刪除/編輯)
+    // 800ms 後把整份排程(排除 placeholder)上傳後端;後端 upsert + 刪除清單外的列。
+    useEffect(() => {
+        if (!ordersLoaded) return;
+        const payload = orders
+            .filter(o => o.id !== 'placeholder' && isGuid(o.id))
+            .map((o, i) => toBackendOrder(o, i));
+        const handle = setTimeout(() => {
+            apiSyncSchedule(payload).catch(e => console.warn('[orders] 鏡像同步失敗', e));
+        }, 800);
+        return () => clearTimeout(handle);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [orders, ordersLoaded]);
+    // ──────────────────────────────────────────────────────────────────────────────
+
     // Shared Product Data(供生產排程與產品庫共用)
     // 產品檔為空時種入 RSC/HSC 測試料號(供生產排程右側顯示 + 加入排程生成工單)。
     const [products, setProducts] = useState(() => {
@@ -179,11 +268,10 @@ const MainLayout = () => {
         localStorage.setItem('products', JSON.stringify(products));
     }, [products]);
 
+    // 以 splice 搬移取代原本的相鄰交換:相鄰移動(上/下移按鈕)結果不變,
+    // 額外支援任意 from→to(拖拉排序需要把某列插到非相鄰位置)。
     const moveOrder = (fromIndex, toIndex) => {
-        if (toIndex < 0 || toIndex >= orders.length) return;
-        const newOrders = [...orders];
-        [newOrders[fromIndex], newOrders[toIndex]] = [newOrders[toIndex], newOrders[fromIndex]];
-        setOrders(newOrders);
+        setOrders(prev => spliceMove(prev, fromIndex, toIndex));
     };
 
     const deleteOrder = (orderId) => {
@@ -198,8 +286,9 @@ const MainLayout = () => {
             addLog(`Order ${existingId} Updated`);
         } else {
             // Add New - Generate unique ID and sequence number
+            // Phase 2:改用 GUID 作為 id,讓全量鏡像同步能穩定 upsert 至後端 Orders 表
             const timestamp = Date.now();
-            const newId = `ord_${timestamp}`;
+            const newId = genOrderId();
 
             // 產生唯一序號：使用時間戳的後4位數字 × 10 來確保唯一性
             // 例如：timestamp = 1736915298135 → seqNo = 8130 (取後3位813 * 10)
@@ -248,10 +337,7 @@ const MainLayout = () => {
     };
 
     const reorderOrders = () => {
-        setOrders(prev => prev.map((o, index) => ({
-            ...o,
-            seqNo: (index + 1) * 10  // 重新編號序號，但保留原始 id
-        })));
+        setOrders(prev => renumberSeq(prev));  // 重新編號 seqNo 為 10,20,30…,保留原始 id 與其餘欄位
         addLog('Orders Renumbered (seqNo updated)');
     };
 

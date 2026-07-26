@@ -1,11 +1,70 @@
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import {
+    DndContext,
+    closestCenter,
+    PointerSensor,
+    KeyboardSensor,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core';
+import {
+    SortableContext,
+    verticalListSortingStrategy,
+    useSortable,
+    sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useLanguage } from '../modules/language/LanguageContext';
+import { resolveDragReorder } from '../utils/scheduleDnd';
 import BoxDiagram from '../components/common/BoxDiagram';
 import ProductFormModal from '../components/modals/ProductFormModal';
 import ProductDetailModal from '../components/modals/ProductDetailModal';
 import AddScheduleModal from '../modules/maintenance/AddScheduleModal';
 import styles from './Schedule.module.css';
+
+/**
+ * 可拖拉的排程列。
+ * - 執行中訂單(index 0)鎖定:disabled 且不掛拖拉 listener,僅可點選檢視。
+ * - 其餘列掛上 dnd-kit 的 attributes/listeners,支援滑鼠拖拉與鍵盤(Tab 聚焦 + 空白鍵抓取 + 方向鍵)。
+ * @param {Object} order 訂單資料
+ * @param {number} index 於陣列中的位置(0 為執行中)
+ * @param {boolean} isSelected 是否為目前選取列
+ * @param {Function} onSelect (order, index) 點選回呼
+ */
+const SortableOrderRow = ({ order, index, isSelected, onSelect }) => {
+    const isRunning = index === 0;
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+        useSortable({ id: order.id, disabled: isRunning });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.6 : 1,
+        cursor: isRunning ? 'default' : 'grab',
+    };
+
+    return (
+        <tr
+            ref={setNodeRef}
+            style={style}
+            onClick={() => onSelect(order, index)}
+            className={`${isSelected ? styles.selectedRow : ''} ${isRunning ? styles.runningRow : ''}`}
+            {...(isRunning ? {} : attributes)}
+            {...(isRunning ? {} : listeners)}
+        >
+            <td style={{ fontWeight: isRunning ? 'bold' : 'normal', color: isRunning ? '#2e7d32' : 'inherit' }}>
+                {order.seqNo || (index + 1) * 10}
+            </td>
+            <td>{order.customer}</td>
+            <td>{order.orderNo}</td>
+            <td>{order.boxNo}</td>
+            <td>{order.qty}</td>
+            <td>{order.msg || order.productName}</td>
+            <td>{order.boxType}</td>
+        </tr>
+    );
+};
 
 const Schedule = () => {
     const { t } = useLanguage();
@@ -40,6 +99,27 @@ const Schedule = () => {
     const [modalMode, setModalMode] = useState('add_product');
     const [editingProduct, setEditingProduct] = useState(null);
     const [detailProduct, setDetailProduct] = useState(null); // 點選產品列時顯示的唯讀詳情
+
+    // 拖拉感測器:PointerSensor 設 5px 啟動門檻,讓「點選檢視」與「拖拉排序」不衝突
+    // (小於門檻視為點擊 → 觸發 onClick 選取;超過才進入拖拉);KeyboardSensor 保留無滑鼠可操作性。
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    );
+
+    /**
+     * 拖拉放開:依商規解析來源/目標索引,允許時 splice 搬移並重新編號 seqNo。
+     * 執行中訂單(index 0)鎖定由 resolveDragReorder 一併擋下(來源或目標為 0 皆忽略)。
+     */
+    const handleDragEnd = (event) => {
+        const { active, over } = event;
+        if (!over) return;
+        const { allowed, oldIndex, newIndex } = resolveDragReorder(orders, active.id, over.id);
+        if (!allowed) return;
+        moveOrder(oldIndex, newIndex);   // splice 搬移(MainLayout)
+        reorderOrders();                 // 重新編號 seqNo 10,20,30…
+        addLog(`Reordered Order ${active.id} to position ${newIndex + 1}`);
+    };
 
     // --- Schedule Controls (Left) ---
     const handleMoveOrder = (direction) => {
@@ -216,45 +296,42 @@ const Schedule = () => {
                     <button onClick={handleReorderSchedule}>{t('orders.schedule.reorder')}</button>
                 </div>
 
-                {/* Middle: Schedule Table */}
+                {/* Middle: Schedule Table(支援拖拉排序;執行中訂單鎖定) */}
                 <div className={styles.scheduleTableContainer}>
-                    <table className={styles.scheduleTable}>
-                        <thead>
-                            <tr>
-                                <th style={{ width: '50px' }}>{t('dashboard.schedule.seqNo')}</th>
-                                <th>{t('dashboard.schedule.customer')}</th>
-                                <th>{t('dashboard.schedule.orderNo')}</th>
-                                <th>{t('dashboard.schedule.boxNo')}</th>
-                                <th style={{ width: '60px' }}>{t('dashboard.schedule.qty')}</th>
-                                <th>{t('dashboard.schedule.productName')}</th>
-                                <th style={{ width: '80px' }}>{t('dashboard.schedule.boxType')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {orders.map((order, index) => (
-                                <tr key={order.id}
-                                    onClick={() => {
-                                        setSelectedScheduleId(order.id);
-                                        setLastClickedSection('schedule');
-                                        if (index === 0) {
-                                            addLog(`Viewing Running Order: ${order.orderNo}`);
-                                        }
-                                    }}
-                                    className={`${selectedScheduleId === order.id ? styles.selectedRow : ''} ${index === 0 ? styles.runningRow : ''}`}
-                                >
-                                    <td style={{ fontWeight: index === 0 ? 'bold' : 'normal', color: index === 0 ? '#2e7d32' : 'inherit' }}>
-                                        {order.seqNo || (index + 1) * 10}
-                                    </td>
-                                    <td>{order.customer}</td>
-                                    <td>{order.orderNo}</td>
-                                    <td>{order.boxNo}</td>
-                                    <td>{order.qty}</td>
-                                    <td>{order.msg || order.productName}</td>
-                                    <td>{order.boxType}</td>
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                        <table className={styles.scheduleTable}>
+                            <thead>
+                                <tr>
+                                    <th style={{ width: '50px' }}>{t('dashboard.schedule.seqNo')}</th>
+                                    <th>{t('dashboard.schedule.customer')}</th>
+                                    <th>{t('dashboard.schedule.orderNo')}</th>
+                                    <th>{t('dashboard.schedule.boxNo')}</th>
+                                    <th style={{ width: '60px' }}>{t('dashboard.schedule.qty')}</th>
+                                    <th>{t('dashboard.schedule.productName')}</th>
+                                    <th style={{ width: '80px' }}>{t('dashboard.schedule.boxType')}</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <SortableContext items={orders.map(o => o.id)} strategy={verticalListSortingStrategy}>
+                                <tbody>
+                                    {orders.map((order, index) => (
+                                        <SortableOrderRow
+                                            key={order.id}
+                                            order={order}
+                                            index={index}
+                                            isSelected={selectedScheduleId === order.id}
+                                            onSelect={(o, i) => {
+                                                setSelectedScheduleId(o.id);
+                                                setLastClickedSection('schedule');
+                                                if (i === 0) {
+                                                    addLog(`Viewing Running Order: ${o.orderNo}`);
+                                                }
+                                            }}
+                                        />
+                                    ))}
+                                </tbody>
+                            </SortableContext>
+                        </table>
+                    </DndContext>
                 </div>
 
                 {/* Bottom: Box Diagram */}

@@ -25,8 +25,27 @@ export const updateOrderStatus = async (id, status) => {
     return response.data;
 };
 
+// 全欄位更新(Phase 2:編輯排程列時同步後端;body 為後端 Order payload,含 specJson)
+export const updateOrder = async (id, order) => {
+    const response = await api.put(`/orders/${id}`, order);
+    return response.data;
+};
+
+// 刪除後端訂單(Phase 2:刪除排程列時同步)
+export const deleteOrder = async (id) => {
+    const response = await api.delete(`/orders/${id}`);
+    return response.data;
+};
+
 export const reorderOrders = async (orderedIds) => {
     const response = await api.post('/orders/reorder', orderedIds);
+    return response.data;
+};
+
+// 全量鏡像同步(Phase 2):上傳整份排程(後端 Order payload 陣列),
+// 後端依序 upsert + 刪除清單外的列,回傳正規清單。
+export const syncSchedule = async (orders) => {
+    const response = await api.post('/orders/sync', orders);
     return response.data;
 };
 
