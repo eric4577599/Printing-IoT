@@ -12,8 +12,8 @@
 
 | 層次 | 技術 |
 |------|------|
-| 後端 API | .NET 8 (ASP.NET Core Web API) |
-| IoT Worker | .NET 8 BackgroundService (MQTT via MQTTnet) |
+| 後端 API | .NET 9 (ASP.NET Core Web API) |
+| IoT Worker | .NET 9 BackgroundService (MQTT via MQTTnet) |
 | IoT 協議 | MQTT (Mosquitto Broker) + Modbus (Pymodbus) |
 | 快取 | Redis 7 |
 | AI 視覺 | PaddleOCR + PaddlePaddle + OpenCV |
@@ -46,7 +46,7 @@ docker compose up -d --build
 
 ```
 Printing IoT/
-├── backend/                # .NET 8 Solution
+├── backend/                # .NET 9 Solution
 │   ├── PrintingIoT.API/    # Web API 服務
 │   ├── PrintingIoT.Core/   # 領域模型 (Entities, Interfaces, DTOs)
 │   ├── PrintingIoT.Infrastructure/ # 資料存取 (EF Core, Redis, Services)
@@ -89,7 +89,7 @@ Printing IoT/
 ### 5. 路徑慣例
 | 環境 | 工作目錄 |
 |---|---|
-| macOS(外接 X10 Pro SSD) | `/Volumes/X10Pro/...` |
+| macOS(外接 G70 Pro SSD) | `/Volumes/G70Pro/cusor pool/...` |
 | Windows | `d:\MyGitHub\...` |
 
 操作前先確認外接 SSD 已掛載。
