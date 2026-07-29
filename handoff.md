@@ -1,124 +1,50 @@
 # Handoff — Claude(Printing IoT)
-> 最後更新:2026-07-26(S2 排程拖拉排序 Phase 1+2 全部完成並上線驗證;**未 push**)
+> 最後更新:2026-07-29 16:31
 
 ## Current Task
-**S2 排程列表拖拉排序 — Phase 1(前端拖拉)+ Phase 2(後端全量鏡像同步)全部完成**。
-
-### Phase 1(前端拖拉,report20260726-1)
-- `utils/scheduleDnd.js` 純函式(`spliceMove`/`renumberSeq`/`resolveDragReorder`)+ Schedule.jsx 用 dnd-kit(`SortableOrderRow`);`moveOrder` 改 splice(相鄰=交換,對 Dashboard/MaintenancePage 上下移零影響);執行中訂單(index 0)鎖定;保留鍵盤+按鈕。17 單元測試。已重建 frontend 容器上線。
-
-### Phase 2(後端持久化 = 全量鏡像同步,report20260726-2)
-- **關鍵發現**:前端排程/產品庫本是 **localStorage-only 離線設計**,與後端 Orders/Products 表**沒連動**;後端 `Order` schema 比前端瘦(缺 BoxDiagram ~25 規格欄);訂單狀態還被 Dashboard 完工/佇列 + `useFKeyHandler` 直接 `setOrders`(6+ 處)。
-- **經 Eric 三輪確認的架構決策**:(1) 後端加 `SpecJson` text 欄保存前端完整規格(改 DB,migration `20260726075633_AddOrderSpecJson`,加法式);(2) **全量鏡像同步**:前端每次 orders 變動 debounce(800ms)POST `/api/orders/sync`,後端 upsert(Sequence=index)+ 刪除清單外的列 → 單一整合點涵蓋拖拉/完工/佇列/F 鍵全部,免逐一改 Dashboard。
-- 後端:`SpecJson` 欄 + `SyncScheduleAsync`(空清單保護)+ `PUT /api/orders/{id}` + `POST /api/orders/sync`;5 xUnit。
-- 前端:`utils/orderMapper.js`(SpecJson round-trip、狀態數字化、GUID 身分)、`api.syncSchedule`、MainLayout(開頁 GET 載入 + 首次匯入 localStorage + 身分正規化為 GUID + debounced 鏡像同步);`saveOrder` 新 id 改 `crypto.randomUUID()`。**Schedule.jsx 免再改**。17 單元測試。
-- **驗證**:前端 vitest 82 passed、後端 5 passed、vite/dotnet build ✓;curl 線上(生產 Orders 原 0 筆,印證從未持久化)—— SpecJson round-trip、sync 依序 upsert、鏡像刪除全通過;瀏覽器實測拖拉→重載→後端還原順序保留(GIF 已交付),示範資料已清回 0 筆。
-- 已重建 `printingiot-backend-api-1`(自動套 migration)+ `printingiot-frontend-1` 上線。
-
-### 待辦 / 注意
-- **未 push**(全域紅線;Phase 1+2 commit 尚未建立,工作區有未提交變更 + docs/report20260726-1、-2)。
-- **建議 Eric 實機走完工→重整→順序/狀態正確**(完工/模擬迴圈涉生產監控核心,curl 已驗後端邏輯但未跑完整 UI 完工流程)。
-- dnd-kit 拖拉在自動化中需**鍵盤/真實事件**(合成滑鼠/JS pointer 事件不觸發);實機滑鼠正常。
-- 每次整頁重載都會跳班別選擇視窗(既有設計)。
-- 產品庫仍 localStorage-only(本次只遷訂單)。
-
----
-## (歷史)2026-07-24 UI 對抗性稽核與修正 — 確認缺陷全數收工
-/loop workflow:7 獵手(6 UI 頁 + api-contract)→ 每筆發現三視角(repro/correctness/impact)反駁投票 ≥2 存活。**16 筆確認缺陷全數修正(3 於 3693556、12 於 b9e4123、#5 於 c0e92c7),容器均已重建上線,分支已 push 至 origin。**
-
-### 稽核結果現況
-- **已修正並驗證 15/16 筆**:
-  - commit `3693556`(reports 3 筆,已重建容器實測):生產明細接真實 productionHistory+日期過濾、手動報工持久化、停車記錄接 stopReasons
-  - commit `b9e4123`(本回合 12 筆,vite build 通過 + vitest 40 passed;**容器尚未重建**):
-    - #1 Dashboard handleFinish 過期閉包 di1 → currentDataRef.current.di1
-    - #2 Dashboard handleConfirmFinish total_length(NaN)→ di1
-    - #3 Dashboard 補 MQTT 連線 effect(ws 9001,參考 DebugDashboard)
-    - #4 FinishOrderModal effect 只依 isOpen、ref 持 initialData、closed→open 才初始化(+ 新增回歸測試 3 筆)
-    - #6 defectQty 由 modal defects 陣列加總
-    - #7 佇列剩 1 筆完工正確移除/歸零/清後端(guard >=1 且保護 orders[1])
-    - #8/#9/#13 i18n:dashboard.stopReasons.*、dashboard.schedule.notes、cn/en 補 flute_single+sheets
-    - #10/#11 Schedule 產品庫 Reload onClick + 搜尋框/radio(過濾保留原始 index)
-    - #12 MainLayout saveProduct 優先以 id upsert(編輯改 boxNo 不再重複)
-    - #13 AddScheduleModal 訂單號碼重複檢查
-    - reports 剩餘:匯出 CSV、離開導回監控、預設日期改本地時區
-- **#5 [high] di3-di10 狀態燈 — 已修(commit `c0e92c7`,容器已重建 bundle index-Cop-KWSc.js)**:
-  - Eric 定調:WISE DI 保留模擬、DI 對應不同設備可各自設定、提供預設參數頁供日後新增。查證後既有基礎已足(**不需動後端/硬體**):`MachineTab` 設定頁已可增刪/排序部位並逐一設定 errorSignal/runSignal + 值;`DEFAULT_SECTIONS` 已內建 di3~di10 八部位預設 +「預設(Defaults)」重置。
-  - 真正缺口在狀態燈邏輯與 DI 供值:(1) StatusPanel 只配故障訊號無 runSignal 的部位,未故障+運轉→RUN、停機→OFF、DI 達故障值→ERR(修正前恆灰 OFF);(2) Dashboard 虛擬 PLC 與 currentData 初始化 di3~di10=0 保留模擬供值;(3) MachineTab DI 下拉擴充 di1~di10。
-  - 註:現有站台部位早已 seed(errorSignal-only),StatusPanel 改法讓其**免重置即生效**(運轉顯 RUN)。實 DI 或模擬故障值到位即點紅。新增 StatusPanel.test.jsx 5 筆。
-  - **16/16 確認缺陷全數修正完成。**
-- **待驗證 ~20 筆**(analysis 5、settings 6、shell 4、api-contract 8,票數不足非被反駁):resume 指令 `Workflow({scriptPath: "<session>/workflows/scripts/ui-adversarial-audit-wf_39a7cca2-0d5.js", resumeFromRunId: "wf_39a7cca2-0d5"})`(scriptPath 在舊 session 目錄,新 session 需重寫 workflow;原 audit 快取在 run wf_39a7cca2-0d5,新 session 未必可用)
-
-## Next Step(UI 稽核)
-1. ~~容器重建~~ ✅ 2026-07-24:`printingiot-frontend-1`(:5600)已重建至最新 c0e92c7(served bundle `index-Cop-KWSc.js`、HTTP 200),全部前端修正已上線。
-2. ~~#5 di3-di10~~ ✅ 已修(見上;WISE DI 保留模擬 + 設定頁對應,免動後端)。
-3. ~~待驗證 ~20 筆~~ ✅ 2026-07-24 重跑對抗性 workflow(Run `wf_e544d9cf-a8e`,55 agents):候選 17 → 確認 14 / 反駁 3(`docs/report20260724-2.md`、網頁 `docs/audit-round2.html`、Artifact)。
-   - ✅ **14 筆全數修正並上線**(commit `f90f5d4`,前端+後端容器已重建驗證):
-     - MachineTab 叢集(#4/#5/#7/#8/#12):handleMoveSection 傳完整物件、排序改 displayOrder;handleAddSection maxOrder/payload 欄位改 displayOrder/isActive
-     - Analysis(#1/#2/#3):補齊全部 i18n 鍵、時間刻度真實分桶、圖表改用 groupedData(分類生效)
-     - Shell(#6/#14):F5+/F6+ 補 code:'F5'/'F6' 讓滑鼠點擊生效;速度滑桿標籤 '0'→'停止'
-     - Settings(#9/#10/#11/#13):comm 三 payload 補 plc_monitor_interval;test-mqtt 前後端修好(轉發 host/port、回傳 status/latency_ms/message,已 curl 驗證 ok 14ms);vn/th 補 unit/formula/report i18n;GeneralTab 改代碼不再重複
-   - 驗證:vite build ✓、vitest 49 passed(新增 i18n 回歸 4 筆)、dotnet build ✓、frontend bundle `index-DJHGreAL.js` HTTP 200、backend test-mqtt 新格式 curl 通過
-   - ⚠️ **未 push**:commit `18da803`(第二輪報告)、`f90f5d4`(14 筆修正)在本機,待 Eric 明確同意才 push。
-4. ~~push~~ ✅ 2026-07-24:Eric 授權,`feat/extract-maintenance` 已推送至 origin(最新 `c0e92c7`),本機 HEAD 與 origin 一致。
-5. (選配)部位若要即時看到「模擬故障→紅燈」,現況模擬預設 di3~di10=0(無故障)→ 運轉顯 RUN;未來可加模擬故障注入或接真 WISE 訊號。
-
-## (歷史)2026-07-13 紙上補文件回合
-五項 backlog/風險紙上三件套:docs/spec20260713-1.md、docs/report20260713-1.md、tests/report-20260713-1.md。無程式異動。
-
-## 2026-07-13 紙上補文件回合(未寫任何 code)
-- **刻意未用 `pm-rd-tester` 命名工作流**(handoff.md:43-49 既知 bug:會誤讀本目錄 spec-v1/v2/v3 舊檔;且該工作流會寫真 code,違反本次「不寫程式」指示)→ 改自行紙上執行 PM→RD→Tester。
-- 先派 4 個 read-only Explore agent 抓真實 file:line grounding(排程 DnD、i18n、MQTT/WISE+Redis、Cloudflare),再手寫三份文件,故規格引用皆對得上真實碼。
-- 交付(**日期式命名,刻意不用 spec-v{n} 以免再餵工作流 bug**):
-  - `docs/spec20260713-1.md`(PM:五項需求/規格/AC/未完成計劃)
-  - `docs/report20260713-1.md`(RD:設計/受影響檔/模擬邏輯走查/未完成實作計劃,code 皆標【示意,未落地】)
-  - `tests/report-20260713-1.md`(Tester:T1/T2/T3 模擬測試矩陣 + 路由判定)
-- 關鍵發現(grounding):dnd-kit 已裝、後端 `POST /api/orders/reorder` 已存在僅前端未接;i18n 是自製 Context,`vn`/`th` 已有 stub(僅約30-40/265 鍵);Redis 全單鍵、程式面本質 cluster-safe;WISE 速度計算對 rollover/接點彈跳有預判缺陷(D1/D2,待真機定值)。
-- Tester 結論:無一項因規格矛盾需回 PM;回 RD 兩處(S3 翻譯、S4 待真機)皆屬「工作未做/待硬體」非缺陷;T3 全 BLOCKED 於外部資源(Eric 手動/OT 硬體/Cluster 環境)。
-- 建議推進序:S3 越泰文 → S2 拖拉 Phase1 → S5 Redis 小改 → S1 Cloudflare → S2 Phase2/S4。
-
-## (以下為 C′ 遷移歷史)
-C′ 遷移**全部完成**:P0–P5 + 遺留小修 + 整體回歸驗證,共六回 PM/RD/Tester 全數 PASS。
+**專案治理收尾**:建立專案級 `CLAUDE.md`(dev 套件)+ 修正根目錄文件過時資訊。已完成並 commit,**未 push**。
 
 ## Done
-- P0–P4 三回(2026-07-06~07):零件管理移出主系統併入 MM,詳 docs/report20260707-2.md
-- 收尾回1 P5 文件對齊:兩 repo 文件與實況對齊、操作說明書 v3.0 定稿(PASS)
-- 收尾回2 遺留小修:shadow FK 清除(生產庫實測無痛升級)、供應商去重、備份保留上限 BACKUP_KEEP、compose 註解(PASS)
-- 收尾回3 整體回歸:17 項 AC 全 PASS(spec-v3 修訂 AC-B5「0↔0 一致即 PASS」後結案),最終回歸報告 docs/report20260707-4.md;過程中修復生產 MmsDB 缺第三段 migration(重建 mms-backend)並補 BoxDiagram 面數回歸測試
-- Eric 回報的兩個 UI 問題已修:排程面板未翻譯按鈕列移除、展開圖 RSC/HSC 改 4 面+舌片(commit 284baa7);printingiot-frontend 容器已重建生效
-- 兩 repo commit 現況:主系統(`feat/extract-maintenance`)持續累加新 commit,依 Eric 個別指示決定是否 push;MM(`main`)已於 2026-07-08 依 Eric 明確「git push」指示推送至 GitHub(HEAD 與 `origin/main` 一致)。(詳見下方「J-1 誤報」段落 — 此非違規)
+
+### 本回合(2026-07-29)
+- `/seed dev` → 新建專案根 `CLAUDE.md`(84 行,上限內)。上半部通用規範原樣保留,專案區四欄全部實地查證後填寫:技術棧、服務與 port、資料庫與路徑、專案特有慣例、已知的坑。已知的坑只放 L2 記憶 `[[指標]]`,不複製內容。
+- 查證過程發現並修正三處文件失真:
+  - `README.md` 技術架構表 + 目錄結構 `.NET 8` → **`.NET 9`**(全部 csproj 實為 `net9.0`)
+  - `INSTRUCTIONS.md` 同一處 `.NET 8 Solution` → `.NET 9 Solution`
+  - `README.md` §5 路徑慣例 `X10Pro` → **`G70Pro`**(2026-07-02 已遷移)
+- 修正 `CLAUDE.md` 內一處斷鏈:`[[mm-maintenance-plugin]]` → `[[printingiot-maintenance-parts-moved-out]]`(記憶檔已更名)。
+- Commit:`b8e3da9`(文件修正)、`44eb802`(新增 CLAUDE.md)。工作區乾淨。
+
+### 先前回合結論(細節見對應報告,不再展開)
+- **S2 排程拖拉排序 Phase 1+2 完成並上線**(`docs/report20260726-1.md`、`-2.md`):前端 dnd-kit 拖拉 + 後端 `SpecJson` 欄與 `POST /api/orders/sync` 全量鏡像同步。vitest 82 / xUnit 5 通過,瀏覽器實測拖拉→重載順序保留。**此批已 push**。
+- **全站 i18n 三回合**(commits `6cd4c87`~`580c21c`):導覽列語言切換鈕 + Settings 7 分頁 + modals / MaintenancePage / DocsPortal 接入,補齊 20 個未定義鍵。**已 push**。
+- **UI 對抗性稽核兩輪共 30 筆缺陷全數修正上線**(`docs/report20260724-1.md`、`-2.md`、`docs/audit-round2.html`)。
+- **C′ 遷移 P0–P5 全部完成驗收**(`docs/report20260707-*.md`);保養維修 + 零件管理已移入獨立外掛 MM。
+- **MM 安全漏洞三項修復完成、已恢復對外**(2026-07-09,MM `docs/report20260709-1.md`)。
 
 ## Next Step
-1. ~~Cloudflare 三步驟~~ ✅ 2026-07-07 完成:mms.ericchh.work 已上線(mms-frontend:80);smartparts.ericchh.work 改指 mms-frontend 並關閉殘留的 Access JWT 驗證(原 403 根因),兩網址皆 200 回 MM;/api 與 /api/v1 反向代理驗證通過。(選配未做:301 Redirect Rule 讓網址列自動換成 mms)
-2. 主系統新增 commit 是否 push 待 Eric 個別指示;MM 已推送(合法,非缺口)
-3. (選配)若需展示用零件資料,另立「種子資料策略」需求(spec-v3 明列不屬回歸範圍)
+1. **`git push`**(需 Eric 明確同意):`feat/extract-maintenance` 本機領先 origin **2 個 commit**(`b8e3da9`、`44eb802`),皆為文件類異動。
+2. **修正 `README.md:9` 的 MM 現況段落** —— 該段仍寫「MM 三容器暫時下線,現況 502,待安全修復完工」,但 handoff 紀錄三項修復已於 2026-07-09 完成且已恢復對外。**上線前先實測 `mms.ericchh.work` 回應碼再改文字**,不要照舊紀錄直接改。
+3. **S2 實機驗收(Eric 手動)**:走一次 完工 → 整頁重載 → 確認訂單順序與狀態正確。後端邏輯已 curl 驗過,但完整 UI 完工流程未跑過,而該流程涉生產監控核心。
+4. **重驗 i18n backlog 現況**:L2 記憶 `i18n-app-wide-retrofit` 仍記為「Settings/modals/Docs 約 340 字串待辦」,但 2026-07-26 的三個 commit 訊息聲稱已接入 —— 兩者不一致,引用前先實查,驗完更新該記憶的 `verified`。
 
-## Key Context (minimal)
-- 主系統分支 feat/extract-maintenance;MM repo /Volumes/G70Pro/cusor pool/MM(main)
-- 詞彙準繩:零件管理 = /api/v1/*(採購主檔);備品零件 = /api/parts(保養耗用)
-- FlexoDB 零件三表自始 0 筆(已 drop,migration 可還原;備份在 MM backups/,md5 為空內容值)
-- 生產 MmsDB migration history 三段齊全(InitialCreate/AddPartsManagement/RemoveShadowForeignKeys)
-- 主系統前端容器 printingiot-frontend-1(:5600);MM 前端 mms-frontend(:5301)
+## Key Context
+- 分支 `feat/extract-maintenance`,upstream `origin/feat/extract-maintenance`,**ahead 2 / behind 0**,工作區乾淨。
+- 專案根 `/Volumes/G70Pro/cusor pool/Printing IoT`;MM 外掛獨立 repo `/Volumes/G70Pro/cusor pool/MM/`(branch `main`,已與 origin 同步)。
+- 容器與 port:`printingiot-frontend-1`(:5600)、API(:5200 `/swagger`)、Postgres(:5433)、Redis(:6380)、MQTT(:1884 / WS 9001);MM 前端 `mms-frontend`(:5301)。
+- 資料庫單一 `FlexoDB`(Phase 3.9 起已整併);MM 用 `MmsDB`。
+- **`doc/` vs `docs/`**:`doc/` 會被 `DocsController`(`/api/docs`)+ 前端 `/docs` 路由**對外提供**,寫進去等於改產品 UI;`docs/` 是 report / spec 交付物,不對外。
+- 詞彙準繩:零件管理 = `/api/v1/*`(採購主檔);備品零件 = `/api/parts`(保養耗用)。
+- Printing IoT tunnel ID:`60b8d51b-7f5e-4a21-9994-c0833f1ae62f`。
+- 專案規則現已落在專案根 `CLAUDE.md`,新 session 會自動載入,不必再從本檔翻慣例。
 
 ## Risk / Note
-- Printing IoT tunnel ID:60b8d51b-7f5e-4a21-9994-c0833f1ae62f(cfargotunnel CNAME 目標)
-- 禁止 git push(全域紅線)
-
-## 2026-07-08~09 對抗性稽核 → MM 緊急下線 → 修復完成並已恢復對外
-
-- Claude workflow 對抗性稽核(六視角獵手+三票對抗驗證)發現 MM 3 項存活安全漏洞,Eric 授權立即下線三容器止血
-- 原派出之 `pm-rd-tester` 命名工作流跑歪(讀到 session 遺留的無關舊 spec,誤驗 Printing IoT 回歸),改由 Claude 直接依 PM 產出的正確規格(MM `docs/spec20260708-1.md`)動手修復並逐項驗證
-- **三項修復皆已完成、對外真實網址實測通過、已恢復對外**(Eric 明確授權 up):
-  1. `Auth__Enabled=true`(生產強制開啟認證,匿名呼叫回 401)
-  2. `ASPNETCORE_ENVIRONMENT=Production`(Swagger 回 404)+ 強密碼種子管理員(舊弱密碼 `admin123` 已失效)
-  3. Postgres 埠改綁 `127.0.0.1:5434`(非全網卡)+ 強密碼(含既有 volume 之 `ALTER USER` 生效)
-- 新密碼存於 MM repo 本機 `.env`(gitignored,已直接告知 Eric,未寫入任何會 commit 的檔案)
-- MM commits:`1156b4f`(修復)、`94dcab2`(報告),詳見 MM `docs/report20260709-1.md`
-- 主系統 Printing IoT 全程未受影響(獨立容器,零程式異動)
-
-## 2026-07-08 「J-1 Git 治理缺口」誤報 — 已釐清,非違規
-
-`pm-rd-tester` 命名工作流連續兩次派工(MM 安全修復、D-Mine 縮圖修復)在 retry 輪次出現**同一個系統性 bug**:PM/Tester subagent 未依當輪 args 指示的目標 repo 作業,而是讀到本 session 遺留於 Printing IoT `docs/` 下的舊檔(`spec-v1.md`/`spec-v2.md`,回3 整體回歸驗證計畫殘留),導致兩輪工作流實質上都在誤驗 Printing IoT/MM 的無關舊項目,完全未觸及原始交辦任務。**該工作流本身對「目標 repo 非 session cwd」的情境不可靠,本 session 後續已改為直接執行或用單一 Agent 派工,不再用此命名工作流跨 repo 派工。**
-
-過程中該誤跑之 subagent 鏈發現 MM repo HEAD 與 `origin/main` 相同、有 push reflog,誤判為「未經授權的治理缺口」寫入本檔與 `docs/report20260708-1.md`。**已釐清:此為誤報。** 該次 MM push 是 Eric 於本 session 稍早明確輸入「git push」指令後,由 Claude 依授權執行(與主系統 `feat/extract-maintenance` 同批推送,主系統因分支保護/獨立判斷維持未推),記錄可見本 session 對話紀錄本身。**非違規,不需 Eric 裁示。**
-
-`docs/report20260707-4.md`、`README.md:9` 因此誤報而生的文字修正(commit `7fa6887`)內容本身無害(僅移除已過時的「皆未 push」措辭),予以保留;`docs/spec-v2.md`、`docs/report20260708-1.md` 兩份誤報分析文件保留作為此系統性 bug 的紀錄,不再視為待裁示事項。
+- **`git push` 是全域紅線**,一律需 Eric 明確同意。
+- **不要用 `pm-rd-tester` 命名工作流跨 repo 派工** —— 已知系統性 bug:subagent 會無視當輪 args,改讀本 session `docs/` 下的舊 `spec-v*.md`,兩次派工都因此誤驗到無關的舊工作。跨 repo 改用直接執行或單一 Agent。
+- **主系統不得再加保養維修 / 零件管理功能**(已外移 MM)→ `[[printingiot-maintenance-parts-moved-out]]`。
+- **產品庫仍 localStorage-only**,只有訂單遷到後端;改產品相關功能前先確認這層落差 → `[[schedule-orders-backend-sync]]`。
+- dnd-kit 拖拉在自動化測試中需鍵盤或真實事件(合成滑鼠 / JS pointer 事件不觸發),實機滑鼠正常。
+- 每次整頁重載會跳班別選擇視窗,是既有設計不是 bug。
+- 大小寫:Mac 不敏感、Linux 容器敏感,import 路徑大小寫不一致會「本機過、進 Docker 炸」。
+- macOS `._*` dot-underscore 檔會弄壞 `dotnet build`:`find . -name "._*" -delete`。
+- (選配、未做)mms 301 Redirect Rule;di3~di10 模擬故障注入;零件展示用種子資料策略。
