@@ -24,14 +24,15 @@
 
 ## Next Step
 1. **`git push`**(需 Eric 明確同意):`feat/extract-maintenance` 本機領先 origin **2 個 commit**(`b8e3da9`、`44eb802`),皆為文件類異動。
-2. **修正 `README.md:9` 的 MM 現況段落** —— 該段仍寫「MM 三容器暫時下線,現況 502,待安全修復完工」,但 handoff 紀錄三項修復已於 2026-07-09 完成且已恢復對外。**上線前先實測 `mms.ericchh.work` 回應碼再改文字**,不要照舊紀錄直接改。
+2. ~~修正 `README.md:9` 的 MM 現況段落~~ ✅ 2026-07-29:實測後改寫完成。實測結果 —— `mms.ericchh.work` **200**(回真實 MM 前端)、`/api/v1/parts` **401**、後端 `localhost:5300/swagger` **404**、`mm-postgres-1` 仍只綁 `127.0.0.1:5434`,三項安全修復全部仍生效;`smartparts.ericchh.work` 亦 200(301 Rule 仍未做,選配)。
+   - 陷阱:公網 `/swagger` 回 **200** 是 SPA fallback 吐 index.html,不是 Swagger 被打開,別誤判為安全回退 —— 要驗就直打後端埠。
 3. **S2 實機驗收(Eric 手動)**:走一次 完工 → 整頁重載 → 確認訂單順序與狀態正確。後端邏輯已 curl 驗過,但完整 UI 完工流程未跑過,而該流程涉生產監控核心。
 4. **重驗 i18n backlog 現況**:L2 記憶 `i18n-app-wide-retrofit` 仍記為「Settings/modals/Docs 約 340 字串待辦」,但 2026-07-26 的三個 commit 訊息聲稱已接入 —— 兩者不一致,引用前先實查,驗完更新該記憶的 `verified`。
 
 ## Key Context
 - 分支 `feat/extract-maintenance`,upstream `origin/feat/extract-maintenance`,**ahead 2 / behind 0**,工作區乾淨。
 - 專案根 `/Volumes/G70Pro/cusor pool/Printing IoT`;MM 外掛獨立 repo `/Volumes/G70Pro/cusor pool/MM/`(branch `main`,已與 origin 同步)。
-- 容器與 port:`printingiot-frontend-1`(:5600)、API(:5200 `/swagger`)、Postgres(:5433)、Redis(:6380)、MQTT(:1884 / WS 9001);MM 前端 `mms-frontend`(:5301)。
+- 容器與 port:`printingiot-frontend-1`(:5600)、API(:5200 `/swagger`)、Postgres(:5433)、Redis(:6380)、MQTT(:1884 / WS 9001);MM 為 `mm-mms-frontend-1`(:5301)、`mm-mms-backend-1`(:5300)、`mm-postgres-1`(**127.0.0.1**:5434,僅綁 loopback 是安全修復的一部分,不要改成全網卡)。
 - 資料庫單一 `FlexoDB`(Phase 3.9 起已整併);MM 用 `MmsDB`。
 - **`doc/` vs `docs/`**:`doc/` 會被 `DocsController`(`/api/docs`)+ 前端 `/docs` 路由**對外提供**,寫進去等於改產品 UI;`docs/` 是 report / spec 交付物,不對外。
 - 詞彙準繩:零件管理 = `/api/v1/*`(採購主檔);備品零件 = `/api/parts`(保養耗用)。
