@@ -1,5 +1,5 @@
 # Handoff — Claude(Printing IoT)
-> 最後更新:2026-07-29 16:31
+> 最後更新:2026-07-29 21:23
 
 ## Current Task
 **專案治理收尾**:建立專案級 `CLAUDE.md`(dev 套件)+ 修正根目錄文件過時資訊。已完成並 commit,**未 push**。
@@ -13,7 +13,8 @@
   - `INSTRUCTIONS.md` 同一處 `.NET 8 Solution` → `.NET 9 Solution`
   - `README.md` §5 路徑慣例 `X10Pro` → **`G70Pro`**(2026-07-02 已遷移)
 - 修正 `CLAUDE.md` 內一處斷鏈:`[[mm-maintenance-plugin]]` → `[[printingiot-maintenance-parts-moved-out]]`(記憶檔已更名)。
-- Commit:`b8e3da9`(文件修正)、`44eb802`(新增 CLAUDE.md)。工作區乾淨。
+- 實測 MM 現況(見 Next Step #2),據以更正 README:9 已過時的「下線 502」敘述。
+- Commit:`b8e3da9`(文件修正)、`44eb802`(新增 CLAUDE.md)、`7ecf75f`(handoff)、`39cce38`(MM 現況更正),**皆已 push**。
 
 ### 先前回合結論(細節見對應報告,不再展開)
 - **S2 排程拖拉排序 Phase 1+2 完成並上線**(`docs/report20260726-1.md`、`-2.md`):前端 dnd-kit 拖拉 + 後端 `SpecJson` 欄與 `POST /api/orders/sync` 全量鏡像同步。vitest 82 / xUnit 5 通過,瀏覽器實測拖拉→重載順序保留。**此批已 push**。
@@ -23,14 +24,14 @@
 - **MM 安全漏洞三項修復完成、已恢復對外**(2026-07-09,MM `docs/report20260709-1.md`)。
 
 ## Next Step
-1. **`git push`**(需 Eric 明確同意):`feat/extract-maintenance` 本機領先 origin **2 個 commit**(`b8e3da9`、`44eb802`),皆為文件類異動。
+1. ~~`git push`~~ ✅ 2026-07-29:Eric 兩次明確授權,本日 4 個文件類 commit(`b8e3da9`、`44eb802`、`7ecf75f`、`39cce38`)已全數推送,本機與 origin 一致。
 2. ~~修正 `README.md:9` 的 MM 現況段落~~ ✅ 2026-07-29:實測後改寫完成。實測結果 —— `mms.ericchh.work` **200**(回真實 MM 前端)、`/api/v1/parts` **401**、後端 `localhost:5300/swagger` **404**、`mm-postgres-1` 仍只綁 `127.0.0.1:5434`,三項安全修復全部仍生效;`smartparts.ericchh.work` 亦 200(301 Rule 仍未做,選配)。
    - 陷阱:公網 `/swagger` 回 **200** 是 SPA fallback 吐 index.html,不是 Swagger 被打開,別誤判為安全回退 —— 要驗就直打後端埠。
 3. **S2 實機驗收(Eric 手動)**:走一次 完工 → 整頁重載 → 確認訂單順序與狀態正確。後端邏輯已 curl 驗過,但完整 UI 完工流程未跑過,而該流程涉生產監控核心。
 4. **重驗 i18n backlog 現況**:L2 記憶 `i18n-app-wide-retrofit` 仍記為「Settings/modals/Docs 約 340 字串待辦」,但 2026-07-26 的三個 commit 訊息聲稱已接入 —— 兩者不一致,引用前先實查,驗完更新該記憶的 `verified`。
 
 ## Key Context
-- 分支 `feat/extract-maintenance`,upstream `origin/feat/extract-maintenance`,**ahead 2 / behind 0**,工作區乾淨。
+- 分支 `feat/extract-maintenance`,upstream `origin/feat/extract-maintenance`,推到 `39cce38` 與 origin 一致;之後只多出「本檔這次收工更新」這一個 commit,尚未 push。
 - 專案根 `/Volumes/G70Pro/cusor pool/Printing IoT`;MM 外掛獨立 repo `/Volumes/G70Pro/cusor pool/MM/`(branch `main`,已與 origin 同步)。
 - 容器與 port:`printingiot-frontend-1`(:5600)、API(:5200 `/swagger`)、Postgres(:5433)、Redis(:6380)、MQTT(:1884 / WS 9001);MM 為 `mm-mms-frontend-1`(:5301)、`mm-mms-backend-1`(:5300)、`mm-postgres-1`(**127.0.0.1**:5434,僅綁 loopback 是安全修復的一部分,不要改成全網卡)。
 - 資料庫單一 `FlexoDB`(Phase 3.9 起已整併);MM 用 `MmsDB`。
