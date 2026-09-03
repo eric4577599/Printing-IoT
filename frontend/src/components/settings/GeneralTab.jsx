@@ -1,6 +1,18 @@
 import React, { useState } from 'react';
 import styles from '../../pages/SettingsPage.module.css';
 import { useLanguage } from '../../modules/language/LanguageContext';
+import { useReasonCodes } from '../../hooks/useReasonCodes';
+import { createReasonCode, deleteReasonCode } from '../../services/api';
+
+// S3 / F8:原因主檔改由後端維護;以下兩份只是 API 與 localStorage 快取都不可用時的最後降級
+const DEFAULT_STOP_REASONS = [
+    { code: '001', name: '送紙歪斜 (Feed Skew)', category: 'Feed' },
+    { code: '002', name: '印刷不清 (Print Blurry)', category: 'Print' },
+];
+
+const DEFAULT_DEFECT_REASONS = [
+    { code: 'D01', name: '髒污 (Dirty)', category: 'Quality' },
+];
 
 const GeneralTab = () => {
     // i18n:取得翻譯函式,提供本頁所有畫面文字
@@ -365,21 +377,19 @@ const GeneralTab = () => {
     );
 
 
-    // --- Reason State (Kept here) ---
+    // --- Reason State(S3 / F8:改讀後端原因主檔,與現場彈窗共用同一份資料)---
 
-    const [stopReasonsList, setStopReasonsList] = useState(() => {
-        const saved = localStorage.getItem('stopReasonsList');
-        return saved ? JSON.parse(saved) : [
-            { id: '001', reason: '送紙歪斜 (Feed Skew)', category: 'Feed' },
-            { id: '002', reason: '印刷不清 (Print Blurry)', category: 'Print' }
-        ];
-    });
-    const [defectReasonsList, setDefectReasonsList] = useState(() => {
-        const saved = localStorage.getItem('defectReasonsList');
-        return saved ? JSON.parse(saved) : [
-            { id: 'D01', reason: '髒污 (Dirty)', category: 'Quality' }
-        ];
-    });
+    const {
+        reasons: stopReasonsList,
+        error: stopReasonsError,
+        reload: reloadStopReasons,
+    } = useReasonCodes('stop', DEFAULT_STOP_REASONS);
+
+    const {
+        reasons: defectReasonsList,
+        error: defectReasonsError,
+        reload: reloadDefectReasons,
+    } = useReasonCodes('defect', DEFAULT_DEFECT_REASONS);
 
     // Inputs for New Reason
     const [newStopId, setNewStopId] = useState('');
@@ -391,73 +401,119 @@ const GeneralTab = () => {
     const [newDefectCategory, setNewDefectCategory] = useState('');
 
 
-    // --- Reason Handlers ---
-    const handleAddStopReason = () => {
-        if (!newStopId || !newStopReason) {
+    // --- Reason Handlers(S3 / F8)---
+
+    /**
+     * 離線降級:把清單寫回 localStorage 快取並提示使用者
+     * @param {string} type - 'stop' | 'defect'
+     * @param {Array} list - 要保存的清單({ id, code, name, category })
+     * @returns {void}
+     * @description API 不可用時維持既有的 localStorage 行為,讓設定頁在斷網現場仍可用,
+     *              但必須明白告知變更沒有同步到後端。
+     */
+    const saveReasonsOffline = (type, list) => {
+        const key = type === 'stop' ? 'stopReasonsList' : 'defectReasonsList';
+        try {
+            localStorage.setItem(key, JSON.stringify(list));
+        } catch (err) {
+            console.warn(`寫入 ${key} 失敗`, err);
+        }
+        alert(t('settingsExt.general.offlineModeNotice'));
+    };
+
+    /**
+     * 新增一筆原因(停機或不良)
+     * @param {string} type - 'stop' | 'defect'
+     * @returns {Promise<void>}
+     * @description 呼叫 POST /api/reasons,成功後 reload();失敗時退回 localStorage 並提示離線模式。
+     */
+    const addReason = async (type) => {
+        const code = type === 'stop' ? newStopId : newDefectId;
+        const name = type === 'stop' ? newStopReason : newDefectReason;
+        const category = (type === 'stop' ? newStopCategory : newDefectCategory) || 'General';
+        const list = type === 'stop' ? stopReasonsList : defectReasonsList;
+
+        if (!code || !name) {
             alert(t('settingsExt.general.alertEnterIdReason'));
             return;
         }
-        const newList = [...stopReasonsList, { id: newStopId, reason: newStopReason, category: newStopCategory || 'General' }];
-        setStopReasonsList(newList);
-        localStorage.setItem('stopReasonsList', JSON.stringify(newList));
 
-        // Reset
-        setNewStopId('');
-        setNewStopReason('');
-        setNewStopCategory('');
-    };
+        try {
+            await createReasonCode(type, { code, name, category, displayOrder: list.length + 1 });
+            await (type === 'stop' ? reloadStopReasons() : reloadDefectReasons());
+        } catch (err) {
+            console.warn('新增原因失敗,改以離線模式保存', err);
+            saveReasonsOffline(type, [...list, { id: code, code, name, category }]);
+        }
 
-    const handleDeleteStopReason = (id) => {
-        if (confirm(t('settingsExt.general.confirmDeleteReason'))) {
-            const newList = stopReasonsList.filter(r => r.id !== id);
-            setStopReasonsList(newList);
-            localStorage.setItem('stopReasonsList', JSON.stringify(newList));
+        if (type === 'stop') {
+            setNewStopId('');
+            setNewStopReason('');
+            setNewStopCategory('');
+        } else {
+            setNewDefectId('');
+            setNewDefectReason('');
+            setNewDefectCategory('');
         }
     };
 
-    const handleImportStopReasons = () => {
-        alert(t('settingsExt.general.alertImportSuccess'));
-        const newList = [
-            ...stopReasonsList,
-            { id: '003', reason: '機械故障 (Imported)', category: 'Machine' },
-            { id: '004', reason: '缺墨 (Imported)', category: 'Material' }
-        ];
-        setStopReasonsList(newList);
-        localStorage.setItem('stopReasonsList', JSON.stringify(newList));
-    };
+    /**
+     * 刪除一筆原因(後端為軟刪除)
+     * @param {string} type - 'stop' | 'defect'
+     * @param {string} id - 原因 Id
+     * @returns {Promise<void>}
+     * @description 呼叫 DELETE /api/reasons/{id},成功後 reload();失敗時退回 localStorage 並提示離線模式。
+     */
+    const removeReason = async (type, id) => {
+        if (!confirm(t('settingsExt.general.confirmDeleteReason'))) return;
 
-    const handleAddDefectReason = () => {
-        if (!newDefectId || !newDefectReason) {
-            alert(t('settingsExt.general.alertEnterIdReason'));
-            return;
-        }
-        const newList = [...defectReasonsList, { id: newDefectId, reason: newDefectReason, category: newDefectCategory || 'General' }];
-        setDefectReasonsList(newList);
-        localStorage.setItem('defectReasonsList', JSON.stringify(newList));
+        const list = type === 'stop' ? stopReasonsList : defectReasonsList;
 
-        // Reset
-        setNewDefectId('');
-        setNewDefectReason('');
-        setNewDefectCategory('');
-    };
-
-    const handleDeleteDefectReason = (id) => {
-        if (confirm(t('settingsExt.general.confirmDeleteReason'))) {
-            const newList = defectReasonsList.filter(r => r.id !== id);
-            setDefectReasonsList(newList);
-            localStorage.setItem('defectReasonsList', JSON.stringify(newList));
+        try {
+            await deleteReasonCode(id);
+            await (type === 'stop' ? reloadStopReasons() : reloadDefectReasons());
+        } catch (err) {
+            console.warn('刪除原因失敗,改以離線模式保存', err);
+            saveReasonsOffline(type, list.filter(r => r.id !== id));
         }
     };
 
-    const handleImportDefectReasons = () => {
-        alert(t('settingsExt.general.alertImportSuccess'));
-        const newList = [
-            ...defectReasonsList,
-            { id: 'D02', reason: '顏色偏差 (Imported)', category: 'Color' }
-        ];
-        setDefectReasonsList(newList);
-        localStorage.setItem('defectReasonsList', JSON.stringify(newList));
+    /**
+     * 匯入示範原因(行為維持不變,但改走同一組 API)
+     * @param {string} type - 'stop' | 'defect'
+     * @returns {Promise<void>}
+     */
+    const importReasons = async (type) => {
+        const samples = type === 'stop'
+            ? [
+                { code: '003', name: '機械故障 (Imported)', category: 'Machine' },
+                { code: '004', name: '缺墨 (Imported)', category: 'Material' },
+            ]
+            : [
+                { code: 'D02', name: '顏色偏差 (Imported)', category: 'Color' },
+            ];
+
+        const list = type === 'stop' ? stopReasonsList : defectReasonsList;
+
+        try {
+            for (let i = 0; i < samples.length; i++) {
+                await createReasonCode(type, { ...samples[i], displayOrder: list.length + i + 1 });
+            }
+            await (type === 'stop' ? reloadStopReasons() : reloadDefectReasons());
+            alert(t('settingsExt.general.alertImportSuccess'));
+        } catch (err) {
+            console.warn('匯入原因失敗,改以離線模式保存', err);
+            saveReasonsOffline(type, [...list, ...samples.map(x => ({ id: x.code, ...x }))]);
+        }
     };
+
+    const handleAddStopReason = () => addReason('stop');
+    const handleDeleteStopReason = (id) => removeReason('stop', id);
+    const handleImportStopReasons = () => importReasons('stop');
+
+    const handleAddDefectReason = () => addReason('defect');
+    const handleDeleteDefectReason = (id) => removeReason('defect', id);
+    const handleImportDefectReasons = () => importReasons('defect');
 
 
 
@@ -572,6 +628,11 @@ const GeneralTab = () => {
 
             <div className={styles.settingGroup}>
                 <h4>{t('settingsExt.general.stopReasonSettings')}</h4>
+                {stopReasonsError && (
+                    <p style={{ fontSize: '0.85rem', color: '#b45309', margin: '0 0 8px' }}>
+                        {t('settingsExt.general.offlineModeNotice')}
+                    </p>
+                )}
                 <div className={styles.buttonGroup}>
                     {/* <button className={styles.actionButton} onClick={handleAddStopReason}>新增原因 (Add Reason)</button> */}
                     <button className={styles.actionButton} onClick={handleImportStopReasons}>{t('settingsExt.common.import')}</button>
@@ -589,8 +650,8 @@ const GeneralTab = () => {
                         <tbody>
                             {stopReasonsList.map(reason => (
                                 <tr key={reason.id}>
-                                    <td className={styles.td}>{reason.id}</td>
-                                    <td className={styles.td}>{reason.reason}</td>
+                                    <td className={styles.td}>{reason.code}</td>
+                                    <td className={styles.td}>{reason.name}</td>
                                     <td className={styles.td}>{reason.category}</td>
                                     <td className={styles.td}>
                                         <button className={styles.miniBtn} onClick={() => handleDeleteStopReason(reason.id)}>{t('settingsExt.common.delete')}</button>
@@ -611,6 +672,11 @@ const GeneralTab = () => {
 
             <div className={styles.settingGroup}>
                 <h4>{t('settingsExt.general.defectReasonSettings')}</h4>
+                {defectReasonsError && (
+                    <p style={{ fontSize: '0.85rem', color: '#b45309', margin: '0 0 8px' }}>
+                        {t('settingsExt.general.offlineModeNotice')}
+                    </p>
+                )}
                 <div className={styles.buttonGroup}>
                     {/* <button className={styles.actionButton} onClick={handleAddDefectReason}>新增原因 (Add Reason)</button> */}
                     <button className={styles.actionButton} onClick={handleImportDefectReasons}>{t('settingsExt.common.import')}</button>
@@ -628,8 +694,8 @@ const GeneralTab = () => {
                         <tbody>
                             {defectReasonsList.map(reason => (
                                 <tr key={reason.id}>
-                                    <td className={styles.td}>{reason.id}</td>
-                                    <td className={styles.td}>{reason.reason}</td>
+                                    <td className={styles.td}>{reason.code}</td>
+                                    <td className={styles.td}>{reason.name}</td>
                                     <td className={styles.td}>{reason.category}</td>
                                     <td className={styles.td}>
                                         <button className={styles.miniBtn} onClick={() => handleDeleteDefectReason(reason.id)}>{t('settingsExt.common.delete')}</button>

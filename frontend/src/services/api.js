@@ -42,10 +42,11 @@ export const reorderOrders = async (orderedIds) => {
     return response.data;
 };
 
-// 全量鏡像同步(Phase 2):上傳整份排程(後端 Order payload 陣列),
-// 後端依序 upsert + 刪除清單外的列,回傳正規清單。
-export const syncSchedule = async (orders) => {
-    const response = await api.post('/orders/sync', orders);
+// 排程同步(S1 / DF-04):上傳 { orders, deleteIds }。
+// 後端只 upsert orders 內的列(第 i 筆 sequence = i)並刪除 deleteIds 明確列出的列,
+// 清單外的既有排程一律保留(不再全量鏡像刪除)。回傳同步後的正規清單。
+export const syncSchedule = async (orders, deleteIds = []) => {
+    const response = await api.post('/orders/sync', { orders, deleteIds });
     return response.data;
 };
 
@@ -122,5 +123,97 @@ export const getBoxTypes = async () => {
 
 export const updateBoxTypes = async (types) => {
     const response = await api.put('/settings/box-types', types);
+    return response.data;
+};
+
+// ---------------------------------------------------------------------------
+// S3 / F6:完工實績落地後端(後端才是實績的權威來源,localStorage 降級為離線快取)
+// ---------------------------------------------------------------------------
+
+/**
+ * 送出一筆完工實績到後端
+ * @param {Object} payload - 完工實績本體,形狀見 docs/spec20260903-s3-v1.md §F2
+ *                           (含 clientRecordId 冪等鍵、defects、stops)
+ * @returns {Promise<Object>} 後端回應,含 productionDate / oee / availabilityRate 等後端算出的欄位
+ * @description 同一 clientRecordId 重送會得到 duplicated: true 且資料庫不長第二筆(冪等)。
+ */
+export const createProductionCompletion = async (payload) => {
+    const response = await api.post('/production/completions', payload);
+    return response.data;
+};
+
+/**
+ * 依工廠日區間查詢完工實績
+ * @param {Object} params - 查詢條件
+ * @param {string} [params.from] - 起始工廠日 YYYY-MM-DD(含)
+ * @param {string} [params.to] - 結束工廠日 YYYY-MM-DD(含)
+ * @param {number} [params.page=1] - 頁碼
+ * @param {number} [params.pageSize=50] - 每頁筆數(後端上限 500)
+ * @returns {Promise<Array>} 完工實績清單(含 defects / stops 明細)
+ */
+export const getProductionCompletions = async ({ from, to, page = 1, pageSize = 50 } = {}) => {
+    const params = { page, pageSize };
+    if (from) params.from = from;
+    if (to) params.to = to;
+    const response = await api.get('/production/completions', { params });
+    return response.data;
+};
+
+/**
+ * 取得工廠時區與日界設定
+ * @returns {Promise<{ timeZone: string, dayBoundaryHour: number }>} 工廠日換算所需參數
+ * @description 前端算本地快取紀錄的工廠日時取得與後端同一組參數,不必把 8 寫死在前端。
+ */
+export const getFactoryTimeSettings = async () => {
+    const response = await api.get('/settings/factory-time');
+    return response.data;
+};
+
+// ---------------------------------------------------------------------------
+// S3 / F8:停機 / 不良原因主檔(設定頁與現場彈窗共用同一份資料)
+// ---------------------------------------------------------------------------
+
+/**
+ * 取得指定類別的原因清單
+ * @param {string} type - 'stop' | 'defect'
+ * @param {boolean} [includeInactive=false] - 是否含已軟刪除的原因
+ * @returns {Promise<Array>} 依 displayOrder → code 升冪的原因清單
+ */
+export const getReasonCodes = async (type, includeInactive = false) => {
+    const response = await api.get('/reasons', { params: { type, includeInactive } });
+    return response.data;
+};
+
+/**
+ * 建立一筆原因
+ * @param {string} type - 'stop' | 'defect'
+ * @param {Object} reason - { code, name, category, displayOrder }
+ * @returns {Promise<Object>} 建立後的原因
+ * @description 同類別下代碼重複時後端回 409,呼叫端需自行捕捉。
+ */
+export const createReasonCode = async (type, reason) => {
+    const response = await api.post('/reasons', { type, ...reason });
+    return response.data;
+};
+
+/**
+ * 更新一筆原因(只改 name / category / displayOrder / isActive)
+ * @param {string} id - 原因 Id
+ * @param {Object} reason - 要更新的欄位
+ * @returns {Promise<Object>} 後端回應(204 無本體)
+ */
+export const updateReasonCode = async (id, reason) => {
+    const response = await api.put(`/reasons/${id}`, reason);
+    return response.data;
+};
+
+/**
+ * 軟刪除一筆原因
+ * @param {string} id - 原因 Id
+ * @returns {Promise<Object>} 後端回應(204 無本體)
+ * @description 後端為軟刪除(isActive = false),歷史報表仍讀得到當時的原因名稱。
+ */
+export const deleteReasonCode = async (id) => {
+    const response = await api.delete(`/reasons/${id}`);
     return response.data;
 };

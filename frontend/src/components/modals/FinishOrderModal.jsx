@@ -1,6 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../../modules/language/LanguageContext';
+import { useReasonCodes } from '../../hooks/useReasonCodes';
 import styles from './ModalStyles.module.css';
+
+/**
+ * 不良原因的內建預設清單(S3 / F8 的最後一道降級)
+ * @param {Function} t - i18n 翻譯函式
+ * @returns {Array} 四筆不良原因 { code, name }
+ * @description 原本是元件內 useState 寫死的四筆,改為後端主檔的 fallback。
+ *              名稱仍走 i18n 鍵,語言切換時內建預設也跟著翻譯。
+ */
+const buildDefaultDefectReasons = (t) => [
+    { code: 'A01', name: t('modalExt.finishOrder.defectFlat') || '壓扁' },
+    { code: 'A02', name: t('modalExt.finishOrder.defectPrint') || '印刷不良' },
+    { code: 'A03', name: t('modalExt.finishOrder.defectSelf') || '自檢不良' },
+    { code: 'A04', name: t('modalExt.finishOrder.defectOver') || '超量' },
+];
 
 const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
     const { t } = useLanguage();
@@ -19,13 +34,11 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
         targetQty: 0,
     });
 
-    // 不良類別以 i18n 鍵儲存,渲染時再翻譯,語言切換即時反映
-    const [defects, setDefects] = useState([
-        { id: 'A01', reasonKey: 'modalExt.finishOrder.defectFlat', qty: 0 },
-        { id: 'A02', reasonKey: 'modalExt.finishOrder.defectPrint', qty: 0 },
-        { id: 'A03', reasonKey: 'modalExt.finishOrder.defectSelf', qty: 0 },
-        { id: 'A04', reasonKey: 'modalExt.finishOrder.defectOver', qty: 0 },
-    ]);
+    // S3 / F8:不良品表格改由後端原因主檔產生列;API 不可用時退回內建四筆
+    const { reasons: defectReasons } = useReasonCodes('defect', buildDefaultDefectReasons(t));
+
+    // 各代碼對應的輸入數量;列由 defectReasons 決定,qty 一律初始 0
+    const [defectQtys, setDefectQtys] = useState({});
 
     // 修正:原 effect 依賴 [isOpen, initialData],父層(Dashboard)每秒重建 initialData 物件,
     // 導致 goodQty 每秒被即時計數覆寫、操作員無法手動修改。改為只在 closed→open 邊緣以最新
@@ -35,6 +48,8 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
 
     useEffect(() => {
         if (isOpen) {
+            // S3 / F8:每次開啟都把不良數量歸零,避免上一張工單的輸入殘留
+            setDefectQtys({});
             const init = initialDataRef.current;
             if (init) {
                 setFormData(prev => ({
@@ -57,9 +72,27 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
         }));
     };
 
-    const handleDefectChange = (id, newQty) => {
-        setDefects(prev => prev.map(d => d.id === id ? { ...d, qty: Number(newQty) } : d));
+    /**
+     * 更新某一不良原因的數量
+     * @param {string} code - 不良原因代碼
+     * @param {string|number} newQty - 使用者輸入的數量
+     * @returns {void}
+     */
+    const handleDefectChange = (code, newQty) => {
+        setDefectQtys(prev => ({ ...prev, [code]: Number(newQty) || 0 }));
     };
+
+    /**
+     * 組出送出用的不良明細陣列
+     * @returns {Array} [{ code, reason, qty }]
+     * @description 形狀對齊後端 DTO(docs/spec20260903-s3-v1.md §F2);
+     *              數量為 0 的列也照實送出 —— 0 也是資訊。
+     */
+    const buildDefectsPayload = () => defectReasons.map(r => ({
+        code: r.code,
+        reason: r.name,
+        qty: Number(defectQtys[r.code]) || 0,
+    }));
 
     const handleSubmit = () => {
         // Validation: If Good Qty < Target Qty, Shortage Reason is required
@@ -82,7 +115,7 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
             return;
         }
 
-        onConfirm({ ...formData, defects });
+        onConfirm({ ...formData, defects: buildDefectsPayload() });
         onClose();
     };
 
@@ -205,14 +238,14 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {defects.map(d => (
-                                    <tr key={d.id}>
-                                        <td style={{ border: '1px solid #ccc', padding: '5px' }}>{d.id} {t(d.reasonKey)}</td>
+                                {defectReasons.map(d => (
+                                    <tr key={d.code}>
+                                        <td style={{ border: '1px solid #ccc', padding: '5px' }}>{d.code} {d.name}</td>
                                         <td style={{ border: '1px solid #ccc', padding: '0' }}>
                                             <input
                                                 type="number"
-                                                value={d.qty}
-                                                onChange={(e) => handleDefectChange(d.id, e.target.value)}
+                                                value={defectQtys[d.code] ?? 0}
+                                                onChange={(e) => handleDefectChange(d.code, e.target.value)}
                                                 style={{ width: '100%', border: 'none', padding: '5px' }}
                                             />
                                         </td>

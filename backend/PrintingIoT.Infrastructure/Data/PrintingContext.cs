@@ -15,6 +15,14 @@ public class PrintingContext : DbContext
     public DbSet<MachineSection> MachineSections { get; set; }
     public DbSet<Product> Products { get; set; }
 
+    // S3 / F1:完工實績(主表 + 不良明細 + 停機明細)
+    public DbSet<ProductionCompletion> ProductionCompletions { get; set; }
+    public DbSet<ProductionDefect> ProductionDefects { get; set; }
+    public DbSet<ProductionStop> ProductionStops { get; set; }
+
+    // S3 / F5:停機 / 不良原因主檔
+    public DbSet<ReasonCode> ReasonCodes { get; set; }
+
     // Auth (Phase 4.2)
     public DbSet<PrintingIoT.Core.Entities.Auth.User> Users { get; set; }
     public DbSet<PrintingIoT.Core.Entities.Auth.Role> Roles { get; set; }
@@ -27,6 +35,39 @@ public class PrintingContext : DbContext
         modelBuilder.Entity<ProductionLog>()
             .HasIndex(p => p.Timestamp)
             .IsDescending();
+
+        // S1 / ERP-02:產品碼唯一索引(ERP 推單自動建立佔位產品時,靠它擋掉同碼重複列)
+        modelBuilder.Entity<Product>()
+            .HasIndex(p => p.ProductCode)
+            .IsUnique();
+
+        // S3 / F1:ClientRecordId 唯一索引 —— 冪等的落地保證(同一筆完工重送不會長第二列)
+        modelBuilder.Entity<ProductionCompletion>()
+            .HasIndex(c => c.ClientRecordId)
+            .IsUnique();
+
+        // S3 / F1:報表以工廠日查詢,加索引
+        modelBuilder.Entity<ProductionCompletion>()
+            .HasIndex(c => c.ProductionDate);
+
+        // S3 / F1:兩張子表對 CompletionId 的 FK,主表刪除時連帶刪除明細。
+        // 刻意不對 Order 建立導覽屬性(只留 OrderId)——實績必須比工單活得久。
+        modelBuilder.Entity<ProductionCompletion>()
+            .HasMany(c => c.Defects)
+            .WithOne()
+            .HasForeignKey(d => d.CompletionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ProductionCompletion>()
+            .HasMany(c => c.Stops)
+            .WithOne()
+            .HasForeignKey(s => s.CompletionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // S3 / F5:(Type, Code) 複合唯一索引
+        modelBuilder.Entity<ReasonCode>()
+            .HasIndex(r => new { r.Type, r.Code })
+            .IsUnique();
 
         // Auth — Unique Username
         modelBuilder.Entity<PrintingIoT.Core.Entities.Auth.User>()

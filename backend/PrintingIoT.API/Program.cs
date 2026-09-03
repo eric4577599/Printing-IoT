@@ -78,6 +78,10 @@ builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
+// S3:完工實績、原因主檔與工廠時區(工廠時區為無狀態設定,註冊為 Singleton)
+builder.Services.AddScoped<IProductionService, ProductionService>();
+builder.Services.AddScoped<IReasonService, ReasonService>();
+builder.Services.AddSingleton<IFactoryTimeProvider, FactoryTimeProvider>();
 
 if (!builder.Environment.IsEnvironment("Testing"))
 {

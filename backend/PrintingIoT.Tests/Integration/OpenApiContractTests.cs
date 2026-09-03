@@ -39,4 +39,32 @@ public class OpenApiContractTests : IClassFixture<WebApplicationFactory<Program>
         Assert.True(root.TryGetProperty("paths", out _), "Schema must contain 'paths' block");
         Assert.True(root.TryGetProperty("components", out _), "Schema must contain 'components' block");
     }
+
+    /// <summary>
+    /// S3:新增的端點必須出現在 OpenAPI 的 paths 內(規格 §12 DoD 第 5 項)。
+    /// 輸入:無;輸出:無(斷言)。
+    /// 邏輯:抓 swagger.json,逐一確認完工實績、原因主檔與工廠時間三組路徑都被登錄。
+    /// </summary>
+    [Theory]
+    [InlineData("/api/Production/completions")]
+    [InlineData("/api/Production/completions/{id}")]
+    [InlineData("/api/Reasons")]
+    [InlineData("/api/Reasons/{id}")]
+    [InlineData("/api/settings/factory-time")]
+    public async Task SwaggerEndpoint_ContainsS3Paths(string expectedPath)
+    {
+        var client = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Testing");
+        }).CreateClient();
+
+        var response = await client.GetAsync("/swagger/v1/swagger.json");
+        response.EnsureSuccessStatusCode();
+
+        using var jsonDoc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var paths = jsonDoc.RootElement.GetProperty("paths");
+
+        Assert.True(paths.TryGetProperty(expectedPath, out _),
+            $"OpenAPI paths 應包含 {expectedPath}");
+    }
 }

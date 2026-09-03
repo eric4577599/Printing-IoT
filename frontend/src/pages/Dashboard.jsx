@@ -8,9 +8,37 @@ import OrderDetailsModal from '../components/modals/OrderDetailsModal';
 import StopReasonModal from '../components/modals/StopReasonModal';
 import FinishOrderModal from '../components/modals/FinishOrderModal';
 import {
-    setCurrentOrder, clearCurrentOrder, getRealtimeData, getMachineSections // Imported
+    setCurrentOrder, clearCurrentOrder, getRealtimeData, getMachineSections, // Imported
+    updateOrderStatus, createProductionCompletion, getFactoryTimeSettings
 } from '../services/api';
+import { finishHeadOrder, promoteSelectedToHead, returnCurrentToQueue } from '../utils/orderQueue';
+import { isGuid } from '../utils/orderMapper';
+import { calculateOEE, durationToMinutes } from '../utils/reportUtils';
+import { resolveFactoryDate, DEFAULT_DAY_BOUNDARY_HOUR, DEFAULT_TIME_ZONE } from '../utils/factoryDate';
 import { useLanguage } from '../modules/language/LanguageContext';
+
+/**
+ * 修補 localStorage 內某一筆生產歷史紀錄
+ * @param {number|string} recordId - productionRecord.id
+ * @param {Object} patch - 要覆寫的欄位
+ * @returns {boolean} 是否找到並更新
+ * @description S3 / F6:後端落地成功後,把後端算出的工廠日與四個率值寫回離線快取,
+ *              讓報表(本輪仍讀 localStorage)顯示的是後端的權威數字。
+ *              寫入失敗只記 warning,不得影響現場流程。
+ */
+const patchProductionRecord = (recordId, patch) => {
+    try {
+        const history = JSON.parse(localStorage.getItem('productionHistory') || '[]');
+        const index = history.findIndex(r => String(r.id) === String(recordId));
+        if (index === -1) return false;
+        history[index] = { ...history[index], ...patch };
+        localStorage.setItem('productionHistory', JSON.stringify(history));
+        return true;
+    } catch (err) {
+        console.warn('回寫生產歷史紀錄失敗', err);
+        return false;
+    }
+};
 
 const Dashboard = () => {
     const { t } = useLanguage();
@@ -241,6 +269,28 @@ const Dashboard = () => {
 
     const [showFinishModal, setShowFinishModal] = useState(false);
 
+    // S3 / F7:工廠時區與日界(啟動時向後端取一次,取不到就用預設 8 / Asia/Taipei)。
+    // 用 ref 供 handleConfirmFinish 讀取,避免閉包捕捉到過期的設定值。
+    const factoryTimeRef = useRef({ dayBoundaryHour: DEFAULT_DAY_BOUNDARY_HOUR, timeZone: DEFAULT_TIME_ZONE });
+
+    useEffect(() => {
+        let cancelled = false;
+        getFactoryTimeSettings()
+            .then(settings => {
+                if (cancelled || !settings) return;
+                factoryTimeRef.current = {
+                    dayBoundaryHour: Number.isInteger(settings.dayBoundaryHour)
+                        ? settings.dayBoundaryHour
+                        : DEFAULT_DAY_BOUNDARY_HOUR,
+                    timeZone: settings.timeZone || DEFAULT_TIME_ZONE,
+                };
+            })
+            .catch(err => {
+                console.warn('取得工廠時間設定失敗,改用預設 08:00 / Asia/Taipei', err);
+            });
+        return () => { cancelled = true; };
+    }, []);
+
     const handleFinish = () => {
         // 修正:F4 完工透過 currentDataRef 取即時 di1,避免 keydown effect 閉包捕捉到過期 currentData 導致永遠判定「生產數量 0」
         const currentCount = Math.floor(currentDataRef.current.di1 - resetOffset);
@@ -280,11 +330,30 @@ const Dashboard = () => {
         // --- 儲存生產歷史記錄到 localStorage ---
         // 計算平均車速：運轉時間 > 0 時，用生產數量 / 運轉時間(分鐘)
         const avgSpeedCalc = jobRunTime > 0 ? Math.round(currentCount / (jobRunTime / 60)) : 0;
-        // 計算 OEE：簡化公式 = (實際產量 / 目標產量) × (運轉時間 / (運轉時間 + 停車時間)) × 100
-        const totalTime = jobRunTime + jobStopTime;
-        const availability = totalTime > 0 ? jobRunTime / totalTime : 1;
-        const performance = finishedOrder.qty > 0 ? Math.min(1, currentCount / finishedOrder.qty) : 1;
-        const oeeCalc = Math.round(availability * performance * 100);
+
+        // S3 / GAP-05:三個計時器換成分鐘(後端與報表都以分鐘為單位)
+        const prepTimeMinutes = Math.round(prepTimeSeconds / 60 * 10) / 10;
+        const runTimeMinutes = Math.round(jobRunTime / 60 * 10) / 10;
+        const stopTimeMinutes = Math.round(jobStopTime / 60 * 10) / 10;
+        const goodQtyValue = data.goodQty || currentCount;
+        const targetQtyValue = finishedOrder.qty || 0;
+
+        // S3 / GAP-05:行內的簡化 OEE 公式整段移除,改呼叫唯一的 calculateOEE
+        //(舊公式:效能分子用含不良品的累計計數、分母為零時以 1 假裝滿分、且沒有良率因子)
+        const oeeResult = calculateOEE({
+            runTime: runTimeMinutes,
+            stopTime: stopTimeMinutes,
+            prepTime: prepTimeMinutes,
+            goodQty: goodQtyValue,
+            defectQty,
+            targetQty: targetQtyValue,
+        });
+        const oeeCalc = oeeResult.oee;
+
+        // S3 / F7:完工日改用工廠日規則(舊寫法 toISOString 取的是 UTC 日,
+        // 台北 00:00–08:00 完工的大夜班會落在前一個 UTC 日)
+        const finishedAtIso = new Date().toISOString();
+        const factoryDate = resolveFactoryDate(finishedAtIso, factoryTimeRef.current);
 
         const productionRecord = {
             id: Date.now(),
@@ -297,18 +366,28 @@ const Dashboard = () => {
             flute: finishedOrder.flute || '-',
             operator: data.operator || user?.name || 'Unknown',
             shift: user?.shift || 'Day',
-            targetQty: finishedOrder.qty || 0,
-            goodQty: data.goodQty || currentCount,
+            targetQty: targetQtyValue,
+            goodQty: goodQtyValue,
             defectQty: defectQty,
-            prepTime: Math.round(prepTimeSeconds / 60 * 10) / 10,   // 準備時間（分鐘，保留1位小數）
-            runTime: Math.round(jobRunTime / 60 * 10) / 10,         // 運轉時間（分鐘）
-            stopTime: Math.round(jobStopTime / 60 * 10) / 10,       // 停車時間（分鐘）
+            prepTime: prepTimeMinutes,                               // 準備時間（分鐘，保留1位小數）
+            runTime: runTimeMinutes,                                 // 運轉時間（分鐘）
+            stopTime: stopTimeMinutes,                               // 停車時間（分鐘）
             stopCount: stopReasons.length,                           // 停車次數
             avgSpeed: avgSpeedCalc,                                  // 平均車速（張/分）
+            availabilityRate: oeeResult.availability,                // 稼動率（%）
+            performanceRate: oeeResult.performance,                  // 效能（%）
+            qualityRate: oeeResult.quality,                          // 良率（%）
             oee: oeeCalc,                                            // OEE 百分比
-            date: new Date().toISOString().split('T')[0],            // 生產日期 (YYYY-MM-DD)
-            finishedAt: new Date().toISOString(),                    // 完工時間戳
+            date: factoryDate,                                       // 工廠日 (YYYY-MM-DD)
+            finishedAt: finishedAtIso,                               // 完工時間戳
+            syncState: 'pending',                                    // S3 / F6:後端落地成功後改為 'synced'
+            defects: (data.defects || []).map(d => ({                // 不良明細（形狀對齊後端 DTO）
+                code: d.code,
+                reason: d.reason,
+                qty: Number(d.qty) || 0
+            })),
             stopReasons: stopReasons.map(r => ({                     // 停車原因記錄
+                code: r.code || '',
                 time: r.time,
                 duration: r.duration,
                 reason: r.reason
@@ -319,12 +398,58 @@ const Dashboard = () => {
             const history = JSON.parse(localStorage.getItem('productionHistory') || '[]');
             history.unshift(productionRecord);
             // 限制保留最近 1000 筆記錄，避免 localStorage 超容量
+            // (S3 起這裡只是離線快取,真相在後端 —— 截斷不再等於資料遺失)
             if (history.length > 1000) history.length = 1000;
             localStorage.setItem('productionHistory', JSON.stringify(history));
             addLog(`Production history saved: ${finishedOrder.orderNo}`);
         } catch (err) {
             console.error('Failed to save production history:', err);
         }
+        // -----------------------------------------
+
+        // --- S3 / F6:完工實績落地後端(後端才是實績的權威來源)---
+        const completionPayload = {
+            clientRecordId: String(productionRecord.id),
+            orderId: isGuid(finishedOrder.id) ? finishedOrder.id : null,
+            orderNumber: productionRecord.orderNo === '-' ? '' : productionRecord.orderNo,
+            deviceId: currentDataRef.current?.device_id || '',
+            operator: productionRecord.operator,
+            shift: productionRecord.shift,
+            targetQty: targetQtyValue,
+            goodQty: goodQtyValue,
+            prepTimeMinutes,
+            runTimeMinutes,
+            stopTimeMinutes,
+            avgSpeed: avgSpeedCalc,
+            shortageReason: data.shortageReason || '',
+            completedAt: finishedAtIso,
+            defects: productionRecord.defects,
+            stops: stopReasons.map(r => ({
+                code: r.code || '',
+                reason: r.reason,
+                durationMinutes: durationToMinutes(r.duration),
+            })),
+        };
+
+        createProductionCompletion(completionPayload)
+            .then(result => {
+                // 後端算出的工廠日與四個率值覆寫回本地紀錄,避免兩份數字打架
+                patchProductionRecord(productionRecord.id, {
+                    syncState: 'synced',
+                    backendId: result.id,
+                    date: result.productionDate || productionRecord.date,
+                    oee: result.oee,
+                    availabilityRate: result.availabilityRate,
+                    performanceRate: result.performanceRate,
+                    qualityRate: result.qualityRate,
+                });
+                addLog(`Completion synced to backend: ${result.id}`);
+            })
+            .catch(err => {
+                // 斷網 / 4xx / 5xx 一律不阻擋現場:不 alert、不中止換單,本地紀錄留 pending
+                console.warn('完工實績落地後端失敗,本地紀錄標記為 pending', err);
+                addLog('Completion sync FAILED (kept locally as pending)');
+            });
         // -----------------------------------------
 
         // --- Publish to MQTT for Backend Storage ---
@@ -355,7 +480,9 @@ const Dashboard = () => {
         // 修正:原僅 orders.length > 1 才處理,佇列剩最後 1 筆完工時工單不移除/計數不歸零/後端不清除。
         // slice(1) 對長度 1 會得到空陣列,可同時處理「換下一筆」與「完成最後一筆」兩種情境。
         if (orders.length >= 1) {
-            const nextOrders = orders.slice(1);
+            // S1 / v2.0:完工單不從後端刪除(它是生產紀錄),改回寫狀態為 Completed;
+            // 載入端由 isSchedulableBackendOrder 過濾,避免它下次開頁以「執行中」回到佇列。
+            const { nextOrders } = finishHeadOrder(orders, { updateStatus: updateOrderStatus });
             setOrders(nextOrders);
             setResetOffset(currentDataRef.current.di1);
             if (orders[1] && selectedOrderId === orders[1].id) setSelectedOrderId(null);
@@ -408,7 +535,7 @@ const Dashboard = () => {
             durationStr = `${mm}:${ss}`;
         }
 
-        setStopReasons(prev => [{ time: startTimeStr, duration: durationStr, reason: reason.name }, ...prev]);
+        setStopReasons(prev => [{ code: reason.code || '', time: startTimeStr, duration: durationStr, reason: reason.name }, ...prev]);
         addLog(`Stop Reason Logged: ${reason.name} (${durationStr})`);
         setStopStartTime(null);
     };
@@ -455,11 +582,9 @@ const Dashboard = () => {
                             if (selectedOrderId) {
                                 const idx = orders.findIndex(o => o.id === selectedOrderId);
                                 if (idx > 0) {
-                                    const newOrders = [...orders];
-                                    // Move selected to 0, remove placeholder
-                                    const selected = newOrders[idx];
-                                    newOrders[0] = { ...selected, status: 'Running' };
-                                    newOrders.splice(idx, 1); // Remove from queue
+                                    // Move selected to 0, remove placeholder(行為保持重構:陣列變換抽到 orderQueue)
+                                    const selected = orders[idx];
+                                    const newOrders = promoteSelectedToHead(orders, selectedOrderId);
 
                                     setOrders(newOrders);
 
@@ -551,8 +676,7 @@ const Dashboard = () => {
                         }
                         if (orders.length > 0 && orders[0].id !== 'placeholder') {
                             const curLen = currentDataRef.current.di1;
-                            const newOrders = [...orders];
-                            const returnedOrder = { ...newOrders[0], status: 'Queued' };
+                            const returnedOrder = { ...orders[0], status: 'Queued' };
 
                             // Force placeholder to ensure Green Box becomes EMPTY (Idle) as requested
                             // "Long green box should have NO order inside"
@@ -566,21 +690,13 @@ const Dashboard = () => {
                                 status: 'Idle'
                             };
 
-                            if (autoNext && newOrders.length > 1) {
-                                // Auto Next ON: Swap with next available
-                                // Even in Auto Next, maybe we should transiently show empty? 
-                                // Standard logic: Auto Next means immediacy. 
-                                // But if user wants "Empty", maybe Auto Next implies *immediate* replacement. 
-                                // Let's keep Auto Next as "Swap" (Immediate fill). 
-                                // Only Manual Return (F10 default) creates the "Empty" state.
-                                newOrders[0] = { ...newOrders[1], status: 'Running' };
-                                newOrders[1] = returnedOrder;
+                            // 行為保持重構:陣列變換抽到 orderQueue.returnCurrentToQueue,
+                            // Auto Next ON 為「與次筆交換」(立即遞補)、Manual 為「插入 placeholder」(綠框留空)。
+                            const newOrders = returnCurrentToQueue(orders, { autoNext, placeholder });
+
+                            if (autoNext && orders.length > 1) {
                                 addLog(`F10 (Auto): Swapped ${returnedOrder.id} with ${newOrders[0].id}`);
                             } else {
-                                // Manual / Default Return:
-                                // Move current [0] to [1], Insert Placeholder at [0]
-                                newOrders.splice(0, 0, placeholder);
-                                newOrders[1] = returnedOrder;
                                 addLog(`F10: Returned ${returnedOrder.id} to queue. Box is Empty.`);
                             }
 

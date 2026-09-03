@@ -4,6 +4,7 @@ import {
     fromBackendOrder,
     sortBySequence,
     isGuid,
+    isSchedulableBackendOrder,
     BACKEND_STATUS,
 } from '../../utils/orderMapper';
 
@@ -67,6 +68,48 @@ describe('toBackendOrder', () => {
     });
 });
 
+// S1 / DF-05:目標長度與楞別不再被鏡像同步歸零 —— 有值才送,沒有就整個鍵不輸出。
+describe('toBackendOrder — 楞別與目標長度(DF-05)', () => {
+    it('有 flute 時輸出 paperSpec', () => {
+        const be = toBackendOrder({ ...richOrder, flute: 'AB' }, 0);
+        expect(be.paperSpec).toBe('AB');
+    });
+
+    it('paperSpec 優先於 flute', () => {
+        const be = toBackendOrder({ ...richOrder, flute: 'AB', paperSpec: 'BC' }, 0);
+        expect(be.paperSpec).toBe('BC');
+    });
+
+    it('沒有楞別資訊時 payload 不含 paperSpec 鍵(後端收到 null → 不覆寫)', () => {
+        const be = toBackendOrder(richOrder, 0);
+        expect('paperSpec' in be).toBe(false);
+    });
+
+    it('楞別為空字串時同樣不輸出該鍵', () => {
+        const be = toBackendOrder({ ...richOrder, flute: '' }, 0);
+        expect('paperSpec' in be).toBe(false);
+    });
+
+    it('有 targetLength 時輸出數字', () => {
+        const be = toBackendOrder({ ...richOrder, targetLength: 5000 }, 0);
+        expect(be.targetLength).toBe(5000);
+        expect(typeof be.targetLength).toBe('number');
+    });
+
+    it('targetLen 別名也能輸出', () => {
+        expect(toBackendOrder({ ...richOrder, targetLen: '1200' }, 0).targetLength).toBe(1200);
+    });
+
+    it('沒有目標長度時 payload 不含 targetLength 鍵,不會送 0', () => {
+        const be = toBackendOrder(richOrder, 0);
+        expect('targetLength' in be).toBe(false);
+    });
+
+    it('目標長度非數值時不輸出該鍵', () => {
+        expect('targetLength' in toBackendOrder({ ...richOrder, targetLength: 'abc' }, 0)).toBe(false);
+    });
+});
+
 describe('isGuid', () => {
     it('辨識 GUID 字串', () => {
         expect(isGuid('11111111-1111-1111-1111-111111111111')).toBe(true);
@@ -123,6 +166,48 @@ describe('fromBackendOrder', () => {
     });
 });
 
+describe('fromBackendOrder — 楞別與目標長度還原(DF-05)', () => {
+    it('以後端 typed 欄位還原 paperSpec 與 targetLength', () => {
+        const fe = fromBackendOrder({
+            id: '11111111-1111-1111-1111-111111111111',
+            orderNumber: 'O-1',
+            paperSpec: 'AB',
+            targetLength: 5000,
+            specJson: JSON.stringify({ paperSpec: 'BC', targetLength: 999 }),
+        });
+        expect(fe.paperSpec).toBe('AB');
+        expect(fe.targetLength).toBe(5000);
+    });
+
+    it('後端值為空時退回 SpecJson 的值', () => {
+        const fe = fromBackendOrder({
+            id: '11111111-1111-1111-1111-111111111111',
+            orderNumber: 'O-1',
+            paperSpec: '',
+            specJson: JSON.stringify({ paperSpec: 'BC', targetLength: 999 }),
+        });
+        expect(fe.paperSpec).toBe('BC');
+        expect(fe.targetLength).toBe(999);
+    });
+
+    it('兩邊都沒有時給預設值', () => {
+        const fe = fromBackendOrder({ id: 'x', orderNumber: 'O-1' });
+        expect(fe.paperSpec).toBe('');
+        expect(fe.targetLength).toBe(0);
+    });
+
+    it('flute 仍由 SpecJson 還原(不被 paperSpec 影響)', () => {
+        const fe = fromBackendOrder({
+            id: 'x',
+            orderNumber: 'O-1',
+            paperSpec: 'AB',
+            specJson: JSON.stringify({ flute: 'E' }),
+        });
+        expect(fe.flute).toBe('E');
+        expect(fe.paperSpec).toBe('AB');
+    });
+});
+
 describe('round-trip(前端 → 後端 → 前端)', () => {
     it('規格與核心欄位在來回後保持一致', () => {
         const be = toBackendOrder(richOrder, 5);
@@ -152,5 +237,43 @@ describe('sortBySequence', () => {
         const src = [{ id: 'b', _sequence: 20 }, { id: 'a', _sequence: 10 }];
         sortBySequence(src);
         expect(src.map(o => o.id)).toEqual(['b', 'a']);
+    });
+});
+
+// ── S1 / v2.0:載入端過濾(AC-31)────────────────────────────────────────────
+// 完工單改以狀態留在後端而非刪除,載入端必須把 Completed / Cancelled 濾掉,
+// 否則它會在下次開頁以「執行中」回到佇列頭部。
+describe('isSchedulableBackendOrder(AC-31)', () => {
+    // AC-31a:完工/取消不入列
+    it('Completed(3)、Cancelled(4) 與其字串形式皆回 false', () => {
+        expect(isSchedulableBackendOrder({ status: 3 })).toBe(false);
+        expect(isSchedulableBackendOrder({ status: 4 })).toBe(false);
+        expect(isSchedulableBackendOrder({ status: 'Completed' })).toBe(false);
+        expect(isSchedulableBackendOrder({ status: 'Cancelled' })).toBe(false);
+    });
+
+    // AC-31b:寬鬆策略 —— 認不出來的狀態照樣入列
+    it('生產中狀態、缺漏狀態與未知狀態皆回 true', () => {
+        expect(isSchedulableBackendOrder({ status: 0 })).toBe(true);
+        expect(isSchedulableBackendOrder({ status: 1 })).toBe(true);
+        expect(isSchedulableBackendOrder({ status: 2 })).toBe(true);
+        expect(isSchedulableBackendOrder({ status: 'Pending' })).toBe(true);
+        expect(isSchedulableBackendOrder({})).toBe(true);
+        expect(isSchedulableBackendOrder({ status: 99 })).toBe(true);
+    });
+
+    // AC-31c:與 fromBackendOrder 組合的載入鏈
+    it('後端三筆(Pending / InProgress / Completed)過濾後只剩 2 筆,不含完工單', () => {
+        const be = [
+            { id: '11111111-1111-1111-1111-111111111111', orderNumber: 'P-1', status: BACKEND_STATUS.Pending, sequence: 0 },
+            { id: '22222222-2222-2222-2222-222222222222', orderNumber: 'P-2', status: BACKEND_STATUS.InProgress, sequence: 1 },
+            { id: '33333333-3333-3333-3333-333333333333', orderNumber: 'P-3', status: BACKEND_STATUS.Completed, sequence: 2 },
+        ];
+
+        const mapped = be.filter(isSchedulableBackendOrder).map(fromBackendOrder);
+
+        expect(mapped).toHaveLength(2);
+        expect(mapped.map(o => o.orderNo)).toEqual(['P-1', 'P-2']);
+        expect(mapped.some(o => o.orderNo === 'P-3')).toBe(false);
     });
 });

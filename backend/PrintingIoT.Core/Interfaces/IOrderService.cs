@@ -13,10 +13,11 @@ public interface IOrderService
     Task<bool> DeleteOrderAsync(Guid id);
     Task<bool> ReorderSequenceAsync(List<Guid> orderedIds);
 
-    // Phase 2(全量鏡像同步):前端每次排程變動上傳整份清單,後端依陣列順序 upsert(Sequence=index)
-    // 並刪除清單中不存在的列。回傳同步後的正規清單(依 Sequence)。
-    Task<IEnumerable<Order>> SyncScheduleAsync(List<Order> incoming);
-    
+    // S1 / DF-04:排程同步改 upsert 語意 —— 依 Id → OrderNumber 比對既有列,
+    // 清單外的列一律保留,只刪 DeleteIds 明確列出的列。回傳同步後的正規清單(依 Sequence)。
+    Task<IEnumerable<Order>> SyncScheduleAsync(ScheduleSyncRequest request);
+
     // ERP Integration
-    Task<int> PushOrdersAsync(List<OrderDto> orderDtos);
+    // S1 / ERP-02 + ERP-10:依 OrderNumber upsert(冪等),回傳逐列結果。
+    Task<ErpPushResponseDto> PushOrdersAsync(List<OrderDto> orderDtos);
 }
