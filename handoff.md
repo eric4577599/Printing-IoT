@@ -1,10 +1,21 @@
 # Handoff — Claude(Printing IoT)
-> 最後更新:2026-09-05 14:56
+> 最後更新:2026-09-05 21:40
+
+## ⛔ 下一個接手的人先看這段
+
+主系統**已啟用真正的認證授權**(commit `9e86cf9`)。這改變了部署行為:
+
+- 上線前必讀 **`docs/report20260905-2.md`**,照它的 §2 逐步做。
+- 順序:輪替 JWT 簽章密鑰 → 注入一次性 SetupToken → **先跑重複帳號檢查 SQL** → 套用 migration
+  → 建立管理者與現場帳號。**在建立帳號完成之前,現場完全無法操作系統**,這是刻意的。
+- **`/api/erp/push-orders` 現在需要身分,ERP 暫時無法推單**,要等下一趟補機器對機器憑證。
+- 原本硬編碼在前端的管理者密碼 `eric4577599` 已進版控並推上 GitHub。
+  從程式碼移除**不等於**它安全了,凡是別處(GitHub、Google、公司系統、其他專案)還在用同一組的,全部要換。
 
 ## Current Task
-**依架構稽核修正四批問題**:三輪對抗性稽核 → 依客戶手繪架構圖做設計意圖對照 → 以 PM→RD→Tester 四趟分工實作修正。
-分支 `fix/audit-20260903`,前三個 commit **已 push**(2026-09-04,Eric 明確授權),
-S4 的 commit `1270601` **尚未 push**。
+**依架構稽核修正六批問題**:三輪對抗性稽核 → 依客戶手繪架構圖做設計意圖對照
+→ 以 PM→RD→Tester 六趟分工實作修正。
+分支 `fix/audit-20260903`,**全部 commit 已 push**(2026-09-04 與 09-05,Eric 三次明確授權)。
 
 ## Done
 
@@ -36,13 +47,31 @@ S3 §9 backlog 第 1 項。新增對映層 `completionMapper` 與共用 hook `us
   已寫進 `calculateOEE` 與 `calculateUtilization` 註解。
 - **分頁不靜默截斷**:超過上限時畫面明示。
 
+**五、S5 + S6 端到端接通認證授權**(commit `9e86cf9`,67 檔、7437 行新增,`docs/report20260905-2.md`)
+稽核頭號根因,前四趟刻意排除因為必須前後端一起做。
+後端改預設拒絕(fallback policy),11 個 Controller 全數標註,敏感操作再加政策限制,僅登入端點匿名;
+setup-admin 密碼改走 body 並以一次性 SetupToken 保護;統一角色詞彙;限流啟用 ForwardedHeaders 並移到
+CORS 之後;移除已進版控的 JWT 密鑰。前端接真登入、只存權杖、攔截器帶授權標頭並處理 401、
+移除三處硬編碼帳密並加掃描測試釘住、`/debug` 納入保護。
+
+**驗收機制擋下三個我沒預料到的真問題**:
+- `DocsPortal` 用裸 fetch 繞過攔截器,後端一上鎖文件頁 100% 回 401。
+- **登入大小寫會把現場鎖在門外**:建立端不分大小寫唯一、登入端精確比對,
+  管理者建 `OP1` 而作業員打 `op1` 會回 401 且只顯示「帳號或密碼錯誤」。
+  已裁決採不分大小寫,並以 `UsernameNormalized` 唯一索引讓應用層與資料庫層一致。
+- 名冊 `username` 有**兩個**寫入點(登入視窗與設定頁 `GeneralTab`),只修一處會從另一條路徑復發。
+
+**兩趟都耗盡三次重試,但卡的不是程式碼** —— T1 從頭到尾全綠,卡的是 RD 連三輪沒更新交付報告。
+最後那四處文件缺口由主流程自己補完。教訓見 `[[pm-rd-tester-doc-deliverable-blind-spot]]`。
+
 **驗證(主流程親自實跑,非採信代理)**
-| 項目 | 原始基準線 | S1–S3 後 | S4 後 |
-|---|---|---|---|
-| dotnet build | 成功 | 成功 | 成功,0 錯誤 0 警告 |
-| dotnet test | 39 | 181 | **181 全過**(S4 未動後端) |
-| npm run test | 103 過 | 190 過 | **263 過、1 略過**,24/25 檔 |
-| npm run lint | 51 err / 18 warn | 相同 | 相同,零新增 |
+| 項目 | 原始基準線 | S1–S3 後 | S4 後 | S5+S6 後 |
+|---|---|---|---|---|
+| dotnet build | 成功 | 成功 | 成功 | 成功,0 錯誤 0 警告 |
+| dotnet test | 39 | 181 | 181 | **249 全過** |
+| npm run test | 103 過 | 190 過 | 263 過 | **297 過、1 略過**,30/31 檔 |
+| npm run lint | 51 err / 18 warn | 相同 | 相同 | **49 err / 18 warn**(比基準線少 2) |
+| npm run build | — | — | — | 成功 |
 
 唯一失敗的 `frontend/tests/dashboard.e2e.test.js` 需真實瀏覽器,為既有問題,四趟都未修改該檔。
 
@@ -51,28 +80,39 @@ S3 §9 backlog 第 1 項。新增對映層 `completionMapper` 與共用 hook `us
 - S2 排程拖拉排序 Phase 1+2、全站 i18n 三回合、UI 稽核 30 筆修正、C′ 遷移 P0–P5、MM 安全三項修復。
 
 ## Next Step
-1. **`git push` S4 的 commit**(需 Eric 明確同意):`1270601`。
-   前三個 commit(`8ac1d47`、`47b525e`、`773eee4`)已於 2026-09-04 推送,分支已在 origin 上。
-2. **實機驗收**(Eric 手動,Docker 在這台機器不可用故無法代跑):
-   前端改完要**重建容器**才會上線。重點走一次 完工 → 整頁重載 → 確認完工單不會復活、順序與狀態正確。
-3. **四個 EF migration 尚未實際套用到資料庫**(本機無 Docker,只驗過 migration 產生與 build)。
-   `AddProductCodeUniqueIndex` 有 DBA 前置注意事項:若既有 Products 已存在重複 ProductCode,建索引會失敗,需先清理。
-4. **未納入三趟範圍、待客戶決策的項目**:認證授權(加 [Authorize] 必須與前端登入改接後端一起做)、對外埠綁定改 127.0.0.1、mosquitto 關匿名並建 ACL(需同步設定 WISE 硬體)。
-5. **Stop 與 NG 的實體訊號來源**:本次只做後端落地欄位,訊號本身牽涉現場硬體怎麼接,待硬體端確認。
-6. ~~前端報表四頁改讀後端 API~~ ✅ 2026-09-05 S4 完成(commit `1270601`)。
-7. **localStorage 舊實績回填後端**:S4 只做合併呈現讓資料看得見,舊資料仍只在單一瀏覽器內,
+1. ~~`git push`~~ ✅ 全部已推送。分支 `fix/audit-20260903` 共 6 個 commit,本機與 origin 一致。
+   尚未開 PR;注意這個分支是從 `feat/extract-maintenance` 開出來的,不是 `main`,開 PR 時要確認基底。
+2. **S7 · ERP 的機器對機器認證**(下一趟的第一優先)。
+   `/api/erp/push-orders` 目前需要身分,而 ERP 是程式呼叫、不能用互動式登入,所以**現在推不了單**。
+   需要另一套憑證機制(API 金鑰或服務帳號),範圍已在 `docs/report20260905-2.md` §6 列出。
+3. **依 `docs/report20260905-2.md` §2 完成上線步驟**(Eric 手動,Docker 在這台機器不可用故無法代跑)。
+   見本檔開頭的置頂段落。前端改完要**重建容器**才會上線。
+4. **五個 EF migration 尚未實際套用**(本機無 Docker,只驗過 migration 產生與 build)。
+   兩個有 DBA 前置條件,套用前必須先查:
+   - `AddProductCodeUniqueIndex` —— 既有 Products 若有重複 ProductCode,建索引會失敗。
+   - `AddUsernameNormalizedUniqueIndex` —— 既有 Users 若有僅大小寫不同的重複帳號,建索引會失敗、
+     **整個 migration 回滾**。檢查 SQL 在 `docs/report20260905-2.md` §2 第 3 步,不可略過。
+5. **實機驗收**:走一次 完工 → 整頁重載 → 確認完工單不會復活、順序與狀態正確;
+   以及登入 → 各頁面 → 權杖過期後的行為。
+6. **仍待客戶決策**:對外埠綁定改 127.0.0.1、mosquitto 關匿名並建 ACL(需同步設定 WISE 硬體)。
+   ~~認證授權~~ ✅ 2026-09-05 S5+S6 完成。
+7. **Stop 與 NG 的實體訊號來源**:只做了後端落地欄位,訊號本身牽涉現場硬體怎麼接,待硬體端確認。
+8. ~~前端報表四頁改讀後端 API~~ ✅ 2026-09-05 S4 完成(commit `1270601`)。
+9. **localStorage 舊實績回填後端**:S4 只做合併呈現讓資料看得見,舊資料仍只在單一瀏覽器內,
    換機器或超過 1000 筆上限就沒了。要真正解決需先確認去重規則、工單關聯遺失怎麼補、
    工廠日怎麼重算,以及客戶現場實際資料量。
-8. **後端彙總端點**:目前後端只有逐筆率值,報表要的彙總在前端算,
+10. **後端彙總端點**:目前後端只有逐筆率值,報表要的彙總在前端算,
    所以 `reportUtils` 的 JS 公式無法退場,與 C# `OeeCalculator` 是兩份會漂移的實作。
    要收斂成單一事實來源,需補日 / 月 / 停機原因三組彙總查詢端點。
-9. S4 驗收留下三條非阻斷觀察(詳見 `tests/report20260905-s4-v2.md`):
+11. S4 驗收留下三條非阻斷觀察(詳見 `tests/report20260905-s4-v2.md`):
    工廠日與本機日界線落差會讓已同步紀錄被標成「僅存在本機」(僅措辭,去重仍正確);
    `filterByDateRange` 單邊區間語意與規格描述有落差(既有行為,現行入口走不到);
    硬上限一萬列在未虛擬捲動的明細表上的渲染成本。
 
 ## Key Context
-- 分支 `fix/audit-20260903`(自 `feat/extract-maintenance` 開出),兩個 commit 皆未 push。
+- 分支 `fix/audit-20260903`(自 `feat/extract-maintenance` 開出),6 個 commit 全部已 push,與 origin 一致。
+- **主系統現在需要登入才能用**。角色與權限矩陣見 `docs/spec20260905-s5-v1.md`;
+  帳號不分大小寫(以 `UsernameNormalized` 唯一索引背書);權杖效期 2 小時,過期由前端攔截器處理。
 - 專案根 `/Volumes/G70Pro/cusor pool/Printing IoT`;MM 外掛獨立 repo `/Volumes/G70Pro/cusor pool/MM/`。
 - 容器與 port:前端 :5600、API :5200 `/swagger`、Postgres :5433、Redis :6380、MQTT :1884 / WS 9001;MM 前端 :5301、後端 :5300、`mm-postgres-1` **127.0.0.1**:5434(僅綁 loopback 是安全修復的一部分,不要改)。
 - 資料庫單一 `FlexoDB`;MM 用 `MmsDB`。
