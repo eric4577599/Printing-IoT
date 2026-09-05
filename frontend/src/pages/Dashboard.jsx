@@ -427,6 +427,9 @@ const Dashboard = () => {
             stops: stopReasons.map(r => ({
                 code: r.code || '',
                 reason: r.reason,
+                // S4 / F6:補送停車起始時間(後端 ProductionStopRequest.StartedAt 早已存在,不需後端變更);
+                // 沒有 ISO 時間戳的舊項送 null,回讀時由對映層顯示 '-'。
+                startedAt: r.startedAtIso || null,
                 durationMinutes: durationToMinutes(r.duration),
             })),
         };
@@ -535,7 +538,15 @@ const Dashboard = () => {
             durationStr = `${mm}:${ss}`;
         }
 
-        setStopReasons(prev => [{ code: reason.code || '', time: startTimeStr, duration: durationStr, reason: reason.name }, ...prev]);
+        // S4 / F6:除了顯示用的 time 字串,另存一份 ISO 時間戳,
+        // 完工時一併送給後端 ProductionStopRequest.StartedAt —— 否則回讀報表時停車起始時間永遠是 '-'。
+        setStopReasons(prev => [{
+            code: reason.code || '',
+            time: startTimeStr,
+            startedAtIso: (stopStartTime || endTime).toISOString(),
+            duration: durationStr,
+            reason: reason.name
+        }, ...prev]);
         addLog(`Stop Reason Logged: ${reason.name} (${durationStr})`);
         setStopStartTime(null);
     };

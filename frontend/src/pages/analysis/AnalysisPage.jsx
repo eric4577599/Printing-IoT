@@ -21,7 +21,13 @@ const AnalysisPage = () => {
         productionHistory,
         groupedData,
         summaryStats,
-        t
+        t,
+        isLoading,
+        error,
+        isDegraded,
+        truncated,
+        localOnlyCount,
+        reload
     } = useAnalysisData();
 
     const chartContainerRef = useRef(null);
@@ -101,6 +107,8 @@ const AnalysisPage = () => {
     };
 
     const exportToExcel = () => {
+        // S4 / F4.2:載入中要提示尚在載入,而不是匯出一份空檔讓使用者誤以為沒資料
+        if (isLoading) return alert(t('analysis.state.exportWhileLoading'));
         if (productionHistory.length === 0) return alert(t('ui.messages.noData'));
         const exportData = productionHistory.map(record => ({
             '日期': record.date, '訂單編號': record.orderNo, '客戶': record.customer, '產品名稱': record.productName,
@@ -113,6 +121,7 @@ const AnalysisPage = () => {
     };
 
     const downloadChartAsImage = () => {
+        if (isLoading) return alert(t('analysis.state.exportWhileLoading'));
         if (!chartRef.current) return alert('圖表尚未載入完成');
         const canvas = chartRef.current.canvas;
         const link = document.createElement('a');
@@ -225,12 +234,54 @@ const AnalysisPage = () => {
         } : {}
     };
 
+    /**
+     * 渲染資料狀態與警示列(S4 / spec §5)
+     * @returns {JSX.Element} 主狀態(載入中 / 錯誤 / 無資料)+ 可疊加的警示列
+     * @description 三種主狀態措辭必須可區分;API 成功但回空只是「無資料」,不是錯誤(E-17)。
+     */
+    const renderDataState = () => {
+        const hasRecords = productionHistory.length > 0;
+        return (
+            <div className={styles.stateArea}>
+                {isLoading && (
+                    <div className={styles.stateLoading} data-testid="analysis-state-loading">{t('analysis.state.loading')}</div>
+                )}
+                {!isLoading && isDegraded && !hasRecords && (
+                    <div className={styles.stateError} data-testid="analysis-state-error">
+                        {t('analysis.state.error')}
+                        <button className={styles.stateBtn} onClick={reload}>{t('analysis.state.retry')}</button>
+                    </div>
+                )}
+                {!isLoading && !error && !hasRecords && (
+                    <div className={styles.stateEmpty} data-testid="analysis-state-empty">{t('analysis.state.empty')}</div>
+                )}
+                {!isLoading && isDegraded && hasRecords && (
+                    <div className={styles.stateWarn} data-testid="analysis-alert-degraded">
+                        {t('analysis.state.degraded')}
+                        <button className={styles.stateBtn} onClick={reload}>{t('analysis.state.retry')}</button>
+                    </div>
+                )}
+                {truncated && (
+                    <div className={styles.stateWarn} data-testid="analysis-alert-truncated">
+                        {t('analysis.state.truncated')}:{productionHistory.length}
+                    </div>
+                )}
+                {localOnlyCount > 0 && (
+                    <div className={styles.stateWarn} data-testid="analysis-alert-local-only">
+                        {localOnlyCount} {t('analysis.state.localOnly')}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     const scrollToStart = () => chartContainerRef.current?.scrollTo({ left: 0, behavior: 'smooth' });
     const scrollToEnd = () => chartContainerRef.current?.scrollTo({ left: chartContainerRef.current.scrollWidth, behavior: 'smooth' });
 
     return (
         <div className={styles.container}>
             <h2 className={styles.pageTitle}>{t('analysis.title')}</h2>
+            {renderDataState()}
             <div className={styles.mainLayout}>
                 <AnalysisSidebar 
                     {...{startDate, setStartDate, endDate, setEndDate, selectedCategories, setSelectedCategories, chartType, setChartType, timeScale, setTimeScale, selectedDisplayItems, setSelectedDisplayItems, sidebarCollapsed, setSidebarCollapsed, handleQuickDate, availableCategoryFields, availableDisplayFields, chartOptions, timeScaleOptions, isDistributionChart, exportToExcel, downloadChartAsImage, clearAllFilters, t}} 

@@ -65,3 +65,33 @@ describe('dashboard 停車原因 / 備註鍵(#8 / #9)', () => {
         ]);
     });
 });
+
+// S4 / F5:分析頁的資料狀態鍵(載入中 / 錯誤 / 無資料 / 降級 / 未取完 / 本機列 / 重試 / 載入中匯出)
+// 五語系皆須存在且為非空字串,否則畫面會直接渲染 'analysis.state.loading' 這種原始鍵路徑。
+describe('Analysis 資料狀態 i18n 鍵(S4 / F5,AC-S4-31)', () => {
+    it('tw/cn/en/vn/th 皆有 analysis.state.* 鍵', () => {
+        expectKeys(['tw', 'cn', 'en', 'vn', 'th'], [
+            'analysis.state.loading', 'analysis.state.error', 'analysis.state.empty',
+            'analysis.state.degraded', 'analysis.state.truncated', 'analysis.state.localOnly',
+            'analysis.state.retry', 'analysis.state.exportWhileLoading',
+        ]);
+    });
+
+    it('載入中 / 無資料 / 錯誤三種措辭不得相同(AC-S4-29:查詢失敗不可看起來像沒生產)', () => {
+        for (const loc of ['tw', 'cn', 'en', 'vn', 'th']) {
+            const texts = [
+                get(translations[loc], 'analysis.state.loading'),
+                get(translations[loc], 'analysis.state.empty'),
+                get(translations[loc], 'analysis.state.error'),
+            ];
+            expect(new Set(texts).size, `${loc} 三種狀態措辭重複`).toBe(3);
+
+            const reportTexts = [
+                get(translations[loc], 'reportView.state.loading'),
+                get(translations[loc], 'reportView.state.empty'),
+                get(translations[loc], 'reportView.state.error'),
+            ];
+            expect(new Set(reportTexts).size, `${loc} 報表三種狀態措辭重複`).toBe(3);
+        }
+    });
+});

@@ -160,6 +160,47 @@ export const getProductionCompletions = async ({ from, to, page = 1, pageSize = 
 };
 
 /**
+ * 逐頁抓取指定工廠日區間的全部完工實績
+ * @param {Object} params - 查詢條件
+ * @param {string} [params.from] - 起始工廠日 YYYY-MM-DD(含);省略則不限該端
+ * @param {string} [params.to] - 結束工廠日 YYYY-MM-DD(含);省略則不限該端
+ * @param {number} [params.pageSize=500] - 每頁筆數(後端上限 500,超過由後端夾)
+ * @param {number} [params.maxPages=20] - 硬上限頁數,防止無限迴圈打 API
+ * @returns {Promise<{ items: Array, pageCount: number, truncated: boolean }>}
+ *          items 為串接後的完整清單;truncated = true 表示觸到硬上限、資料未取完
+ * @description 後端回的是裸 JSON 陣列、沒有 total / hasNext 信封(見 spec20260905-s4-v1 §1.3),
+ *              因此「取完了沒」只能靠「本頁筆數 < pageSize」判斷,這是唯一可靠的終止條件。
+ *              代價是總筆數恰為 pageSize 倍數時會多打一次回空陣列的請求,以正確性換取。
+ *
+ *              任一頁拋錯時整個函式拋出(不在此吞例外),由上層 hook 轉成降級 —— 否則上層
+ *              分不清「取完了」與「取到一半炸了」,會把半份資料當成完整資料呈現。
+ *              回應不是陣列(後端日後改成信封)時視該頁為 0 筆並結束,不讓 .length 爆 TypeError。
+ */
+export const getAllProductionCompletions = async ({ from, to, pageSize = 500, maxPages = 20 } = {}) => {
+    const items = [];
+    let pageCount = 0;
+    let truncated = false;
+
+    for (let page = 1; page <= maxPages; page++) {
+        const data = await getProductionCompletions({ from, to, page, pageSize });
+        pageCount++;
+
+        if (!Array.isArray(data)) break;
+        items.push(...data);
+
+        // 短頁 = 已取完(唯一可靠的終止條件)
+        if (data.length < pageSize) {
+            truncated = false;
+            break;
+        }
+        // 滿頁(或異常地超過滿頁)代表可能還有下一頁;已用完硬上限就標示未取完
+        if (page === maxPages) truncated = true;
+    }
+
+    return { items, pageCount, truncated };
+};
+
+/**
  * 取得工廠時區與日界設定
  * @returns {Promise<{ timeZone: string, dayBoundaryHour: number }>} 工廠日換算所需參數
  * @description 前端算本地快取紀錄的工廠日時取得與後端同一組參數,不必把 8 寫死在前端。

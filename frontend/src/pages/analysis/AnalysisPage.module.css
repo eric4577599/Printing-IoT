@@ -657,3 +657,55 @@
     cursor: not-allowed;
     background: #f0f0f0;
 }
+/* S4 / spec §5:資料狀態與警示列 */
+.stateArea {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.stateArea:empty {
+    display: none;
+}
+
+.stateLoading,
+.stateEmpty,
+.stateError,
+.stateWarn {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stateLoading {
+    background-color: #eef4ff;
+    color: #14396b;
+}
+
+.stateEmpty {
+    background-color: #f5f5f5;
+    color: #666;
+}
+
+.stateError {
+    background-color: #fdecec;
+    color: #a11;
+}
+
+.stateWarn {
+    background-color: #fff8e1;
+    color: #8a6100;
+}
+
+.stateBtn {
+    padding: 2px 10px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    border: 1px solid #bbb;
+    border-radius: 3px;
+    background: #fff;
+}

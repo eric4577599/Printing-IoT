@@ -17,7 +17,7 @@ vi.mock('axios', () => ({
 
 const {
     syncSchedule, deleteOrder, updateOrderStatus,
-    createProductionCompletion, getProductionCompletions, getFactoryTimeSettings,
+    createProductionCompletion, getProductionCompletions, getAllProductionCompletions, getFactoryTimeSettings,
     getReasonCodes, createReasonCode, deleteReasonCode,
 } = await import('../../services/api');
 
@@ -160,5 +160,126 @@ describe('api 原因主檔請求形狀(S3 / F8)', () => {
         await deleteReasonCode('33333333-3333-3333-3333-333333333333');
 
         expect(mockInstance.delete).toHaveBeenCalledWith('/reasons/33333333-3333-3333-3333-333333333333');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// S4 / F2:getAllProductionCompletions 逐頁抓取(AC-S4-04、AC-S4-07、AC-S4-08、AC-S4-10、E-04、E-05)
+//
+// 後端回的是裸陣列、沒有 total / hasNext 信封,終止條件只能靠「短頁」。
+// 這組測試釘住三件事:取得完整、不無限迴圈、不靜默截斷。
+// ---------------------------------------------------------------------------
+describe('api.getAllProductionCompletions 分頁完整性(S4 / F2)', () => {
+    /** 造 n 筆假的完工實績列(只需要有長度,內容不影響分頁判斷)。 */
+    const rows = (n) => Array.from({ length: n }, (_, i) => ({ id: `r${i}` }));
+
+    beforeEach(() => {
+        mockInstance.get.mockReset();
+        mockInstance.get.mockResolvedValue({ data: [] });
+    });
+
+    it('AC-S4-04:每次請求的 params.from / params.to 皆等於輸入值', async () => {
+        mockInstance.get
+            .mockResolvedValueOnce({ data: rows(500) })
+            .mockResolvedValueOnce({ data: rows(3) });
+
+        await getAllProductionCompletions({ from: '2026-09-01', to: '2026-09-30' });
+
+        expect(mockInstance.get).toHaveBeenCalledTimes(2);
+        mockInstance.get.mock.calls.forEach(([url, config]) => {
+            expect(url).toBe('/production/completions');
+            expect(config.params.from).toBe('2026-09-01');
+            expect(config.params.to).toBe('2026-09-30');
+        });
+        // 頁碼遞增、pageSize 為後端上限
+        expect(mockInstance.get.mock.calls.map(([, c]) => c.params.page)).toEqual([1, 2]);
+        expect(mockInstance.get.mock.calls.every(([, c]) => c.params.pageSize === 500)).toBe(true);
+    });
+
+    it('AC-S4-07:500 / 500 / 7 → 呼叫 3 次、1007 筆、truncated false', async () => {
+        mockInstance.get
+            .mockResolvedValueOnce({ data: rows(500) })
+            .mockResolvedValueOnce({ data: rows(500) })
+            .mockResolvedValueOnce({ data: rows(7) });
+
+        const result = await getAllProductionCompletions({ from: '2026-09-01', to: '2026-09-30' });
+
+        expect(mockInstance.get).toHaveBeenCalledTimes(3);
+        expect(result.items).toHaveLength(1007);
+        expect(result.pageCount).toBe(3);
+        expect(result.truncated).toBe(false);
+    });
+
+    it('AC-S4-08:每頁都回滿 → 呼叫次數恰為 maxPages 且 truncated true(不得無限迴圈)', async () => {
+        mockInstance.get.mockResolvedValue({ data: rows(500) });
+
+        const result = await getAllProductionCompletions({ from: '2026-09-01', to: '2026-09-30' });
+
+        expect(mockInstance.get).toHaveBeenCalledTimes(20);
+        expect(result.items).toHaveLength(10000);
+        expect(result.truncated).toBe(true);
+    });
+
+    it('AC-S4-08b:maxPages 可調,呼叫次數跟著改變', async () => {
+        mockInstance.get.mockResolvedValue({ data: rows(2) });
+
+        const result = await getAllProductionCompletions({ pageSize: 2, maxPages: 3 });
+
+        expect(mockInstance.get).toHaveBeenCalledTimes(3);
+        expect(result.items).toHaveLength(6);
+        expect(result.truncated).toBe(true);
+    });
+
+    it('AC-S4-10:總筆數恰為 pageSize 倍數 → 1000 筆、truncated false,不多不少', async () => {
+        mockInstance.get
+            .mockResolvedValueOnce({ data: rows(500) })
+            .mockResolvedValueOnce({ data: rows(500) })
+            .mockResolvedValueOnce({ data: [] });
+
+        const result = await getAllProductionCompletions({});
+
+        expect(mockInstance.get).toHaveBeenCalledTimes(3);
+        expect(result.items).toHaveLength(1000);
+        expect(result.truncated).toBe(false);
+    });
+
+    it('AC-S4-14 前置:任一頁拋錯時整個函式拋出,不得回傳半份資料', async () => {
+        mockInstance.get
+            .mockResolvedValueOnce({ data: rows(500) })
+            .mockRejectedValueOnce(new Error('Network Error'));
+
+        await expect(getAllProductionCompletions({})).rejects.toThrow('Network Error');
+    });
+
+    it('E-04:回應不是陣列時視為該頁 0 筆並結束,不拋 TypeError', async () => {
+        mockInstance.get.mockResolvedValueOnce({ data: { items: [], total: 0 } });
+
+        const result = await getAllProductionCompletions({});
+
+        expect(result.items).toEqual([]);
+        expect(result.truncated).toBe(false);
+        expect(mockInstance.get).toHaveBeenCalledTimes(1);
+    });
+
+    it('E-05:單頁筆數超過 pageSize 時視為「可能還有」,繼續下一頁', async () => {
+        mockInstance.get
+            .mockResolvedValueOnce({ data: rows(501) })
+            .mockResolvedValueOnce({ data: rows(1) });
+
+        const result = await getAllProductionCompletions({});
+
+        expect(mockInstance.get).toHaveBeenCalledTimes(2);
+        expect(result.items).toHaveLength(502);
+        expect(result.truncated).toBe(false);
+    });
+
+    it('E-02:from / to 省略時不帶該參數', async () => {
+        mockInstance.get.mockResolvedValueOnce({ data: [] });
+
+        await getAllProductionCompletions({});
+
+        const [, config] = mockInstance.get.mock.calls[0];
+        expect(config.params.from).toBeUndefined();
+        expect(config.params.to).toBeUndefined();
     });
 });

@@ -162,6 +162,9 @@ function calculateLoadTime(runTime, stopTime, prepTime) {
  * @returns {number} 稼動率百分比 (0-100)
  * @description §5.1 規則 2:A = min(R, L) / L × 100，L = max(0, R + S − P)；L ≤ 0 時回 0。
  *              min 的理由是準備時間與運轉/停車重疊，以 L 夾住上限確保不超過 100%。
+ *
+ *              本函式是 PrintingIoT.Core.Services.OeeCalculator 的 JS 孿生，規則見
+ *              docs/spec20260903-s3-v1.md §5.1；僅用於本機列與彙總重算，後端列的率值一律採用後端回傳值。
  */
 export function calculateUtilization(runTime, stopTime, prepTime = 0) {
     const run = clampNonNegative(runTime);
@@ -181,8 +184,9 @@ export function calculateUtilization(runTime, stopTime, prepTime = 0) {
  * @param {number} params.targetQty - 目標數量
  * @returns {{ availability: number, performance: number, quality: number, oee: number }}
  *          四個值皆 0-100 且四捨五入到小數 1 位
- * @description 規則見 docs/spec20260903-s3-v1.md §5.1，與後端 PrintingIoT.Core.Services.OeeCalculator
- *              是同一份規則的兩處實作，由測試釘住相同數值。
+ * @description 本函式是 PrintingIoT.Core.Services.OeeCalculator 的 JS 孿生，規則見
+ *              docs/spec20260903-s3-v1.md §5.1，兩處實作由測試釘住相同數值；
+ *              僅用於本機列與彙總重算，後端列的率值一律採用後端回傳值。
  *
  *              分母為零一律回 0，不以 1 假裝滿分 —— 顯示 0 是誠實的「無法評估」。
  *
