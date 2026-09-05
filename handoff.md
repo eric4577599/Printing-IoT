@@ -1,5 +1,5 @@
 # Handoff — Claude(Printing IoT)
-> 最後更新:2026-09-05 21:40
+> 最後更新:2026-09-06 06:10
 
 ## ⛔ 下一個接手的人先看這段
 
@@ -8,16 +8,50 @@
 - 上線前必讀 **`docs/report20260905-2.md`**,照它的 §2 逐步做。
 - 順序:輪替 JWT 簽章密鑰 → 注入一次性 SetupToken → **先跑重複帳號檢查 SQL** → 套用 migration
   → 建立管理者與現場帳號。**在建立帳號完成之前,現場完全無法操作系統**,這是刻意的。
-- **`/api/erp/push-orders` 現在需要身分,ERP 暫時無法推單**,要等下一趟補機器對機器憑證。
+- ~~**`/api/erp/push-orders` 現在需要身分,ERP 暫時無法推單**~~ ✅ 2026-09-06 S7 把**管道**建好了。
+  ERP 只要帶 `X-Api-Key` 標頭就能推單。**但這一趟只做管道,沒有要立刻串接** ——
+  金鑰等 ERP 真的要接的那天再建(步驟 `docs/report20260906-1.md` §2.1)。
+  在那之前 `ApiKeys` 是空表,**系統一切正常**,只是 ERP 推單不可用,與現況相同。
 - 原本硬編碼在前端的管理者密碼 `eric4577599` 已進版控並推上 GitHub。
   從程式碼移除**不等於**它安全了,凡是別處(GitHub、Google、公司系統、其他專案)還在用同一組的,全部要換。
 
 ## Current Task
-**依架構稽核修正六批問題**:三輪對抗性稽核 → 依客戶手繪架構圖做設計意圖對照
-→ 以 PM→RD→Tester 六趟分工實作修正。
-分支 `fix/audit-20260903`,**全部 commit 已 push**(2026-09-04 與 09-05,Eric 三次明確授權)。
+**依架構稽核修正七批問題**:三輪對抗性稽核 → 依客戶手繪架構圖做設計意圖對照
+→ 分趟實作修正。分支 `fix/audit-20260903`。
+S1–S6 共 6 個 commit 已 push;**S7 的 3 個 commit 已在本機,尚未 push**。
 
 ## Done
+
+### 本回合(2026-09-06)
+
+**S7 · ERP 機器對機器憑證 + 三項認證 backlog**(`docs/report20260906-1.md`、`docs/spec20260906-s7-v1.md`)
+
+`docs/report20260905-2.md` §6 列的四項一次收完:
+
+- **G1 ERP 憑證**(稽核後 ERP 推不了單的正解)。Eric 裁決採 **API 金鑰 + DB 雜湊保管**。
+  金鑰格式 `pio_{prefix}_{secret}`,前綴明文入庫供單列查找,祕密段只存 SHA-256。
+  新增不是預設方案的 `ApiKey` 驗證方案 + `ErpPush` policy(`ApiKey` 或 `ADMIN` 的 Bearer),
+  只有推單端點吃金鑰 —— **一支外洩的金鑰打不開整個系統**。
+  管理端點 `/api/v1/apikeys` 限 ADMIN 且只收 JWT(不讓金鑰自我繁殖),撤銷不刪列。
+- **G2 名冊接後端**。設定頁改讀 `/api/v1/auth/users`;登入視窗因為面對未登入的人、
+  呼叫不了 ADMIN 端點,**仍讀本機快取**,快取由設定頁改寫,已停用的帳號不進快取。
+  「刪除」語意改「停用」(後端沒有刪除端點)。密碼新增必填、編輯留空即不變更。
+- **G3 403 文案 i18n**。新增 `authGuard` 群組五語系齊補;狀態碼「403」刻意不翻譯。
+- **G4 權杖刷新**。刷新憑證預設 12 小時(涵蓋一個班),一次性 + 輪替 + 重用偵測;
+  前端 401 → 換發 → **重送原請求**,同時只允許一次換發(否則會踩到自己的重用偵測)。
+
+**驗收擋下三件事**(詳見報告 §4):
+- **base64url 的 `_` 讓約三分之一的金鑰從產生當下就是死的** —— `Split('_')` 要求剛好三段,
+  但祕密段本身可能含底線。改 `Split('_', 3)`,並補「連續產生 200 支每支都解析得出前綴」的回歸。
+- 安全測試 `noHardcodedCredentials` 的粗判準(GeneralTab 不得出現 `password:`)
+  會擋掉正當的「把密碼送給後端」。沒有放寬,換成兩條更精確的:密碼不得與 localStorage 同行、
+  名冊快取投影不得有 password 欄位。
+- `@testing-library/jest-dom` 在 `package.json` 裡但沒掛進 `setupFiles`,`toBeDisabled()` 全部不可用。
+
+**實測**:dotnet build 0 錯 0 警;**dotnet test 305 全過**(基準線 249);
+**npm test 313 過 1 略過**(基準線 297);npm lint 49 err / 18 warn(**與基準線相同**);npm build 成功。
+
+### 先前回合
 
 ### 本回合(2026-09-03 → 09-04)
 
@@ -80,20 +114,26 @@ CORS 之後;移除已進版控的 JWT 密鑰。前端接真登入、只存權杖
 - S2 排程拖拉排序 Phase 1+2、全站 i18n 三回合、UI 稽核 30 筆修正、C′ 遷移 P0–P5、MM 安全三項修復。
 
 ## Next Step
-1. ~~`git push`~~ ✅ 全部已推送。分支 `fix/audit-20260903` 共 6 個 commit,本機與 origin 一致。
+1. **`git push`(需 Eric 明確同意)**。分支 `fix/audit-20260903` 共 9 個 commit,
+   前 6 個(S1–S6)已與 origin 一致,**S7 的 3 個只在本機**:
+   `8cf801b` 後端憑證 / `2053390` 前端接線 / `f75e9b6` 文件。
    尚未開 PR;注意這個分支是從 `feat/extract-maintenance` 開出來的,不是 `main`,開 PR 時要確認基底。
-2. **S7 · ERP 的機器對機器認證**(下一趟的第一優先)。
-   `/api/erp/push-orders` 目前需要身分,而 ERP 是程式呼叫、不能用互動式登入,所以**現在推不了單**。
-   需要另一套憑證機制(API 金鑰或服務帳號),範圍已在 `docs/report20260905-2.md` §6 列出。
+2. ~~**S7 · ERP 的機器對機器認證**~~ ✅ 2026-09-06 完成(**只做管道,尚未串接**)。
+   **不是上線當下的必辦事項** —— 等 ERP 那側真的要接時,才由 ADMIN 建一支金鑰交過去
+   (`docs/report20260906-1.md` §2.1,明文只回傳一次)。
+   在那之前 `ApiKeys` 空表,系統正常運作。
+   真正要串的那天要一併確認的:ERP 端誰負責改、金鑰放在對方哪個設定檔、輪替窗口怎麼安排。
 3. **依 `docs/report20260905-2.md` §2 完成上線步驟**(Eric 手動,Docker 在這台機器不可用故無法代跑)。
    見本檔開頭的置頂段落。前端改完要**重建容器**才會上線。
-4. **五個 EF migration 尚未實際套用**(本機無 Docker,只驗過 migration 產生與 build)。
-   兩個有 DBA 前置條件,套用前必須先查:
+4. **七個 EF migration 尚未實際套用**(本機無 Docker,只驗過 migration 產生與 build)。
+   S7 新增的 `AddApiKeys` 與 `AddRefreshTokens` 是純新增資料表,**沒有** DBA 前置條件。
+   另外兩個有前置條件,套用前必須先查:
    - `AddProductCodeUniqueIndex` —— 既有 Products 若有重複 ProductCode,建索引會失敗。
    - `AddUsernameNormalizedUniqueIndex` —— 既有 Users 若有僅大小寫不同的重複帳號,建索引會失敗、
      **整個 migration 回滾**。檢查 SQL 在 `docs/report20260905-2.md` §2 第 3 步,不可略過。
 5. **實機驗收**:走一次 完工 → 整頁重載 → 確認完工單不會復活、順序與狀態正確;
-   以及登入 → 各頁面 → 權杖過期後的行為。
+   以及登入 → 各頁面 → **放超過 2 小時**確認會自動換發而不是被踢出去(S7 G4);
+   再走一次 ADMIN 建帳號 → 該帳號登入 → 停用 → 確認立刻登不進去(S7 G2 + G4)。
 6. **仍待客戶決策**:對外埠綁定改 127.0.0.1、mosquitto 關匿名並建 ACL(需同步設定 WISE 硬體)。
    ~~認證授權~~ ✅ 2026-09-05 S5+S6 完成。
 7. **Stop 與 NG 的實體訊號來源**:只做了後端落地欄位,訊號本身牽涉現場硬體怎麼接,待硬體端確認。
@@ -104,7 +144,12 @@ CORS 之後;移除已進版控的 JWT 密鑰。前端接真登入、只存權杖
 10. **後端彙總端點**:目前後端只有逐筆率值,報表要的彙總在前端算,
    所以 `reportUtils` 的 JS 公式無法退場,與 C# `OeeCalculator` 是兩份會漂移的實作。
    要收斂成單一事實來源,需補日 / 月 / 停機原因三組彙總查詢端點。
-11. S4 驗收留下三條非阻斷觀察(詳見 `tests/report20260905-s4-v2.md`):
+11. **S7 留下的三條**(詳見 `docs/report20260906-1.md` §6):
+   **存取權杖無法撤銷** —— JWT 無狀態,登出或停用後已發出的權杖最長仍有 2 小時殘命,
+   要收掉需黑名單或改不透明權杖;**金鑰管理沒有前端 UI**(走 curl / Swagger,以使用頻率判斷不值得先做);
+   **名冊快取仍是單機的** —— A 機器建的帳號,B 機器的登入視窗要等 B 的管理者開過設定頁才會出現在觸控清單
+   (帳號本身在後端,手動輸入永遠登得進去)。
+12. S4 驗收留下三條非阻斷觀察(詳見 `tests/report20260905-s4-v2.md`):
    工廠日與本機日界線落差會讓已同步紀錄被標成「僅存在本機」(僅措辭,去重仍正確);
    `filterByDateRange` 單邊區間語意與規格描述有落差(既有行為,現行入口走不到);
    硬上限一萬列在未虛擬捲動的明細表上的渲染成本。
@@ -112,7 +157,11 @@ CORS 之後;移除已進版控的 JWT 密鑰。前端接真登入、只存權杖
 ## Key Context
 - 分支 `fix/audit-20260903`(自 `feat/extract-maintenance` 開出),6 個 commit 全部已 push,與 origin 一致。
 - **主系統現在需要登入才能用**。角色與權限矩陣見 `docs/spec20260905-s5-v1.md`;
-  帳號不分大小寫(以 `UsernameNormalized` 唯一索引背書);權杖效期 2 小時,過期由前端攔截器處理。
+  帳號不分大小寫(以 `UsernameNormalized` 唯一索引背書);存取權杖效期 2 小時,
+  **S7 起到期會由前端以刷新憑證自動換發**(憑證 12 小時,`Auth:RefreshTokenHours`),
+  換不到才登出。
+- **ERP 推單靠 `X-Api-Key` 標頭**,金鑰由 ADMIN 在 `/api/v1/apikeys` 建立,
+  明文只在建立當下回傳一次。撤銷不刪列。金鑰只對推單端點有效,打不開其他端點。
 - 專案根 `/Volumes/G70Pro/cusor pool/Printing IoT`;MM 外掛獨立 repo `/Volumes/G70Pro/cusor pool/MM/`。
 - 容器與 port:前端 :5600、API :5200 `/swagger`、Postgres :5433、Redis :6380、MQTT :1884 / WS 9001;MM 前端 :5301、後端 :5300、`mm-postgres-1` **127.0.0.1**:5434(僅綁 loopback 是安全修復的一部分,不要改)。
 - 資料庫單一 `FlexoDB`;MM 用 `MmsDB`。
@@ -121,6 +170,9 @@ CORS 之後;移除已進版控的 JWT 密鑰。前端接真登入、只存權杖
 - MM 與主系統的設計整合形狀是**並列掛同一訊息來源、共用 Parameter**,不是主系統轉手 → `[[printingiot-mm-parallel-signal-source]]`
 
 ## Risk / Note
+- **這台機器的 `git` 與 `python3` 被 Xcode 授權擋住**(2026-09-06 發現):
+  `You have not agreed to the Xcode license agreements.`,走 `/usr/bin` shim 的指令全部直接退出。
+  `sudo xcodebuild -license accept` 之後才會恢復。`dotnet` 不受影響。
 - **`git push` 是全域紅線**,一律需 Eric 明確同意。
 - **這台機器的沙箱會讓 `dotnet` 指令假失敗**:卡滿 5 分鐘後回報「建置失敗,0 個警告,0 個錯誤」。
   沙箱外同一條指令 1.7 秒成功。跑 dotnet 一律要 `dangerouslyDisableSandbox: true`,
