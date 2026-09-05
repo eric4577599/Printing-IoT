@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PrintingIoT.Core.Interfaces;
 
@@ -10,6 +11,7 @@ namespace PrintingIoT.API.Controllers;
 /// SettingsController 相依 ISettingsService(需要 Redis 連線),而本端點只讀組態,
 /// 不該因為 Redis 不可用就一起壞掉。
 /// </summary>
+[Authorize]
 [ApiController]
 [Route("api/settings")]
 public class FactorySettingsController : ControllerBase

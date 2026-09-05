@@ -52,18 +52,30 @@ const GeneralTab = () => {
     // --- User Settings State ---
     const [userSource, setUserSource] = useState('custom'); // 'inherit' | 'custom'
     const [userRemoteIP, setUserRemoteIP] = useState('');
+    // S5:名冊不再含預設帳號、也不再存密碼;舊資料讀入時以白名單重建並回寫(E14)
     const [users, setUsers] = useState(() => {
         const saved = localStorage.getItem('appUsers');
-        return saved ? JSON.parse(saved) : [
-            { id: '001', name: 'OP1', username: 'OP1', password: '123', role: 'OPERATOR', shift: 'A' },
-            { id: '002', name: 'OP2', username: 'OP2', password: '123', role: 'OPERATOR', shift: 'B' },
-            { id: '003', name: 'OP3', username: 'OP3', password: '123', role: 'OPERATOR', shift: 'C' }
-        ];
+        if (!saved) return [];
+        try {
+            const cleaned = (JSON.parse(saved) || []).map(u => ({
+                id: u?.id ?? '',
+                name: u?.name ?? '',
+                // S6:username 是**後端帳號**,值即代碼(id);缺值時以代碼遞補,
+                // 絕不可用顯示名稱(name)遞補 —— 那會讓點名冊登入必然 401。
+                // 遞補鏈與 LoginModal.sanitizeRoster 逐字一致(E24)。
+                username: u?.username ?? u?.id ?? u?.name ?? '',
+                role: u?.role ?? 'OPERATOR',
+                shift: u?.shift ?? '',
+            }));
+            localStorage.setItem('appUsers', JSON.stringify(cleaned));
+            return cleaned;
+        } catch {
+            return [];
+        }
     });
 
     const [newUserCode, setNewUserCode] = useState('');
     const [newUserName, setNewUserName] = useState('');
-    const [newUserPassword, setNewUserPassword] = useState('');
     const [newUserShift, setNewUserShift] = useState('');
     const [selectedUserId, setSelectedUserId] = useState(null);
 
@@ -85,16 +97,24 @@ const GeneralTab = () => {
 
 
     // --- User Handlers ---
+    /**
+     * 新增 / 更新名冊列。
+     * 輸入:無(取表單 state);輸出:無;
+     * 邏輯:S5 起名冊只是顯示用清單,**不再寫入任何密碼欄位** ——
+     *       帳號密碼由系統管理者透過後端 /api/v1/auth/users 建立(S6 接線)。
+     *       S6:username 必須是**代碼**(newUserCode),即送進 /api/v1/auth/login 的帳號字串;
+     *       顯示名稱只放在 name。寫成顯示名稱會讓作業員點名冊登入必然 401,
+     *       而畫面只顯示「帳號或密碼錯誤」,現場無從除錯。
+     */
     const handleAddUser = () => {
-        if (!newUserCode || !newUserName || !newUserPassword) {
+        if (!newUserCode || !newUserName) {
             alert(t('settingsExt.general.alertFillUser'));
             return;
         }
         const newUser = {
             id: newUserCode,
             name: newUserName,
-            username: newUserName,
-            password: newUserPassword,
+            username: newUserCode,
             role: 'OPERATOR', // Default
             shift: newUserShift
         };
@@ -124,7 +144,6 @@ const GeneralTab = () => {
         // Reset inputs
         setNewUserCode('');
         setNewUserName('');
-        setNewUserPassword('');
         setNewUserShift('');
         setSelectedUserId(null);
     };
@@ -143,7 +162,6 @@ const GeneralTab = () => {
         setSelectedUserId(u.id);
         setNewUserCode(u.id);
         setNewUserName(u.name);
-        setNewUserPassword(u.password || '');
         setNewUserShift(u.shift || '');
         // We need to unlock ID editing restriction or handle it?
         // For simplicity, we allow overwriting by ID.
@@ -242,7 +260,6 @@ const GeneralTab = () => {
                     <thead>
                         <tr>
                             <th className={styles.th}>{t('settingsExt.general.colUser')}</th>
-                            <th className={styles.th}>{t('settingsExt.general.colPassword')}</th>
                             <th className={styles.th}>{t('settingsExt.general.colId')}</th>
                             <th className={styles.th}>{t('settingsExt.general.colActions')}</th>
                         </tr>
@@ -256,7 +273,6 @@ const GeneralTab = () => {
                                 style={{ cursor: userSource === 'custom' ? 'pointer' : 'default' }}
                             >
                                 <td className={styles.td}>{u.name}</td>
-                                <td className={styles.td}>{u.password}</td>
                                 <td className={styles.td}>{u.id}</td>
                                 <td className={styles.td}>
                                     <button
@@ -272,14 +288,13 @@ const GeneralTab = () => {
 
                 <div className={styles.editRow}>
                     <input placeholder={t('settingsExt.general.userNamePlaceholder')} value={newUserName} onChange={e => setNewUserName(e.target.value)} disabled={userSource === 'inherit'} />
-                    <input placeholder={t('settingsExt.general.passwordPlaceholder')} value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} disabled={userSource === 'inherit'} />
                     <input placeholder={t('settingsExt.general.idPlaceholder')} value={newUserCode} onChange={e => setNewUserCode(e.target.value)} disabled={userSource === 'inherit'} style={{ width: '80px' }} />
                     <button className={styles.actionButton} onClick={handleAddUser} disabled={userSource === 'inherit'}>
                         {selectedUserId ? t('settingsExt.common.update') : t('settingsExt.common.add')}
                     </button>
                     {selectedUserId && (
                         <button className={styles.actionButton} onClick={() => {
-                            setSelectedUserId(null); setNewUserName(''); setNewUserCode(''); setNewUserPassword('');
+                            setSelectedUserId(null); setNewUserName(''); setNewUserCode('');
                         }}>{t('settingsExt.common.cancel')}</button>
                     )}
                 </div>

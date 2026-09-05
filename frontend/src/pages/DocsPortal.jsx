@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import useProductionStore from '../stores/productionStore';
 import { useLanguage } from '../modules/language/LanguageContext';
+import { getDocument } from '../services/api';
 
 /**
  * DocsPortal — 內建文件入口
@@ -57,16 +58,22 @@ const DocsPortal = () => {
     ]},
   ];
 
+  /**
+   * 讀取一份設計文件並填入內容區。
+   * 輸入:檔名(DOC_INDEX 內的 path);輸出:無(改寫 content / error / loading 狀態);
+   * 邏輯:一律走 services/api.js 的 getDocument(),讓請求攔截器帶上 Authorization ——
+   *       S5 起 /api/docs 需要登入,原本的瀏覽器原生 fetch 不經攔截器會固定回 401。
+   *       axios 失敗時錯誤訊息取 HTTP 狀態碼(無 response 則為網路錯誤訊息)。
+   */
   const fetchDocument = async (filePath) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/docs/${encodeURIComponent(filePath)}`);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const text = await response.text();
+      const text = await getDocument(filePath);
       setContent(text);
     } catch (err) {
-      setError(`${t('docs.error.loadFail')}: ${err.message}`);
+      const detail = err?.response?.status ? `HTTP ${err.response.status}` : err.message;
+      setError(`${t('docs.error.loadFail')}: ${detail}`);
       setContent('');
     } finally {
       setLoading(false);

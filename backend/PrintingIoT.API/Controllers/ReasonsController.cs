@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authorization;
+using PrintingIoT.Core.Constants;
 using Microsoft.AspNetCore.Mvc;
 using PrintingIoT.Core.DTOs;
 using PrintingIoT.Core.Entities;
@@ -9,6 +11,7 @@ namespace PrintingIoT.API.Controllers;
 /// S3 / F5:停機 / 不良原因主檔端點。
 /// 設定頁維護、現場彈窗讀取,兩邊終於是同一份資料。
 /// </summary>
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class ReasonsController : ControllerBase
@@ -51,6 +54,7 @@ public class ReasonsController : ControllerBase
     /// 輸入:type 查詢參數或本體的 type 欄位、ReasonCreateRequest。
     /// 輸出:201;code / name 空白 → 400;(type, code) 已存在 → 409。
     /// </summary>
+    [Authorize(Policy = AppRoles.Policies.MasterDataWrite)]
     [HttpPost]
     public async Task<IActionResult> CreateReason([FromQuery] string? type, [FromBody] ReasonCreateWithTypeRequest? request)
     {
@@ -78,6 +82,7 @@ public class ReasonsController : ControllerBase
     /// 更新原因(只改 Name / Category / DisplayOrder / IsActive)。
     /// 輸入:id 與 ReasonUpdateRequest;輸出:204,查無 → 404。
     /// </summary>
+    [Authorize(Policy = AppRoles.Policies.MasterDataWrite)]
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateReason(Guid id, [FromBody] ReasonUpdateRequest? request)
     {
@@ -92,6 +97,7 @@ public class ReasonsController : ControllerBase
     /// <summary>
     /// 軟刪除原因。輸入:id;輸出:204(重複刪除仍 204),查無 → 404。
     /// </summary>
+    [Authorize(Policy = AppRoles.Policies.MasterDataWrite)]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteReason(Guid id)
     {

@@ -1,0 +1,48 @@
+import { describe, it, expect } from 'vitest';
+
+/**
+ * S5 補強:前端不得以瀏覽器原生 fetch 直接打後端 /api。
+ *
+ * 背景:S5 讓後端全面 [Authorize],權杖只由 services/api.js 的 axios 請求攔截器掛上。
+ * 任何繞過該 instance 的呼叫(例如原本 DocsPortal 的 `fetch('/api/docs/...')`)都不會帶
+ * Authorization,一律回 401 —— 這種錯誤在單元測試不會顯現,只有實際點頁面才看得到,
+ * 因此改用靜態掃描把它擋在版控之前。
+ *
+ * 取檔方式與 noHardcodedCredentials.test.js 一致:用 import.meta.glob(?raw),
+ * 因為本專案的 vite-plugin-node-polyfills 會把 node:fs 換成瀏覽器替身、讀不到真實檔案。
+ */
+
+// 以原始字串載入 src 下所有 .js / .jsx(鍵為相對本檔的路徑)
+const modules = import.meta.glob('../../**/*.{js,jsx}', { query: '?raw', import: 'default', eager: true });
+
+// 只留 src/ 其他目錄的檔案(src/tests 底下會解析成 './' 或 '../',不以 '../../' 開頭)
+const sources = Object.entries(modules)
+    .filter(([file]) => file.startsWith('../../'))
+    .filter(([file]) => !file.includes('/tests/'));
+
+// 比對「fetch( 後面第一個引數是以 /api 開頭的字串或樣板字面值」,
+// 前綴的否定判斷是為了放過 `something.fetch(` 這類方法名巧合。
+const BARE_API_FETCH = /(?<![.\w])fetch\s*\(\s*[`'"]\/api/;
+
+describe('前端不得繞過 api.js 直接 fetch 後端(S5 補強)', () => {
+    it('掃描範圍非空(避免測試因路徑錯誤而空轉通過)', () => {
+        expect(sources.length).toBeGreaterThan(10);
+        expect(sources.some(([f]) => f.endsWith('pages/DocsPortal.jsx'))).toBe(true);
+    });
+
+    it('src 內沒有任何裸 fetch 打向 /api', () => {
+        const hits = sources.filter(([, code]) => BARE_API_FETCH.test(code)).map(([f]) => f);
+        expect(
+            hits,
+            `以下檔案用原生 fetch 打後端,不會帶 Authorization,請改走 services/api.js:${hits.join(', ')}`
+        ).toEqual([]);
+    });
+
+    it('DocsPortal 取文件走 services/api.js 的 getDocument()', () => {
+        const found = sources.find(([f]) => f.endsWith('pages/DocsPortal.jsx'));
+        expect(found, 'DocsPortal.jsx 不存在').toBeDefined();
+        const code = found[1];
+        expect(code).toContain("from '../services/api'");
+        expect(code).toContain('getDocument(');
+    });
+});

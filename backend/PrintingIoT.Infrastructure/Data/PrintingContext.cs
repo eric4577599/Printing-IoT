@@ -69,10 +69,18 @@ public class PrintingContext : DbContext
             .HasIndex(r => new { r.Type, r.Code })
             .IsUnique();
 
-        // Auth — Unique Username
+        // Auth — Unique Username(保留:較寬鬆但無害的既有索引,移除只是多餘的變動)
         modelBuilder.Entity<PrintingIoT.Core.Entities.Auth.User>()
             .HasIndex(u => u.Username)
             .IsUnique();
+
+        // S6 / Auth — 帳號不分大小寫唯一:唯一索引建在正規化欄位上,
+        // 讓資料庫層與應用層(AppUsernames.Normalize)採用同一個相等語意,
+        // 併發時無法繞過 CreateUser 的重複檢查。
+        modelBuilder.Entity<PrintingIoT.Core.Entities.Auth.User>()
+            .HasIndex(u => u.UsernameNormalized)
+            .IsUnique()
+            .HasDatabaseName("IX_Users_UsernameNormalized");
 
         // Auth — Role Unique Name
         modelBuilder.Entity<PrintingIoT.Core.Entities.Auth.Role>()

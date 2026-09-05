@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authorization;
+using PrintingIoT.Core.Constants;
 using Microsoft.AspNetCore.Mvc;
 using MQTTnet;
 using MQTTnet.Client;
@@ -5,6 +7,7 @@ using System.Text.Json;
 
 namespace PrintingIoT.API.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class SimulationController : ControllerBase
@@ -16,6 +19,7 @@ public class SimulationController : ControllerBase
         _configuration = configuration;
     }
 
+    [Authorize(Policy = AppRoles.Policies.SystemConfig)]
     [HttpPost("test-mqtt")]
     public async Task<IActionResult> TestMqttConnection([FromBody] JsonElement? body = null)
     {
@@ -62,6 +66,7 @@ public class SimulationController : ControllerBase
         }
     }
 
+    [Authorize(Policy = AppRoles.Policies.SystemConfig)]
     [HttpPost("speed")]
     public IActionResult UpdateSimulationSpeed([FromBody] JsonElement payload)
     {

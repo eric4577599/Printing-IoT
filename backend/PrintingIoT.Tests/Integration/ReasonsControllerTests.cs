@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PrintingIoT.Core.Entities;
+using PrintingIoT.Core.Constants;
 using PrintingIoT.Infrastructure.Data;
 using System.Net;
 using System.Net.Http.Json;
@@ -39,6 +40,8 @@ public class ReasonsControllerTests : IDisposable
         });
 
         _client = _factory.CreateClient();
+        // S5:後端已預設拒絕未驗證請求,測試客戶端一律帶 ADMIN 權杖通過授權層
+        _client.DefaultRequestHeaders.Authorization = TestAuthTokenFactory.Header(AppRoles.Admin);
     }
 
     /// <summary>

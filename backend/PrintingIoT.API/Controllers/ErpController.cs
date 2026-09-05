@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PrintingIoT.Core.Entities;
@@ -7,6 +8,7 @@ using PrintingIoT.Infrastructure.Data;
 
 namespace PrintingIoT.API.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class ErpController : ControllerBase

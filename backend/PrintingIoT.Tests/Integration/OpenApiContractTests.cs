@@ -51,6 +51,8 @@ public class OpenApiContractTests : IClassFixture<WebApplicationFactory<Program>
     [InlineData("/api/Reasons")]
     [InlineData("/api/Reasons/{id}")]
     [InlineData("/api/settings/factory-time")]
+    // S5 / AC-29:使用者管理端點必須出現在契約中
+    [InlineData("/api/v1/Auth/users")]
     public async Task SwaggerEndpoint_ContainsS3Paths(string expectedPath)
     {
         var client = _factory.WithWebHostBuilder(builder =>

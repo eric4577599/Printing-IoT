@@ -54,6 +54,10 @@ namespace PrintingIoT.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
@@ -62,7 +66,16 @@ namespace PrintingIoT.Infrastructure.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<string>("Shift")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
                     b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("UsernameNormalized")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
@@ -71,6 +84,10 @@ namespace PrintingIoT.Infrastructure.Migrations
 
                     b.HasIndex("Username")
                         .IsUnique();
+
+                    b.HasIndex("UsernameNormalized")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Users_UsernameNormalized");
 
                     b.ToTable("Users");
                 });

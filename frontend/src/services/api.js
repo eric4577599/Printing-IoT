@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getToken, clearAuth } from './authStorage';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -8,6 +9,69 @@ const api = axios.create({
         'Content-Type': 'application/json',
     },
 });
+
+// 登入端點路徑(baseURL 已含 /api,故此處為 /v1/auth/login)
+const LOGIN_PATH = '/v1/auth/login';
+
+/**
+ * 判斷一次請求是否打向登入端點。
+ * 輸入:axios 設定物件;輸出:布林;
+ * 邏輯:比對 config.url 尾段,避免把「密碼打錯的 401」誤判成「權杖失效的 401」。
+ */
+const isLoginRequest = (config) => {
+    const url = config?.url || '';
+    return url.includes(LOGIN_PATH);
+};
+
+// 請求攔截器:有權杖才掛 Authorization,無權杖時絕不留下空標頭
+api.interceptors.request.use((config) => {
+    const token = getToken();
+    if (token) {
+        config.headers = config.headers || {};
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
+// 回應攔截器:只有「非登入端點的 401」才視為權杖失效並觸發全域登出
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        // 無 response 代表網路錯誤 / 後端不可達,絕不可當成 401 而把使用者登出
+        if (error?.response?.status === 401 && !isLoginRequest(error.config)) {
+            clearAuth();
+            if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+                window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+            }
+        }
+        // 403(身分有效、權限不足)一律保留權杖,由呼叫端顯示訊息
+        return Promise.reject(error);
+    }
+);
+
+/**
+ * 登入並取得 JWT。
+ * 輸入:帳號、密碼;
+ * 輸出:後端 LoginResponse({ token, username, roles, displayName, expiresAt });
+ * 邏輯:POST /v1/auth/login;失敗(401)由呼叫端捕捉,攔截器刻意不對登入端點做全域登出。
+ */
+export const login = async (username, password) => {
+    const response = await api.post(LOGIN_PATH, { username, password });
+    return response.data;
+};
+
+/**
+ * 讀取單一系統設計文件(doc/*.md)的原始 Markdown。
+ * 輸入:檔名(如 'HANDOVER.md',內含中文或空白時由本函式負責百分比編碼);
+ * 輸出:Markdown 純文字字串;
+ * 邏輯:走同一個 axios instance,因此請求攔截器會補上 Authorization ——
+ *       S5 起 /api/docs 已加 [Authorize],用瀏覽器原生 fetch 會因缺權杖固定回 401。
+ *       後端回的是 text/markdown,故指定 responseType 'text' 避免 axios 誤判為 JSON。
+ */
+export const getDocument = async (filePath) => {
+    const response = await api.get(`/docs/${encodeURIComponent(filePath)}`, { responseType: 'text' });
+    return response.data;
+};
 
 export const getOrders = async (status) => {
     const params = status ? { status } : {};

@@ -4,22 +4,45 @@ import styles from './LoginModal.module.css';
 import { useAuth } from './AuthContext';
 import { useLanguage } from '../language/LanguageContext';
 
+/**
+ * 名冊白名單重建(S5,S6 修正 username 遞補來源)。
+ * 輸入:localStorage 讀出的名冊陣列(舊資料可能含 password 欄位,或缺 username);
+ * 輸出:只含 id / name / username / shift / role 的新陣列;
+ * 邏輯:剝除 password 等任何非白名單欄位,避免舊資料把密碼留在使用者機器上(E14);
+ *       username 必須是**後端帳號(代碼)**,舊列缺 username 時以 id 遞補而非顯示名稱 ——
+ *       顯示名稱(例如「王小明」)不是帳號,拿去登入必然 401。
+ */
+const sanitizeRoster = (list) => (Array.isArray(list) ? list : []).map(u => ({
+    id: u?.id ?? '',
+    name: u?.name ?? '',
+    username: u?.username ?? u?.id ?? u?.name ?? '',
+    shift: u?.shift ?? '',
+    role: u?.role ?? 'OPERATOR',
+}));
+
 const LoginModal = ({ isOpen, onClose }) => {
-    const { login, loginDirect } = useAuth();
+    const { login, setSessionShift } = useAuth();
     const { t } = useLanguage(); // 取得翻譯函式,依當前語系回傳對應字串
     const navigate = useNavigate();
 
     // -- State --
+    // 名冊只是「觸控便利清單」:點一列僅填入帳號,仍必須輸入密碼才能登入。
+    // 名冊為空時照常顯示,操作員手動輸入帳號即可,不得因此無法登入。
     const [users, setUsers] = useState(() => {
         const saved = localStorage.getItem('appUsers');
-        return saved ? JSON.parse(saved) : [
-            { id: '001', name: 'OP1', username: 'OP1', password: '123', role: 'OPERATOR', shift: 'A' },
-            { id: '002', name: 'OP2', username: 'OP2', password: '123', role: 'OPERATOR', shift: 'B' },
-            { id: '003', name: 'OP3', username: 'OP3', password: '123', role: 'OPERATOR', shift: 'C' },
-            { id: '004', name: 'OP4', username: 'OP4', password: '123', role: 'OPERATOR', shift: 'A' },
-            { id: '005', name: 'OP5', username: 'OP5', password: '123', role: 'OPERATOR', shift: 'B' }
-        ];
+        if (!saved) return [];
+        try {
+            const cleaned = sanitizeRoster(JSON.parse(saved));
+            localStorage.setItem('appUsers', JSON.stringify(cleaned)); // 回寫瘦身後的名冊
+            return cleaned;
+        } catch {
+            return [];
+        }
     });
+
+    // 登入表單(主流程與管理者子視窗共用同一組欄位語意)
+    const [loginUsername, setLoginUsername] = useState('');
+    const [loginPassword, setLoginPassword] = useState('');
 
     // -- Shift Defaults (Updated per req) --
     // Day: 08:00~18:00, Night: 20:00~04:00
@@ -77,31 +100,53 @@ const LoginModal = ({ isOpen, onClose }) => {
 
     // -- Handlers --
 
+    /**
+     * 點選名冊一列。
+     * 輸入:名冊列;輸出:無;
+     * 邏輯:僅把帳號填進登入欄與編輯欄,**不**代表已登入 —— 密碼仍必須手動輸入。
+     */
     const handleUserRowClick = (u) => {
         setSelectedUserId(u.id);
         setNewUserCode(u.id);
         setNewUserName(u.name);
         setNewUserShift(u.shift || '');
+        setLoginUsername(u.username || u.name || '');
     };
 
-    const handleLogin = () => {
-        if (!selectedUserId) {
-            alert(t('login.alert.selectOperator'));
+    /**
+     * 決定要寫入輪廓的班別代碼。
+     * 輸入:無(取名冊選取狀態與班別下拉);
+     * 輸出:班別代碼字串(可能為空字串);
+     * 邏輯:名冊列自帶班別(A / B / C)時以該值為準 —— 這是改版前狀態列顯示的值;
+     *       手動輸入帳號(名冊未選)時退回目前班別的 id(DAY / NIGHT / CUSTOM)。
+     */
+    const resolveShiftCode = () => {
+        const rosterRow = users.find(u => u.id === selectedUserId);
+        const rosterShift = (rosterRow?.shift || '').trim();
+        if (rosterShift) return rosterShift;
+        return (currentSessionShift?.id || currentSessionShift?.name || '').trim();
+    };
+
+    /**
+     * 送出登入(主流程與管理者子視窗共用的唯一登入路徑)。
+     * 輸入:無(取表單 state);輸出:無;
+     * 邏輯:帳號與密碼皆有值才呼叫後端 login();成功後寫入班別、關閉視窗並導回首頁,
+     *       失敗一律只提示「帳號或密碼錯誤」,不區分帳號不存在與密碼錯誤。
+     */
+    const handleLogin = async () => {
+        if (!loginUsername || !loginPassword) {
+            alert(t('login.alert.invalidCredentials'));
             return;
         }
-        const user = users.find(u => u.id === selectedUserId);
-
-        if (user) {
-            // Merge Session Shift
-            const sessionUser = {
-                ...user,
-                sessionShift: currentSessionShift.name
-            };
-            const success = loginDirect(sessionUser);
-            if (success) {
-                onClose();
-                navigate('/');
-            }
+        const result = await login(loginUsername, loginPassword);
+        if (result?.ok) {
+            const shiftCode = resolveShiftCode();
+            if (shiftCode) setSessionShift(shiftCode);
+            setLoginPassword('');
+            onClose();
+            navigate('/');
+        } else {
+            alert(t('login.alert.invalidCredentials'));
         }
     };
 
@@ -112,7 +157,9 @@ const LoginModal = ({ isOpen, onClose }) => {
 
     const handleAddUser = () => {
         if (!newUserCode || !newUserName) return alert(t('login.alert.enterCodeName'));
-        const newUser = { id: newUserCode, name: newUserName, username: newUserName, password: '123', role: 'OPERATOR', shift: newUserShift.toUpperCase() };
+        // S5:名冊物件不得含 password 欄位(帳號密碼由後端建立,見 spec §5.4)
+        // S6:username 是後端帳號(代碼,例如 OP1),不是顯示名稱 —— 兩者混用會讓點名冊登入必然失敗
+        const newUser = { id: newUserCode, name: newUserName, username: newUserCode, role: 'OPERATOR', shift: newUserShift.toUpperCase() };
 
         // Upsert
         const idx = users.findIndex(u => u.id === newUserCode);
@@ -155,24 +202,8 @@ const LoginModal = ({ isOpen, onClose }) => {
         setSelectedShiftIdx(null);
     };
 
-    // Admin Login State
+    // Admin Login State —— 只是同一條登入路徑的另一個入口,不再有第二套驗證邏輯
     const [showAdminLogin, setShowAdminLogin] = useState(false);
-    const [adminUser, setAdminUser] = useState('');
-    const [adminPass, setAdminPass] = useState('');
-
-    const handleAdminLogin = () => {
-        if (login(adminUser, adminPass)) {
-            // Inject Session Shift for Admin too if needed, or default
-            // login() in AuthContext might need update to accept sessionShift?
-            // Current login() just calls loginDirect inside.
-            // I should update login() to return user obj or handle it manually.
-            // Simplified: Admin just gets logged in.
-            onClose();
-            navigate('/');
-        } else {
-            alert(t('login.alert.invalidCredentials'));
-        }
-    };
 
     if (!isOpen) return null;
 
@@ -205,6 +236,26 @@ const LoginModal = ({ isOpen, onClose }) => {
                                 <option key={i} value={s.name}>{s.name} ({s.start}~{s.end})</option>
                             ))}
                         </select>
+                    </div>
+
+                    {/* S5:真登入欄位 —— 點名冊只會填入帳號,密碼一律要手動輸入 */}
+                    <div className={styles.infoField}>
+                        <label>{t('login.placeholder.username')}</label>
+                        <input
+                            aria-label={t('login.placeholder.username')}
+                            value={loginUsername}
+                            onChange={e => setLoginUsername(e.target.value)}
+                        />
+                    </div>
+                    <div className={styles.infoField}>
+                        <label>{t('login.placeholder.password')}</label>
+                        <input
+                            type="password"
+                            aria-label={t('login.placeholder.password')}
+                            value={loginPassword}
+                            onChange={e => setLoginPassword(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') handleLogin(); }}
+                        />
                     </div>
 
                     <div className={styles.infoField}>
@@ -318,20 +369,20 @@ const LoginModal = ({ isOpen, onClose }) => {
                                 type="text"
                                 placeholder={t('login.placeholder.username')}
                                 className={styles.adminInput}
-                                value={adminUser}
-                                onChange={e => setAdminUser(e.target.value)}
+                                value={loginUsername}
+                                onChange={e => setLoginUsername(e.target.value)}
                                 autoFocus
                             />
                             <input
                                 type="password"
                                 placeholder={t('login.placeholder.password')}
                                 className={styles.adminInput}
-                                value={adminPass}
-                                onChange={e => setAdminPass(e.target.value)}
+                                value={loginPassword}
+                                onChange={e => setLoginPassword(e.target.value)}
                             />
                             <div className={styles.adminButtons}>
                                 <button className={`${styles.adminBtn} ${styles.adminBtnCancel}`} onClick={() => setShowAdminLogin(false)}>{t('login.btn.cancel')}</button>
-                                <button className={styles.adminBtn} onClick={handleAdminLogin}>{t('login.btn.login')}</button>
+                                <button className={styles.adminBtn} onClick={handleLogin}>{t('login.btn.login')}</button>
                             </div>
                         </div>
                     </div>

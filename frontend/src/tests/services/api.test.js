@@ -2,11 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // 以 mock 取代 axios:api.js 在 import 期就會呼叫 axios.create(),
 // 因此 mock 必須回傳一個帶 get/post/put/delete 的假 instance,並把它暴露出來供斷言。
+// S5:api.js 於 import 期會註冊請求 / 回應攔截器,假 instance 必須具備 interceptors 形狀
 const mockInstance = {
     get: vi.fn(() => Promise.resolve({ data: null })),
     post: vi.fn(() => Promise.resolve({ data: null })),
     put: vi.fn(() => Promise.resolve({ data: null })),
     delete: vi.fn(() => Promise.resolve({ data: null })),
+    interceptors: {
+        request: { use: vi.fn() },
+        response: { use: vi.fn() },
+    },
 };
 
 vi.mock('axios', () => ({

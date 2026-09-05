@@ -8,6 +8,11 @@ const mockInstance = {
     post: vi.fn(() => Promise.resolve({ data: null })),
     put: vi.fn(() => Promise.resolve({ data: null })),
     delete: vi.fn(() => Promise.resolve({ data: null })),
+    // S5:api.js 於 import 期註冊攔截器,假 instance 必須具備 interceptors 形狀
+    interceptors: {
+        request: { use: vi.fn() },
+        response: { use: vi.fn() },
+    },
 };
 
 vi.mock('axios', () => ({

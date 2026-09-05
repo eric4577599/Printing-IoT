@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PrintingIoT.Core.DTOs;
@@ -6,6 +7,7 @@ using PrintingIoT.Core.Interfaces;
 
 namespace PrintingIoT.API.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class OrdersController : ControllerBase

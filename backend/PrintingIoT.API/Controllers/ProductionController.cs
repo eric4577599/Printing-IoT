@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PrintingIoT.Core.DTOs;
 using PrintingIoT.Core.Interfaces;
@@ -8,6 +9,7 @@ namespace PrintingIoT.API.Controllers;
 /// S3 / F2:完工實績端點。
 /// POST 落地(冪等)、GET 查詢區間、GET/{id} 取單筆含明細。
 /// </summary>
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class ProductionController : ControllerBase
