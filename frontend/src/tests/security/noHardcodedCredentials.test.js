@@ -65,7 +65,41 @@ describe('前端不得再有硬編碼憑證(S5,AC-44)', () => {
             const code = readSource(suffix);
             expect(code, `${suffix} 不存在`).not.toBeNull();
             expect(code.includes("'123'"), `${suffix} 仍含 '123'`).toBe(false);
+        }
+    });
+
+    // (d) AuthContext / LoginModal 完全不該有 password 欄位:
+    //     前者只把密碼當參數轉手給 api.login,後者只有受控輸入框。
+    it('AuthContext / LoginModal 不得出現 password 欄位', () => {
+        for (const suffix of ['modules/auth/AuthContext.jsx', 'modules/auth/LoginModal.jsx']) {
+            const code = readSource(suffix);
+            expect(code, `${suffix} 不存在`).not.toBeNull();
             expect(/password\s*:/i.test(code), `${suffix} 仍含 password 欄位`).toBe(false);
         }
+    });
+
+    // (e) GeneralTab 自 S7 起必須把密碼送去 POST/PUT /v1/auth/users,
+    //     因此不能再用「有沒有 password 欄位」當判準 —— 那會把正當的建立帳號一併擋掉。
+    //     真正的不變量是**密碼絕不落地**:任何一行只要碰 localStorage 就不得同時碰密碼。
+    it('GeneralTab 的密碼絕不寫入 localStorage', () => {
+        const code = readSource('components/settings/GeneralTab.jsx');
+        expect(code, 'GeneralTab.jsx 不存在').not.toBeNull();
+
+        // 註解行不算:說明「不得存密碼」的註解本身就會同時出現這兩個詞
+        const isComment = (line) => /^\s*(\/\/|\/\*|\*)/.test(line);
+
+        const offending = code
+            .split('\n')
+            .map((line, i) => [i + 1, line])
+            .filter(([, line]) => !isComment(line))
+            .filter(([, line]) => line.includes('localStorage') && /password/i.test(line))
+            .map(([n]) => n);
+
+        expect(offending, `以下行號同時碰 localStorage 與密碼:${offending.join(', ')}`).toEqual([]);
+
+        // 名冊快取的白名單投影不得出現 password 欄位(這是實際寫進去的那一份)
+        const cacheProjection = code.match(/const toRosterCache[\s\S]*?\n\n/)?.[0] ?? '';
+        expect(cacheProjection, 'toRosterCache 投影未找到').not.toBe('');
+        expect(/password/i.test(cacheProjection), '名冊快取投影含密碼欄位').toBe(false);
     });
 });

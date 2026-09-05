@@ -5,12 +5,14 @@
  * 任何密碼欄位都不得寫入儲存,寫入前一律以白名單挑欄位。
  *
  * 鍵:
- *   authToken   —— JWT 字串
- *   authUser    —— 輪廓 JSON(白名單欄位,無密碼)
- *   currentUser —— 已廢止(舊版曾把含明文密碼的整個物件寫進去),clearAuth 順手清除
+ *   authToken        —— JWT 字串(存取權杖,2 小時)
+ *   authRefreshToken —— 刷新憑證字串(S7,預設 12 小時,涵蓋一個班)
+ *   authUser         —— 輪廓 JSON(白名單欄位,無密碼)
+ *   currentUser      —— 已廢止(舊版曾把含明文密碼的整個物件寫進去),clearAuth 順手清除
  */
 
 export const TOKEN_KEY = 'authToken';
+export const REFRESH_TOKEN_KEY = 'authRefreshToken';
 export const PROFILE_KEY = 'authUser';
 const LEGACY_PROFILE_KEY = 'currentUser';
 
@@ -34,16 +36,39 @@ export const sanitizeProfile = (profile) => {
 
 /**
  * 存入權杖與輪廓。
- * 輸入:權杖字串、輪廓物件;輸出:無;
+ * 輸入:權杖字串、輪廓物件、刷新憑證(S7,選填);輸出:無;
  * 邏輯:輪廓先過白名單再序列化;順手移除廢止的 currentUser 鍵。
+ *       刷新憑證**只在有給值時才寫入** —— 像 setSessionShift 那種
+ *       「只更新輪廓」的呼叫端不帶第三個參數,不得因此把憑證洗掉。
  */
-export const saveAuth = (token, profile) => {
+export const saveAuth = (token, profile, refreshToken) => {
     try {
         localStorage.setItem(TOKEN_KEY, token);
         localStorage.setItem(PROFILE_KEY, JSON.stringify(sanitizeProfile(profile)));
+        if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
         localStorage.removeItem(LEGACY_PROFILE_KEY);
     } catch {
         // 隱私模式等情境下 localStorage 可能不可寫;不可寫並非致命錯誤,略過即可
+    }
+};
+
+/**
+ * 換發後更新連線階段(S7)。
+ * 輸入:新的存取權杖、新的刷新憑證、新的到期時間;輸出:無;
+ * 邏輯:三者一起換 —— 後端每次換發都會輪替憑證,只換權杖會讓下一次刷新拿舊憑證去打而觸發重用偵測。
+ *       同時把輪廓的 expiresAt 一併更新,否則下次開頁時 isExpired 會用舊時間把人踢出去。
+ */
+export const saveSession = (token, refreshToken, expiresAt) => {
+    try {
+        if (token) localStorage.setItem(TOKEN_KEY, token);
+        if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+
+        const profile = getProfile();
+        if (profile && expiresAt) {
+            localStorage.setItem(PROFILE_KEY, JSON.stringify(sanitizeProfile({ ...profile, expiresAt })));
+        }
+    } catch {
+        // 同 saveAuth:儲存不可用時不中斷流程
     }
 };
 
@@ -54,6 +79,18 @@ export const saveAuth = (token, profile) => {
 export const getToken = () => {
     try {
         return localStorage.getItem(TOKEN_KEY);
+    } catch {
+        return null;
+    }
+};
+
+/**
+ * 讀取刷新憑證(S7)。
+ * 輸入:無;輸出:憑證字串或 null。
+ */
+export const getRefreshToken = () => {
+    try {
+        return localStorage.getItem(REFRESH_TOKEN_KEY);
     } catch {
         return null;
     }
@@ -88,6 +125,7 @@ export const getProfile = () => {
 export const clearAuth = () => {
     try {
         localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(REFRESH_TOKEN_KEY);
         localStorage.removeItem(PROFILE_KEY);
         localStorage.removeItem(LEGACY_PROFILE_KEY);
     } catch {

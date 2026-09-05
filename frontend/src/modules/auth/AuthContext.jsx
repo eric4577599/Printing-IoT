@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useRef } from 'react';
-import { login as loginApi } from '../../services/api';
-import { saveAuth, getToken, getProfile, clearAuth, isExpired } from '../../services/authStorage';
+import { login as loginApi, logoutSession } from '../../services/api';
+import { saveAuth, getToken, getRefreshToken, getProfile, clearAuth, isExpired } from '../../services/authStorage';
 
 /**
  * AuthContext — 真實登入狀態(S5 全面改寫)。
@@ -71,7 +71,8 @@ export const AuthProvider = ({ children }) => {
             const data = await loginApi(username, password);
             if (!data?.token) return { ok: false, reason: 'server' };
             const profile = toProfile(data);
-            saveAuth(data.token, profile);
+            // S7:一併存下刷新憑證,讓存取權杖 2 小時到期後能無感換發(E2)
+            saveAuth(data.token, profile, data.refreshToken);
             setUser(withDerived(profile));
             return { ok: true };
         } catch (error) {
@@ -83,11 +84,16 @@ export const AuthProvider = ({ children }) => {
 
     /**
      * 登出。
-     * 輸入:無;輸出:無;邏輯:清空認證儲存(含舊版遺留的 currentUser)並把 user 歸零。
+     * 輸入:無;輸出:無;
+     * 邏輯:先請後端作廢刷新憑證(S7),再清空認證儲存(含舊版遺留的 currentUser)並把 user 歸零。
+     *       **本機清除不等後端回應** —— 後端不可達時登出仍必須立刻生效,
+     *       否則斷網的現場會卡在一個登不出去的畫面。
      */
     const logout = useCallback(() => {
+        const refreshToken = getRefreshToken();
         clearAuth();
         setUser(null);
+        if (refreshToken) logoutSession(refreshToken);
     }, []);
 
     /**

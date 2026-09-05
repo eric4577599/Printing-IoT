@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getToken, clearAuth } from './authStorage';
+import { getToken, getRefreshToken, saveSession, clearAuth } from './authStorage';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -10,8 +10,10 @@ const api = axios.create({
     },
 });
 
-// 登入端點路徑(baseURL 已含 /api,故此處為 /v1/auth/login)
+// 認證端點路徑(baseURL 已含 /api,故此處為 /v1/auth/*)
 const LOGIN_PATH = '/v1/auth/login';
+const REFRESH_PATH = '/v1/auth/refresh';
+const LOGOUT_PATH = '/v1/auth/logout';
 
 /**
  * 判斷一次請求是否打向登入端點。
@@ -21,6 +23,55 @@ const LOGIN_PATH = '/v1/auth/login';
 const isLoginRequest = (config) => {
     const url = config?.url || '';
     return url.includes(LOGIN_PATH);
+};
+
+/**
+ * 判斷一次請求是否打向刷新 / 登出端點(S7)。
+ * 輸入:axios 設定物件;輸出:布林;
+ * 邏輯:這兩個端點自己回 401 時**不得**再觸發一次刷新 —— 否則刷新失敗會遞迴自打。
+ */
+const isSessionEndpoint = (config) => {
+    const url = config?.url || '';
+    return url.includes(REFRESH_PATH) || url.includes(LOGOUT_PATH);
+};
+
+// 同時只允許一次換發。多個請求同時撞到 401 時共用同一個 promise,
+// 否則每個請求各自拿同一張刷新憑證去換,第二個之後會踩到後端的重用偵測而被全數作廢。
+let refreshPromise = null;
+
+/**
+ * 觸發全域登出(S7 抽出)。
+ * 輸入:無;輸出:無;
+ * 邏輯:清空認證儲存並派發事件,由 AuthContext 同步畫面狀態。
+ */
+const forceLogout = () => {
+    clearAuth();
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+    }
+};
+
+/**
+ * 以刷新憑證換發新的連線階段(S7)。
+ * 輸入:無(自 authStorage 取憑證);
+ * 輸出:布林 —— 是否換發成功;
+ * 邏輯:沒有憑證直接回 false(等同舊行為:401 就登出);
+ *       成功則把新的權杖、憑證與到期時間一起寫回儲存。
+ *       任何錯誤都吞掉並回 false —— 換發失敗的處置是登出,不該讓錯誤再往上炸一層。
+ */
+const runRefresh = async () => {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) return false;
+
+    try {
+        const response = await api.post(REFRESH_PATH, { refreshToken });
+        const data = response?.data;
+        if (!data?.token) return false;
+        saveSession(data.token, data.refreshToken, data.expiresAt);
+        return true;
+    } catch {
+        return false;
+    }
 };
 
 // 請求攔截器:有權杖才掛 Authorization,無權杖時絕不留下空標頭
@@ -33,18 +84,38 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-// 回應攔截器:只有「非登入端點的 401」才視為權杖失效並觸發全域登出
+// 回應攔截器(S7 改寫):非登入端點的 401 先試著以刷新憑證換發並重送原請求,
+// 換不到才視為權杖失效並觸發全域登出。
+//
+// 這是 E2 的解法:2 小時到期後不再是「下一次操作直接被踢出、未存檔的表單資料消失」,
+// 而是使用者無感地換一張新權杖,原請求照常完成。
 api.interceptors.response.use(
     (response) => response,
-    (error) => {
+    async (error) => {
+        const config = error?.config;
+
         // 無 response 代表網路錯誤 / 後端不可達,絕不可當成 401 而把使用者登出
-        if (error?.response?.status === 401 && !isLoginRequest(error.config)) {
-            clearAuth();
-            if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-                window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+        if (error?.response?.status !== 401) return Promise.reject(error);
+
+        // 403 走不到這裡;登入端點的 401 是「密碼打錯」,不是權杖失效
+        if (!config || isLoginRequest(config)) return Promise.reject(error);
+
+        // 刷新 / 登出端點自己回 401 交給呼叫端(runRefresh)判讀,不在此遞迴自打
+        if (isSessionEndpoint(config)) return Promise.reject(error);
+
+        // 每個原始請求只重試一次,避免換發成功但後端仍回 401 時無限重送
+        if (!config.__authRetried && getRefreshToken()) {
+            config.__authRetried = true;
+
+            if (!refreshPromise) {
+                refreshPromise = runRefresh().finally(() => { refreshPromise = null; });
             }
+            const pending = refreshPromise;
+
+            if (await pending) return api.request(config);
         }
-        // 403(身分有效、權限不足)一律保留權杖,由呼叫端顯示訊息
+
+        forceLogout();
         return Promise.reject(error);
     }
 );
@@ -57,6 +128,58 @@ api.interceptors.response.use(
  */
 export const login = async (username, password) => {
     const response = await api.post(LOGIN_PATH, { username, password });
+    return response.data;
+};
+
+/**
+ * 登出(S7)。
+ * 輸入:刷新憑證;輸出:無;
+ * 邏輯:POST /v1/auth/logout 作廢該張憑證。**盡力而為** ——
+ *       後端不可達時仍要讓本機登出成功,否則斷網的現場會連登出都做不到。
+ *       存取權杖本身無法撤銷(JWT 無狀態),最長仍有 2 小時殘命。
+ */
+export const logoutSession = async (refreshToken) => {
+    if (!refreshToken) return;
+    try {
+        await api.post(LOGOUT_PATH, { refreshToken });
+    } catch {
+        // 盡力而為,不阻斷本機登出
+    }
+};
+
+/**
+ * 取得使用者名冊(S7)。
+ * 輸入:無;
+ * 輸出:UserSummary 陣列({ id, username, displayName, shift, roles, isActive, createdAt });
+ * 邏輯:GET /v1/auth/users,**僅 ADMIN 可呼叫**,其餘角色後端回 403,由呼叫端轉為唯讀提示。
+ */
+export const getUsers = async () => {
+    const response = await api.get('/v1/auth/users');
+    return response.data;
+};
+
+/**
+ * 建立使用者(S7)。
+ * 輸入:{ username, password, role, displayName, shift };
+ * 輸出:建立後的 UserSummary;
+ * 邏輯:POST /v1/auth/users。密碼有後端強度規則(預設至少 12 碼),
+ *       違反時回 400 並帶訊息,呼叫端直接顯示後端訊息而非自行猜測規則。
+ */
+export const createUser = async (payload) => {
+    const response = await api.post('/v1/auth/users', payload);
+    return response.data;
+};
+
+/**
+ * 更新使用者(S7)。
+ * 輸入:使用者 id、{ displayName, shift, role, password, isActive }(全部選填);
+ * 輸出:無(後端回 204);
+ * 邏輯:PUT /v1/auth/users/{id}。只送有值的欄位 —— 密碼留空代表不改密碼,
+ *       送空字串會被後端當成「要改成空密碼」而回 400。
+ *       停用最後一位啟用中的 ADMIN 時後端回 409,由呼叫端顯示訊息。
+ */
+export const updateUser = async (id, payload) => {
+    const response = await api.put(`/v1/auth/users/${id}`, payload);
     return response.data;
 };
 

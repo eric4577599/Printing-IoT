@@ -1,8 +1,78 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styles from '../../pages/SettingsPage.module.css';
 import { useLanguage } from '../../modules/language/LanguageContext';
 import { useReasonCodes } from '../../hooks/useReasonCodes';
-import { createReasonCode, deleteReasonCode } from '../../services/api';
+import { createReasonCode, deleteReasonCode, getUsers, createUser, updateUser } from '../../services/api';
+
+// S7:使用者名冊的本機快取鍵。後端才是名冊的事實來源,快取只服務兩件事:
+// ① 後端不可達時設定頁仍看得到清單;② 登入視窗(未登入,呼叫不了 ADMIN 端點)的觸控清單。
+const ROSTER_CACHE_KEY = 'appUsers';
+
+// 可指派的角色。與後端 AppRoles.All 一致,ERP_SERVICE 是機器身分故不在此列。
+const ROLE_OPTIONS = ['OPERATOR', 'SUPERVISOR', 'ENGINEER', 'ADMIN'];
+const ROLE_LABEL_KEY = {
+    OPERATOR: 'settingsExt.general.roleOperator',
+    SUPERVISOR: 'settingsExt.general.roleSupervisor',
+    ENGINEER: 'settingsExt.general.roleEngineer',
+    ADMIN: 'settingsExt.general.roleAdmin',
+};
+
+/**
+ * 名冊快取白名單重建(S5 E14,S7 沿用)。
+ * 輸入:localStorage 讀出的名冊陣列(舊資料可能含 password 欄位,或缺 username);
+ * 輸出:只含 id / name / username / role / shift 的新陣列;
+ * 邏輯:剝除 password 等非白名單欄位;username 缺值時以 id(代碼)遞補,
+ *       絕不可用顯示名稱遞補 —— 顯示名稱不是帳號,拿去登入必然 401。
+ *       遞補鏈與 LoginModal.sanitizeRoster 逐字一致(E24)。
+ */
+const sanitizeRoster = (list) => (Array.isArray(list) ? list : []).map(u => ({
+    id: u?.id ?? '',
+    name: u?.name ?? '',
+    username: u?.username ?? u?.id ?? u?.name ?? '',
+    role: u?.role ?? 'OPERATOR',
+    shift: u?.shift ?? '',
+}));
+
+/**
+ * 後端 UserSummary → 畫面列(S7)。
+ * 輸入:GET /v1/auth/users 的單筆;
+ * 輸出:{ userId, id, username, name, role, shift, isActive };
+ * 邏輯:userId 是後端 Guid(更新時要用),id 沿用既有畫面語意 = 代碼 = 帳號。
+ *       roles 是陣列,取第一個 —— 後端一個帳號只掛一個角色。
+ */
+const fromSummary = (s) => ({
+    userId: s?.id ?? null,
+    id: s?.username ?? '',
+    username: s?.username ?? '',
+    name: s?.displayName || s?.username || '',
+    role: (Array.isArray(s?.roles) ? s.roles[0] : s?.role) || 'OPERATOR',
+    shift: s?.shift ?? '',
+    isActive: s?.isActive !== false,
+});
+
+/**
+ * 畫面列 → 本機快取列(S7)。
+ * 輸入:畫面列陣列;輸出:白名單五欄的陣列;
+ * 邏輯:只快取**啟用中**的帳號 —— 已停用的帳號登不進去,留在登入視窗的觸控清單
+ *       只會讓現場點了之後拿到「帳號或密碼錯誤」。
+ */
+const toRosterCache = (rows) => rows
+    .filter(r => r.isActive)
+    .map(r => ({ id: r.username, name: r.name, username: r.username, role: r.role, shift: r.shift }));
+
+/**
+ * 從 axios 錯誤取出可顯示的訊息(S7)。
+ * 輸入:axios 錯誤物件、預設訊息;輸出:字串;
+ * 邏輯:後端的 400 / 409 會回一句人看得懂的原因(密碼強度、帳號重複、最後一位管理者),
+ *       直接顯示後端訊息比前端自己猜規則準確。
+ */
+const errorMessage = (error, fallback) => {
+    const data = error?.response?.data;
+    if (typeof data === 'string' && data.trim()) return data;
+    if (data?.error) return String(data.error);
+    if (data?.title) return String(data.title);
+    return fallback;
+};
 
 // S3 / F8:原因主檔改由後端維護;以下兩份只是 API 與 localStorage 快取都不可用時的最後降級
 const DEFAULT_STOP_REASONS = [
@@ -52,23 +122,17 @@ const GeneralTab = () => {
     // --- User Settings State ---
     const [userSource, setUserSource] = useState('custom'); // 'inherit' | 'custom'
     const [userRemoteIP, setUserRemoteIP] = useState('');
-    // S5:名冊不再含預設帳號、也不再存密碼;舊資料讀入時以白名單重建並回寫(E14)
+    // S5:名冊不再含預設帳號、也不再存密碼;舊資料讀入時以白名單重建並回寫(E14)。
+    // S7:這份初值只是**開機畫面**,掛載後隨即被後端名冊覆蓋;後端不可達時才會一直沿用。
     const [users, setUsers] = useState(() => {
-        const saved = localStorage.getItem('appUsers');
+        const saved = localStorage.getItem(ROSTER_CACHE_KEY);
         if (!saved) return [];
         try {
-            const cleaned = (JSON.parse(saved) || []).map(u => ({
-                id: u?.id ?? '',
-                name: u?.name ?? '',
-                // S6:username 是**後端帳號**,值即代碼(id);缺值時以代碼遞補,
-                // 絕不可用顯示名稱(name)遞補 —— 那會讓點名冊登入必然 401。
-                // 遞補鏈與 LoginModal.sanitizeRoster 逐字一致(E24)。
-                username: u?.username ?? u?.id ?? u?.name ?? '',
-                role: u?.role ?? 'OPERATOR',
-                shift: u?.shift ?? '',
-            }));
-            localStorage.setItem('appUsers', JSON.stringify(cleaned));
-            return cleaned;
+            const cleaned = sanitizeRoster(JSON.parse(saved));
+            // 立即回寫:剝除舊資料可能殘留的 password 是安全行為,不能等後端回應才做
+            localStorage.setItem(ROSTER_CACHE_KEY, JSON.stringify(cleaned));
+            // 快取沒有 userId / isActive,補上預設值讓畫面列形狀一致
+            return cleaned.map(u => ({ ...u, userId: null, isActive: true }));
         } catch {
             return [];
         }
@@ -78,6 +142,42 @@ const GeneralTab = () => {
     const [newUserName, setNewUserName] = useState('');
     const [newUserShift, setNewUserShift] = useState('');
     const [selectedUserId, setSelectedUserId] = useState(null);
+
+    // S7:名冊改接後端後新增的三個表單欄位與三個狀態旗標
+    const [newUserPassword, setNewUserPassword] = useState('');
+    const [newUserRole, setNewUserRole] = useState('OPERATOR');
+    const [usersLoading, setUsersLoading] = useState(false);
+    // 'offline' = 後端不可達(顯示快取);'forbidden' = 非 ADMIN(唯讀);null = 正常
+    const [usersDegraded, setUsersDegraded] = useState(null);
+
+    /**
+     * 從後端載入使用者名冊(S7)。
+     * 輸入:無;輸出:無(更新 state 與本機快取);
+     * 邏輯:GET /v1/auth/users 成功 → 取代畫面清單並改寫快取(後端是事實來源);
+     *       403(非 ADMIN)→ 轉唯讀並沿用快取;其他錯誤 → 標為離線並沿用快取。
+     *       **失敗時絕不清空畫面** —— 斷網的現場需要看得到清單。
+     */
+    const loadUsers = useCallback(async () => {
+        setUsersLoading(true);
+        try {
+            const list = await getUsers();
+            const rows = (Array.isArray(list) ? list : []).map(fromSummary);
+            setUsers(rows);
+            setUsersDegraded(null);
+            localStorage.setItem(ROSTER_CACHE_KEY, JSON.stringify(toRosterCache(rows)));
+        } catch (error) {
+            setUsersDegraded(error?.response?.status === 403 ? 'forbidden' : 'offline');
+        } finally {
+            setUsersLoading(false);
+        }
+    }, []);
+
+    useEffect(() => { loadUsers(); }, [loadUsers]);
+
+    // S7:名冊編輯的封鎖條件 —— 既有的「繼承遠端 IP」唯讀,加上非 ADMIN 的 403 唯讀。
+    // 離線(offline)刻意**不**封鎖:那時 API 呼叫會失敗並跳出錯誤訊息,
+    // 比畫面直接變灰更能讓現場知道發生什麼事。
+    const userLocked = userSource === 'inherit' || usersDegraded === 'forbidden';
 
     // --- Shift Settings State ---
     const [shiftSource, setShiftSource] = useState('custom'); // 'inherit' | 'custom'
@@ -106,55 +206,89 @@ const GeneralTab = () => {
      *       顯示名稱只放在 name。寫成顯示名稱會讓作業員點名冊登入必然 401,
      *       而畫面只顯示「帳號或密碼錯誤」,現場無從除錯。
      */
-    const handleAddUser = () => {
+    const handleAddUser = async () => {
         if (!newUserCode || !newUserName) {
             alert(t('settingsExt.general.alertFillUser'));
             return;
         }
-        const newUser = {
-            id: newUserCode,
-            name: newUserName,
-            username: newUserCode,
-            role: 'OPERATOR', // Default
-            shift: newUserShift
-        };
 
-        // 修正:編輯模式以原始 id(selectedUserId)定位,變更代碼時原地更新,避免新增重複使用者;
-        // 新增模式仍以代碼定位。
-        const editingId = selectedUserId;
-        // 編輯時若把代碼改成與「其他」既有使用者相同 → 阻止,避免覆蓋別人或製造重複
-        if (editingId != null && newUserCode !== editingId && users.some(u => u.id === newUserCode)) {
+        const editing = selectedUserId != null ? users.find(u => u.id === selectedUserId) : null;
+
+        // 新增時密碼必填 —— 後端的 POST /v1/auth/users 沒有密碼建不了帳號,
+        // 沿用舊的「只填代碼與名稱」會靜默失敗成一列有名字卻登不進去的幽靈。
+        if (!editing && !newUserPassword) {
+            alert(t('settingsExt.general.alertPasswordRequired'));
+            return;
+        }
+
+        // 新增時代碼不可與既有帳號重複(後端也有不分大小寫唯一索引,這裡只是早一步給訊息)
+        if (!editing && users.some(u => u.username.toUpperCase() === newUserCode.toUpperCase())) {
             alert(t('settingsExt.general.alertDuplicateUser').replace('{code}', newUserCode));
             return;
         }
-        const existingIdx = editingId != null
-            ? users.findIndex(u => u.id === editingId)
-            : users.findIndex(u => u.id === newUserCode);
-        let newUsers;
-        if (existingIdx >= 0) {
-            newUsers = [...users];
-            newUsers[existingIdx] = newUser;
-        } else {
-            newUsers = [...users, newUser];
+
+        // 只存在於本機快取的列沒有後端 Guid,改不了。這種列只會在後端不可達時出現,
+        // 讓它靜默走進 PUT undefined 會得到 404 這種看不懂的錯。
+        if (editing && !editing.userId) {
+            alert(t('settingsExt.general.alertUserOffline'));
+            return;
         }
-        setUsers(newUsers);
-        localStorage.setItem('appUsers', JSON.stringify(newUsers));
+
+        try {
+            if (editing) {
+                // 帳號本身不可改(後端沒有改帳號的端點);只送有值的欄位,
+                // 密碼留空代表不變更 —— 送空字串會被後端當成「改成空密碼」而回 400。
+                const payload = {
+                    displayName: newUserName,
+                    shift: newUserShift,
+                    role: newUserRole,
+                };
+                if (newUserPassword) payload.password = newUserPassword;
+                await updateUser(editing.userId, payload);
+            } else {
+                await createUser({
+                    username: newUserCode,
+                    password: newUserPassword,
+                    role: newUserRole,
+                    displayName: newUserName,
+                    shift: newUserShift,
+                });
+            }
+        } catch (error) {
+            alert(errorMessage(error, t('settingsExt.general.alertUserSaveFailed')));
+            return;
+        }
+
+        await loadUsers();
         alert(t('settingsExt.general.alertUserSaved'));
 
         // Reset inputs
         setNewUserCode('');
         setNewUserName('');
         setNewUserShift('');
+        setNewUserPassword('');
+        setNewUserRole('OPERATOR');
         setSelectedUserId(null);
     };
 
-    const handleDeleteUser = (id) => {
-        if (confirm(t('settingsExt.general.confirmDeleteUser'))) {
-            const newUsers = users.filter(u => u.id !== id);
-            setUsers(newUsers);
-            localStorage.setItem('appUsers', JSON.stringify(newUsers));
-            if (selectedUserId === id) setSelectedUserId(null);
+    /**
+     * 停用 / 啟用使用者(S7)。
+     * 輸入:畫面列;輸出:無;
+     * 邏輯:後端**沒有刪除端點**,帳號要留下稽核軌跡,因此「刪除」語意改為停用
+     *       (PUT isActive)。停用最後一位啟用中的 ADMIN 會被後端擋下回 409,顯示其訊息。
+     */
+    const handleToggleUserActive = async (u) => {
+        if (u.isActive && !confirm(t('settingsExt.general.confirmDisableUser'))) return;
+
+        try {
+            await updateUser(u.userId, { isActive: !u.isActive });
+        } catch (error) {
+            alert(errorMessage(error, t('settingsExt.general.alertUserSaveFailed')));
+            return;
         }
+
+        await loadUsers();
+        if (selectedUserId === u.id) setSelectedUserId(null);
     };
 
     const handleUserClick = (u) => {
@@ -163,8 +297,8 @@ const GeneralTab = () => {
         setNewUserCode(u.id);
         setNewUserName(u.name);
         setNewUserShift(u.shift || '');
-        // We need to unlock ID editing restriction or handle it?
-        // For simplicity, we allow overwriting by ID.
+        setNewUserRole(u.role || 'OPERATOR');
+        setNewUserPassword(''); // 編輯時密碼一律從空白開始:留空 = 不變更
     };
 
     // --- Shift Handlers ---
@@ -255,31 +389,64 @@ const GeneralTab = () => {
                 </div>
             )}
 
-            <div className={`${styles.subSection} ${userSource === 'inherit' ? styles.disabledArea : ''}`}>
+            {/* S7:名冊狀態列 —— 載入中、唯讀(非 ADMIN)、離線三種情況都必須說出來,
+                否則現場會以為「存了」但其實只動到本機快取 */}
+            {usersLoading && (
+                <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0 0 8px' }}>
+                    {t('settingsExt.general.userLoading')}
+                </p>
+            )}
+            {usersDegraded === 'forbidden' && (
+                <p style={{ fontSize: '0.85rem', color: '#b45309', margin: '0 0 8px' }}>
+                    {t('settingsExt.general.userReadOnly')}
+                </p>
+            )}
+            {usersDegraded === 'offline' && (
+                <p style={{ fontSize: '0.85rem', color: '#b45309', margin: '0 0 8px' }}>
+                    {t('settingsExt.general.userLoadFailed')}
+                </p>
+            )}
+
+            <div className={`${styles.subSection} ${userLocked ? styles.disabledArea : ''}`}>
                 <table className={styles.table}>
                     <thead>
                         <tr>
                             <th className={styles.th}>{t('settingsExt.general.colUser')}</th>
                             <th className={styles.th}>{t('settingsExt.general.colId')}</th>
+                            <th className={styles.th}>{t('settingsExt.general.colRole')}</th>
+                            <th className={styles.th}>{t('settingsExt.general.colStatus')}</th>
                             <th className={styles.th}>{t('settingsExt.general.colActions')}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {users.map(u => (
                             <tr
-                                key={u.id}
+                                key={u.username || u.id}
                                 onClick={() => handleUserClick(u)}
                                 className={selectedUserId === u.id ? styles.selectedRow : ''}
-                                style={{ cursor: userSource === 'custom' ? 'pointer' : 'default' }}
+                                style={{
+                                    cursor: userLocked ? 'default' : 'pointer',
+                                    opacity: u.isActive ? 1 : 0.5,
+                                }}
                             >
                                 <td className={styles.td}>{u.name}</td>
                                 <td className={styles.td}>{u.id}</td>
+                                <td className={styles.td}>{t(ROLE_LABEL_KEY[u.role] ?? ROLE_LABEL_KEY.OPERATOR)}</td>
+                                <td className={styles.td}>
+                                    {u.isActive
+                                        ? t('settingsExt.general.statusActive')
+                                        : t('settingsExt.general.statusInactive')}
+                                </td>
                                 <td className={styles.td}>
                                     <button
                                         className={styles.miniBtn}
-                                        onClick={(e) => { e.stopPropagation(); handleDeleteUser(u.id); }}
-                                        disabled={userSource === 'inherit'}
-                                    >{t('settingsExt.common.delete')}</button>
+                                        onClick={(e) => { e.stopPropagation(); handleToggleUserActive(u); }}
+                                        disabled={userLocked || !u.userId}
+                                    >
+                                        {u.isActive
+                                            ? t('settingsExt.general.btnDisableUser')
+                                            : t('settingsExt.general.btnEnableUser')}
+                                    </button>
                                 </td>
                             </tr>
                         ))}
@@ -287,14 +454,30 @@ const GeneralTab = () => {
                 </table>
 
                 <div className={styles.editRow}>
-                    <input placeholder={t('settingsExt.general.userNamePlaceholder')} value={newUserName} onChange={e => setNewUserName(e.target.value)} disabled={userSource === 'inherit'} />
-                    <input placeholder={t('settingsExt.general.idPlaceholder')} value={newUserCode} onChange={e => setNewUserCode(e.target.value)} disabled={userSource === 'inherit'} style={{ width: '80px' }} />
-                    <button className={styles.actionButton} onClick={handleAddUser} disabled={userSource === 'inherit'}>
+                    <input placeholder={t('settingsExt.general.userNamePlaceholder')} value={newUserName} onChange={e => setNewUserName(e.target.value)} disabled={userLocked} />
+                    <input placeholder={t('settingsExt.general.idPlaceholder')} value={newUserCode} onChange={e => setNewUserCode(e.target.value)} disabled={userLocked || selectedUserId != null} style={{ width: '80px' }} title={selectedUserId != null ? t('settingsExt.general.usernameImmutableHint') : undefined} />
+                    <input
+                        type="password"
+                        autoComplete="new-password"
+                        placeholder={selectedUserId != null
+                            ? t('settingsExt.general.passwordKeepHint')
+                            : t('settingsExt.general.passwordPlaceholder')}
+                        value={newUserPassword}
+                        onChange={e => setNewUserPassword(e.target.value)}
+                        disabled={userLocked}
+                    />
+                    <select value={newUserRole} onChange={e => setNewUserRole(e.target.value)} disabled={userLocked}>
+                        {ROLE_OPTIONS.map(r => (
+                            <option key={r} value={r}>{t(ROLE_LABEL_KEY[r])}</option>
+                        ))}
+                    </select>
+                    <button className={styles.actionButton} onClick={handleAddUser} disabled={userLocked}>
                         {selectedUserId ? t('settingsExt.common.update') : t('settingsExt.common.add')}
                     </button>
                     {selectedUserId && (
                         <button className={styles.actionButton} onClick={() => {
                             setSelectedUserId(null); setNewUserName(''); setNewUserCode('');
+                            setNewUserPassword(''); setNewUserRole('OPERATOR');
                         }}>{t('settingsExt.common.cancel')}</button>
                     )}
                 </div>
