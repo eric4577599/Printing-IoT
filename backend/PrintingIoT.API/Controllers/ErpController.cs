@@ -2,13 +2,16 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PrintingIoT.Core.Entities;
+using PrintingIoT.Core.Constants;
 using PrintingIoT.Core.DTOs;
 using PrintingIoT.Core.Interfaces;
 using PrintingIoT.Infrastructure.Data;
 
 namespace PrintingIoT.API.Controllers;
 
-[Authorize]
+// S7:改掛 ErpPush policy —— 同時接受 X-Api-Key(ERP 程式呼叫)與 ADMIN 的 JWT(人工補推)。
+// S5 原本的裸 [Authorize] 只認 Bearer,等於把 ERP 鎖在門外、推單完全停擺。
+[Authorize(Policy = AppRoles.Policies.ErpPush)]
 [ApiController]
 [Route("api/[controller]")]
 public class ErpController : ControllerBase

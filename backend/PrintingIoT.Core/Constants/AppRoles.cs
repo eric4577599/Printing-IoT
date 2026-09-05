@@ -25,6 +25,15 @@ public static class AppRoles
     public static readonly string[] All = { Admin, Supervisor, Engineer, Operator };
 
     /// <summary>
+    /// ERP 服務身分(S7)—— **只能由 API 金鑰取得,不可指派給人員帳號**。
+    ///
+    /// 刻意不列入 <see cref="All"/>:AuthController 以 <see cref="IsValid"/> 驗證
+    /// 建立 / 更新使用者時傳入的角色,列進去等於開放管理者把一個純機器身分掛到人身上。
+    /// 它也沒有對應的 Roles 資料列,身分完全由 ApiKeys 表背書。
+    /// </summary>
+    public const string ErpService = "ERP_SERVICE";
+
+    /// <summary>
     /// 授權原則(policy)名稱常數,對應 Program.cs 的註冊。
     /// </summary>
     public static class Policies
@@ -37,6 +46,13 @@ public static class AppRoles
 
         /// <summary>主檔寫入 — ADMIN / SUPERVISOR / ENGINEER。</summary>
         public const string MasterDataWrite = "MasterDataWrite";
+
+        /// <summary>
+        /// ERP 推單(S7)— ERP_SERVICE(API 金鑰)或 ADMIN(人工補推 / Swagger 驗證)。
+        /// 允許 ADMIN 是刻意的:授權矩陣測試 AC-02 要求 ADMIN 權杖在每個端點都不得被擋,
+        /// 現場也需要有人能在 ERP 掛掉時手動補一批單。
+        /// </summary>
+        public const string ErpPush = "ErpPush";
     }
 
     /// <summary>

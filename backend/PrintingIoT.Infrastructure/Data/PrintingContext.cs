@@ -28,6 +28,12 @@ public class PrintingContext : DbContext
     public DbSet<PrintingIoT.Core.Entities.Auth.Role> Roles { get; set; }
     public DbSet<PrintingIoT.Core.Entities.Auth.UserRole> UserRoles { get; set; }
 
+    // S7:機器對機器憑證(ERP 推單)。與人員名冊分離,只存雜湊。
+    public DbSet<PrintingIoT.Core.Entities.Auth.ApiKey> ApiKeys { get; set; }
+
+    // S7:權杖刷新憑證。一次性 + 輪替,只存雜湊。
+    public DbSet<PrintingIoT.Core.Entities.Auth.RefreshToken> RefreshTokens { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -98,6 +104,27 @@ public class PrintingContext : DbContext
             .HasOne(ur => ur.Role)
             .WithMany(r => r.UserRoles)
             .HasForeignKey(ur => ur.RoleId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // S7 / API 金鑰 — 前綴唯一索引。驗證時以前綴撈出單一列再比對雜湊,
+        // 唯一性由資料庫背書,避免同前綴兩列讓 FirstOrDefault 取到錯的那筆。
+        modelBuilder.Entity<PrintingIoT.Core.Entities.Auth.ApiKey>()
+            .HasIndex(k => k.Prefix)
+            .IsUnique();
+
+        // S7 / 刷新憑證 — 雜湊唯一索引(查找鍵),外加 UserId 索引供「作廢此人全部憑證」使用。
+        // 使用者刪除時連帶刪除其憑證:帳號沒了,憑證不該還活著。
+        modelBuilder.Entity<PrintingIoT.Core.Entities.Auth.RefreshToken>()
+            .HasIndex(r => r.TokenHash)
+            .IsUnique();
+
+        modelBuilder.Entity<PrintingIoT.Core.Entities.Auth.RefreshToken>()
+            .HasIndex(r => r.UserId);
+
+        modelBuilder.Entity<PrintingIoT.Core.Entities.Auth.RefreshToken>()
+            .HasOne(r => r.User)
+            .WithMany()
+            .HasForeignKey(r => r.UserId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PrintingIoT.Core.Constants;
 using PrintingIoT.Core.DTOs.Auth;
+using PrintingIoT.Core.Security;
 using PrintingIoT.Infrastructure.Data;
 using BCrypt.Net;
 
@@ -73,12 +74,154 @@ public class AuthController : ControllerBase
             return Unauthorized("Invalid credentials.");
         }
 
+        return Ok(await IssueSessionAsync(user));
+    }
+
+    /// <summary>
+    /// 以刷新憑證換發新的存取權杖(S7)。
+    /// 輸入:body { refreshToken };
+    /// 輸出:200 + LoginResponse(新的存取權杖與**新的**刷新憑證),失敗一律 401;
+    /// 邏輯:雜湊查找 → 檢查未作廢、未到期、使用者仍啟用 → 作廢舊憑證 → 發新的一組(輪替)。
+    ///
+    /// 解決 E2:存取權杖 2 小時到期後,前端在 401 當下換發並重送原請求,
+    /// 現場未存檔的表單資料不會因為到期而消失。
+    ///
+    /// **重用偵測**:一張已作廢的憑證再度出現,代表它被複製過(正常客戶端不會重送已換過的憑證),
+    /// 此時把該使用者所有未作廢的憑證一併作廢,逼真正的持有者重新登入。
+    /// 失敗訊息一律相同,不區分「不存在」「已作廢」「已到期」。
+    /// </summary>
+    [HttpPost("refresh")]
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
+    public async Task<ActionResult<LoginResponse>> Refresh([FromBody] RefreshRequest request)
+    {
+        var presented = request?.RefreshToken;
+        if (string.IsNullOrWhiteSpace(presented))
+            return Unauthorized("Invalid refresh token.");
+
+        var hash = SecureTokens.Hash(presented);
+
+        var stored = await _context.RefreshTokens
+            .Include(r => r.User)
+            .ThenInclude(u => u.UserRoles)
+            .ThenInclude(ur => ur.Role)
+            .FirstOrDefaultAsync(r => r.TokenHash == hash);
+
+        if (stored == null)
+        {
+            _logger.LogWarning("刷新憑證比對失敗,來源 IP:{Ip}", RemoteIp());
+            return Unauthorized("Invalid refresh token.");
+        }
+
+        // 重用偵測:已作廢的憑證再度出現 → 視同外洩,作廢該使用者全部憑證
+        if (stored.RevokedAt != null)
+        {
+            _logger.LogWarning("偵測到已作廢的刷新憑證被重用(使用者 {UserId}),作廢其全部憑證,來源 IP:{Ip}",
+                stored.UserId, RemoteIp());
+            await RevokeAllTokensAsync(stored.UserId);
+            return Unauthorized("Invalid refresh token.");
+        }
+
+        if (stored.ExpiresAt <= DateTime.UtcNow)
+            return Unauthorized("Invalid refresh token.");
+
+        if (stored.User == null || !stored.User.IsActive)
+        {
+            // 帳號在憑證有效期內被停用 —— 停用必須立刻擋住換發,否則停用要等一個班才生效
+            await RevokeAllTokensAsync(stored.UserId);
+            return Unauthorized("Invalid refresh token.");
+        }
+
+        // 輪替:舊的先作廢再發新的,同一次 SaveChanges 落地
+        stored.RevokedAt = DateTime.UtcNow;
+
+        return Ok(await IssueSessionAsync(stored.User));
+    }
+
+    /// <summary>
+    /// 登出(S7)。
+    /// 輸入:body { refreshToken }(可為空);輸出:一律 204;
+    /// 邏輯:作廢該張刷新憑證。刻意匿名且一律回 204 ——
+    ///       存取權杖已過期的客戶端也必須登得出去,而回應內容不得洩漏憑證是否存在。
+    ///       存取權杖本身無法撤銷(JWT 無狀態),最長仍有 2 小時殘命,這是刻意的取捨。
+    /// </summary>
+    [HttpPost("logout")]
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
+    public async Task<IActionResult> Logout([FromBody] LogoutRequest? request)
+    {
+        var presented = request?.RefreshToken;
+        if (string.IsNullOrWhiteSpace(presented))
+            return NoContent();
+
+        var hash = SecureTokens.Hash(presented);
+        var stored = await _context.RefreshTokens.FirstOrDefaultAsync(r => r.TokenHash == hash);
+
+        if (stored is { RevokedAt: null })
+        {
+            stored.RevokedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// 簽發一組完整的連線階段(存取權杖 + 刷新憑證)。
+    /// 輸入:已通過驗證的使用者(UserRoles 需已載入);
+    /// 輸出:LoginResponse,其中 RefreshToken 是**明文,只在此刻出現一次**;
+    /// 邏輯:角色大寫正規化 → 簽 2 小時存取權杖 → 產生刷新憑證(只存雜湊)
+    ///       → 順手清掉此人已過期的憑證列 → 一次 SaveChanges 落地。
+    /// 登入與刷新共用此方法,兩條路徑的權杖內容因此不可能漂移。
+    /// </summary>
+    private async Task<LoginResponse> IssueSessionAsync(Core.Entities.Auth.User user)
+    {
         // 角色大寫正規化(保險一):資料庫殘留 "Admin" 也會發出 "ADMIN"
         var roles = user.UserRoles.Select(ur => AppRoles.Normalize(ur.Role.Name)).ToArray();
         var expiresAt = DateTime.UtcNow.AddHours(2);
         var token = GenerateJwtToken(user.Id.ToString(), user.Username, user.DisplayName, roles, expiresAt);
 
-        return Ok(new LoginResponse(token, user.Username, roles, user.DisplayName ?? user.Username, expiresAt));
+        var refreshHours = _config.GetValue<double?>("Auth:RefreshTokenHours") ?? 12;
+        if (refreshHours <= 0) refreshHours = 12;
+
+        var refreshPlain = SecureTokens.NewSecret();
+        var refreshExpiresAt = DateTime.UtcNow.AddHours(refreshHours);
+
+        _context.RefreshTokens.Add(new Core.Entities.Auth.RefreshToken
+        {
+            UserId = user.Id,
+            TokenHash = SecureTokens.Hash(refreshPlain),
+            ExpiresAt = refreshExpiresAt,
+            CreatedByIp = RemoteIp()
+        });
+
+        // 清掉此人早已過期的憑證列,避免資料表無限增長(作廢但未過期的仍留著供重用偵測)
+        var stale = await _context.RefreshTokens
+            .Where(r => r.UserId == user.Id && r.ExpiresAt <= DateTime.UtcNow)
+            .ToListAsync();
+        if (stale.Count > 0) _context.RefreshTokens.RemoveRange(stale);
+
+        await _context.SaveChangesAsync();
+
+        return new LoginResponse(
+            token, user.Username, roles, user.DisplayName ?? user.Username, expiresAt,
+            refreshPlain, refreshExpiresAt);
+    }
+
+    /// <summary>
+    /// 作廢某使用者所有仍有效的刷新憑證。
+    /// 輸入:使用者 Id;輸出:無;
+    /// 邏輯:供重用偵測與「帳號被停用」兩條路徑使用 —— 兩者都必須讓現有連線階段立即失效。
+    /// </summary>
+    private async Task RevokeAllTokensAsync(Guid userId)
+    {
+        var active = await _context.RefreshTokens
+            .Where(r => r.UserId == userId && r.RevokedAt == null)
+            .ToListAsync();
+
+        foreach (var t in active) t.RevokedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
     }
 
     /// <summary>
@@ -299,6 +442,18 @@ public class AuthController : ControllerBase
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
         if (request?.IsActive != null)
             user.IsActive = request.IsActive.Value;
+
+        // S7:停用帳號時一併作廢其刷新憑證。Refresh 端點本來就會擋下停用中的帳號,
+        // 這裡是提前收乾淨,讓「已停用」在資料上就看不到有效憑證。
+        if (request?.IsActive == false)
+        {
+            foreach (var rt in await _context.RefreshTokens
+                         .Where(r => r.UserId == user.Id && r.RevokedAt == null)
+                         .ToListAsync())
+            {
+                rt.RevokedAt = DateTime.UtcNow;
+            }
+        }
 
         if (newRole != null)
         {

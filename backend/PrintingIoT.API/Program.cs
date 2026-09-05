@@ -8,6 +8,8 @@ using PrintingIoT.Core.Interfaces;
 using PrintingIoT.Infrastructure.Services;
 using PrintingIoT.Infrastructure.Extensions;
 using PrintingIoT.API.Middleware;
+using PrintingIoT.API.Authentication;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -67,7 +69,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
             ClockSkew = TimeSpan.Zero // 過期即過期,不留 5 分鐘寬限,避免 AC-03 因寬限而誤放行
         };
-    });
+    })
+    // S7:機器對機器憑證。ERP 是程式呼叫、沒有互動式登入,無法走 JWT 的帳密流程,
+    // 因此另掛一個只認 X-Api-Key 標頭的方案。它**不是**預設方案 ——
+    // 金鑰只在明確指定此方案的端點(目前僅 ERP 推單)有效,其餘端點的 fallback policy
+    // 仍只認 Bearer,一支外洩的金鑰因此打不開整個系統。
+    .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(
+        ApiKeyAuthenticationDefaults.Scheme, _ => { });
 
 // S5:預設拒絕 —— fallback policy 讓未明確標註的端點一律要求已驗證身分,
 // 新增的 Controller 若忘記標註會被擋下,而不是默默對外開放。
@@ -81,6 +89,13 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(AppRoles.Policies.SystemConfig, p => p.RequireRole(AppRoles.Admin, AppRoles.Engineer));
     options.AddPolicy(AppRoles.Policies.MasterDataWrite,
         p => p.RequireRole(AppRoles.Admin, AppRoles.Supervisor, AppRoles.Engineer));
+
+    // S7:ERP 推單 —— 唯一同時接受 API 金鑰與 JWT 的 policy。
+    // 方案清單寫在 policy 而非 [Authorize] 屬性上,讓「哪些端點吃金鑰」只有這一個決定點。
+    options.AddPolicy(AppRoles.Policies.ErpPush, p => p
+        .AddAuthenticationSchemes(ApiKeyAuthenticationDefaults.Scheme, JwtBearerDefaults.AuthenticationScheme)
+        .RequireAuthenticatedUser()
+        .RequireRole(AppRoles.ErpService, AppRoles.Admin));
 });
 
 // Phase 4.5: Rate Limiting

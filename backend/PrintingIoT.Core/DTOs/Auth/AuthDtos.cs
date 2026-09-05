@@ -10,13 +10,23 @@ public record LoginRequest(string Username, string Password);
 /// <summary>
 /// 登入回應。S5 於尾端新增 DisplayName / ExpiresAt 兩個選填參數(additive),
 /// 既有以三個參數建構的程式碼仍可編譯。
+/// S7 再於尾端新增 RefreshToken / RefreshTokenExpiresAt(同樣 additive):
+/// RefreshToken 是**明文,只在此刻出現一次**,後端只留雜湊。
 /// </summary>
 public record LoginResponse(
     string Token,
     string Username,
     string[] Roles,
     string? DisplayName = null,
-    DateTime ExpiresAt = default);
+    DateTime ExpiresAt = default,
+    string? RefreshToken = null,
+    DateTime? RefreshTokenExpiresAt = null);
+
+/// <summary>換發存取權杖的請求(S7)。憑證本身即身分,故不需另外帶帳號。</summary>
+public record RefreshRequest(string RefreshToken);
+
+/// <summary>登出請求(S7)。作廢指定的刷新憑證;憑證已失效或不存在時一律回 204。</summary>
+public record LogoutRequest(string? RefreshToken);
 
 /// <summary>初始化第一個管理者的請求;密碼一律走 body,不再有 query string 路徑。</summary>
 public record SetupAdminRequest(string SetupToken, string Username, string Password, string? DisplayName);

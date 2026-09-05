@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PrintingIoT.Infrastructure.Data;
@@ -11,9 +12,11 @@ using PrintingIoT.Infrastructure.Data;
 namespace PrintingIoT.Infrastructure.Migrations
 {
     [DbContext(typeof(PrintingContext))]
-    partial class PrintingContextModelSnapshot : ModelSnapshot
+    [Migration("20260905220130_AddRefreshTokens")]
+    partial class AddRefreshTokens
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

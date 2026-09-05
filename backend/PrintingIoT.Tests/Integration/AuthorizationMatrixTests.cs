@@ -53,6 +53,7 @@ public class AuthorizationMatrixTests : IDisposable
         new object[] { "POST", "/api/simulation/speed" },
         new object[] { "POST", "/api/erp/push-orders" },
         new object[] { "GET",  "/api/v1/auth/users" },
+        new object[] { "GET",  "/api/v1/apikeys" }, // S7:金鑰管理端點一併納入預設拒絕的回歸保護
     };
 
     /// <summary>
