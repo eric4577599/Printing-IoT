@@ -88,8 +88,45 @@ public static class OeeCalculator
     }
 
     /// <summary>
-    /// 四捨五入到小數 1 位(AwayFromZero),與 JS 的 Math.round(x * 10) / 10 對齊。
+    /// 四捨五入到小數 1 位(AwayFromZero)。所有對外的率值都必須經過這裡,
+    /// 包括 S8 的彙總端點 —— 只要有一處自己 round,兩份實作就又分岔了。
     /// 輸入:任意 decimal;輸出:小數 1 位的 decimal。
     /// </summary>
-    private static decimal Round1(decimal value) => Math.Round(value, 1, MidpointRounding.AwayFromZero);
+    public static decimal Round1(decimal value) => Math.Round(value, 1, MidpointRounding.AwayFromZero);
+
+    /// <summary>
+    /// 稼動率(§5.1 規則 1 + 2),抽出來供彙總重算使用。
+    /// 輸入:運轉 / 停機 / 準備時間(分)。輸出:0–100 且四捨五入到小數 1 位。
+    /// 邏輯:L = max(0, R + S − P);L ≤ 0 → 0;A = min(R, L) / L × 100。
+    /// </summary>
+    public static decimal Utilization(decimal runTimeMinutes, decimal stopTimeMinutes, decimal prepTimeMinutes)
+    {
+        var run = Math.Max(0m, runTimeMinutes);
+        var stop = Math.Max(0m, stopTimeMinutes);
+        var prep = Math.Max(0m, prepTimeMinutes);
+
+        var load = Math.Max(0m, run + stop - prep);
+        return load <= 0m ? 0m : Round1(Math.Min(run, load) / load * 100m);
+    }
+
+    /// <summary>
+    /// 良率(§5.1 規則 4),供彙總以「區間總量」重算 —— 不是逐筆良率的平均。
+    /// 輸入:良品數、不良品數。輸出:0–100 且四捨五入到小數 1 位;總產出 ≤ 0 → 0。
+    /// </summary>
+    public static decimal YieldRate(long goodQty, long defectQty)
+    {
+        var good = Math.Max(0L, goodQty);
+        var produced = good + Math.Max(0L, defectQty);
+        return produced <= 0 ? 0m : Round1((decimal)good / produced * 100m);
+    }
+
+    /// <summary>
+    /// 達成率。輸入:實際數量、目標數量。輸出:百分比,四捨五入到小數 1 位;
+    /// 目標 ≤ 0 → 0。**刻意不封頂** —— 超產就該顯示超過 100%,與規則 3 的效能因子不同。
+    /// </summary>
+    public static decimal AchievementRate(long actualQty, long targetQty)
+    {
+        var target = Math.Max(0L, targetQty);
+        return target <= 0 ? 0m : Round1((decimal)Math.Max(0L, actualQty) / target * 100m);
+    }
 }

@@ -12,6 +12,8 @@ import {
     calculateAchievementRate
 } from '../../utils/reportUtils';
 import { useLanguage } from '../language/LanguageContext';
+import { useProductionSummary } from '../../hooks/useProductionSummary';
+import SummarySourceNote from './SummarySourceNote';
 
 /**
  * 生產日報表元件
@@ -22,6 +24,7 @@ import { useLanguage } from '../language/LanguageContext';
  * @param {string} props.selectedShift - 選擇的班別
  * @param {Function} props.onDateChange - 日期變更回調
  * @param {Function} props.onShiftChange - 班別變更回調
+ * @param {number} [props.localOnlyCount=0] - 區間內僅存在本機的筆數(S8:大於 0 時不採用後端彙總)
  */
 const DailyReportView = ({
     productionHistory,
@@ -29,7 +32,8 @@ const DailyReportView = ({
     endDate,
     selectedShift,
     onDateChange,
-    onShiftChange
+    onShiftChange,
+    localOnlyCount = 0
 }) => {
     const { t } = useLanguage();
     // 篩選資料
@@ -39,10 +43,33 @@ const DailyReportView = ({
         return records;
     }, [productionHistory, startDate, endDate, selectedShift]);
 
-    // 計算統計彙總
-    const summary = useMemo(() => {
+    // 前端計算的彙總:S8 之後降為備援,但不可移除 ——
+    // 本機還有未回填的舊實績時,只有它涵蓋得到那些資料(見 spec20260906-s8-v1 §4)
+    const localSummary = useMemo(() => {
         return calculateDailySummary(filteredRecords);
     }, [filteredRecords]);
+
+    // 後端彙總(S8):單一事實來源。localOnlyCount > 0 或取得失敗時 source 會是 'local'
+    const { data: backendSummary, source, reason } = useProductionSummary({
+        kind: 'daily',
+        from: startDate,
+        to: endDate,
+        shift: selectedShift,
+        localOnlyCount,
+    });
+
+    // 同 MonthlyReportView:形狀不符就退回前端計算,不讓 undefined 流進畫面變成 'NaN 筆'
+    const backendUsable = source === 'backend'
+        && backendSummary
+        && !Array.isArray(backendSummary)
+        && typeof backendSummary.totalOrders === 'number';
+
+    // 形狀被守衛擋下來時,畫面不可以還說「數字來自後端」—— 那是騙人的。
+    // 這種情況等同取不到後端彙總,一律以降級呈現。
+    const effectiveSource = backendUsable ? 'backend' : 'local';
+    const effectiveReason = backendUsable ? null : (source === 'backend' ? 'error' : reason);
+
+    const summary = backendUsable ? backendSummary : localSummary;
 
     // 匯出 Excel 功能（待實作）
     const handleExport = () => {
@@ -98,6 +125,7 @@ const DailyReportView = ({
             {/* 統計彙總區 */}
             <div className={styles.summaryPanel}>
                 <h3>📈 {t('reportView.daily.summaryTitle')}</h3>
+                <SummarySourceNote source={effectiveSource} reason={effectiveReason} />
                 <div className={styles.summaryGrid}>
                     <div className={styles.summaryItem}>
                         <span className={styles.summaryLabel}>{t('reportView.daily.totalOrders')}</span>

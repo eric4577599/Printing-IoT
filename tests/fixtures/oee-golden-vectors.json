@@ -1,0 +1,240 @@
+[
+  {
+    "name": "一般案例:準備時間從稼動率分母扣掉",
+    "input": {
+      "runTime": 400,
+      "stopTime": 80,
+      "prepTime": 30,
+      "goodQty": 9500,
+      "defectQty": 500,
+      "targetQty": 10000
+    },
+    "expected": {
+      "availability": 88.9,
+      "performance": 95.0,
+      "quality": 95.0,
+      "oee": 80.2
+    }
+  },
+  {
+    "name": "負荷時間為零:運轉與停機皆為 0",
+    "input": {
+      "runTime": 0,
+      "stopTime": 0,
+      "prepTime": 0,
+      "goodQty": 100,
+      "defectQty": 0,
+      "targetQty": 100
+    },
+    "expected": {
+      "availability": 0.0,
+      "performance": 100.0,
+      "quality": 100.0,
+      "oee": 0.0
+    }
+  },
+  {
+    "name": "負荷時間夾到 0:準備時間大於運轉加停機",
+    "input": {
+      "runTime": 30,
+      "stopTime": 10,
+      "prepTime": 100,
+      "goodQty": 100,
+      "defectQty": 0,
+      "targetQty": 100
+    },
+    "expected": {
+      "availability": 0.0,
+      "performance": 100.0,
+      "quality": 100.0,
+      "oee": 0.0
+    }
+  },
+  {
+    "name": "目標為零:效能因子回 0 而不是假裝滿分",
+    "input": {
+      "runTime": 400,
+      "stopTime": 80,
+      "prepTime": 0,
+      "goodQty": 500,
+      "defectQty": 0,
+      "targetQty": 0
+    },
+    "expected": {
+      "availability": 83.3,
+      "performance": 0.0,
+      "quality": 100.0,
+      "oee": 0.0
+    }
+  },
+  {
+    "name": "總產出為零:良率回 0 而不是假裝滿分",
+    "input": {
+      "runTime": 400,
+      "stopTime": 80,
+      "prepTime": 0,
+      "goodQty": 0,
+      "defectQty": 0,
+      "targetQty": 1000
+    },
+    "expected": {
+      "availability": 83.3,
+      "performance": 0.0,
+      "quality": 0.0,
+      "oee": 0.0
+    }
+  },
+  {
+    "name": "超產:效能以 100% 封頂",
+    "input": {
+      "runTime": 400,
+      "stopTime": 80,
+      "prepTime": 0,
+      "goodQty": 12000,
+      "defectQty": 0,
+      "targetQty": 10000
+    },
+    "expected": {
+      "availability": 83.3,
+      "performance": 100.0,
+      "quality": 100.0,
+      "oee": 83.3
+    }
+  },
+  {
+    "name": "負值一律夾到 0",
+    "input": {
+      "runTime": -50,
+      "stopTime": -10,
+      "prepTime": -5,
+      "goodQty": -100,
+      "defectQty": -20,
+      "targetQty": 1000
+    },
+    "expected": {
+      "availability": 0.0,
+      "performance": 0.0,
+      "quality": 0.0,
+      "oee": 0.0
+    }
+  },
+  {
+    "name": "四捨五入邊界:良率原始值剛好 88.85",
+    "input": {
+      "runTime": 400,
+      "stopTime": 100,
+      "prepTime": 0,
+      "goodQty": 1777,
+      "defectQty": 223,
+      "targetQty": 2000
+    },
+    "expected": {
+      "availability": 80.0,
+      "performance": 88.9,
+      "quality": 88.9,
+      "oee": 63.2
+    }
+  },
+  {
+    "name": "四捨五入邊界:稼動率原始值剛好 66.65",
+    "input": {
+      "runTime": 6665,
+      "stopTime": 3335,
+      "prepTime": 0,
+      "goodQty": 1000,
+      "defectQty": 0,
+      "targetQty": 1000
+    },
+    "expected": {
+      "availability": 66.7,
+      "performance": 100.0,
+      "quality": 100.0,
+      "oee": 66.7
+    }
+  },
+  {
+    "name": "四捨五入邊界:效能原始值剛好 33.35",
+    "input": {
+      "runTime": 400,
+      "stopTime": 100,
+      "prepTime": 0,
+      "goodQty": 6670,
+      "defectQty": 0,
+      "targetQty": 20000
+    },
+    "expected": {
+      "availability": 80.0,
+      "performance": 33.4,
+      "quality": 100.0,
+      "oee": 26.7
+    }
+  },
+  {
+    "name": "運轉時間大於負荷時間:min 夾住上限不得超過 100%",
+    "input": {
+      "runTime": 500,
+      "stopTime": 0,
+      "prepTime": 200,
+      "goodQty": 900,
+      "defectQty": 100,
+      "targetQty": 1000
+    },
+    "expected": {
+      "availability": 100.0,
+      "performance": 90.0,
+      "quality": 90.0,
+      "oee": 81.0
+    }
+  },
+  {
+    "name": "三因子皆非整數,驗 OEE 以已四捨五入的因子相乘",
+    "input": {
+      "runTime": 377,
+      "stopTime": 123,
+      "prepTime": 47,
+      "goodQty": 8123,
+      "defectQty": 877,
+      "targetQty": 9500
+    },
+    "expected": {
+      "availability": 83.2,
+      "performance": 85.5,
+      "quality": 90.3,
+      "oee": 64.2
+    }
+  },
+  {
+    "name": "停機遠多於運轉的低稼動情境",
+    "input": {
+      "runTime": 60,
+      "stopTime": 540,
+      "prepTime": 0,
+      "goodQty": 900,
+      "defectQty": 100,
+      "targetQty": 5000
+    },
+    "expected": {
+      "availability": 10.0,
+      "performance": 18.0,
+      "quality": 90.0,
+      "oee": 1.6
+    }
+  },
+  {
+    "name": "完美情境:全部滿分",
+    "input": {
+      "runTime": 480,
+      "stopTime": 0,
+      "prepTime": 0,
+      "goodQty": 1000,
+      "defectQty": 0,
+      "targetQty": 1000
+    },
+    "expected": {
+      "availability": 100.0,
+      "performance": 100.0,
+      "quality": 100.0,
+      "oee": 100.0
+    }
+  }
+]

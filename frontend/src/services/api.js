@@ -388,6 +388,28 @@ export const getAllProductionCompletions = async ({ from, to, pageSize = 500, ma
 };
 
 /**
+ * 取得後端彙總(S8)
+ * @param {'daily'|'monthly'|'stop-reasons'} kind - 要哪一組彙總
+ * @param {Object} params - 查詢條件
+ * @param {string} [params.from] - 起始工廠日 YYYY-MM-DD(含)
+ * @param {string} [params.to] - 結束工廠日 YYYY-MM-DD(含)
+ * @param {string} [params.shift] - 班別;'全部' 或空值視為不過濾
+ * @returns {Promise<Object|Array>} daily 回物件、monthly 回 { dailyRows, totals }、stop-reasons 回陣列
+ * @description 彙總端點刻意不分頁 —— 資料量超過後端上限時回 400 而不是截斷,
+ *              呼叫端會拿到 axios 錯誤,由上層 hook 轉成降級並顯示原因(見 spec20260906-s8-v1 §1.4)。
+ *              班別的 '全部' 是前端的 UI 值,不是後端語彙,在這裡就濾掉不往下送。
+ */
+export const getProductionSummary = async (kind, { from, to, shift } = {}) => {
+    const params = {};
+    if (from) params.from = from;
+    if (to) params.to = to;
+    if (shift && shift !== '全部') params.shift = shift;
+
+    const response = await api.get(`/production/summary/${kind}`, { params });
+    return response.data;
+};
+
+/**
  * 取得工廠時區與日界設定
  * @returns {Promise<{ timeZone: string, dayBoundaryHour: number }>} 工廠日換算所需參數
  * @description 前端算本地快取紀錄的工廠日時取得與後端同一組參數,不必把 8 寫死在前端。

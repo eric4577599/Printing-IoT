@@ -104,7 +104,7 @@ export function average(array, field) {
 export function calculateYieldRate(goodQty, defectQty) {
     const total = goodQty + defectQty;
     if (total === 0) return 0;
-    return (goodQty / total) * 100;
+    return percent(goodQty, total);
 }
 
 /**
@@ -115,7 +115,7 @@ export function calculateYieldRate(goodQty, defectQty) {
  */
 export function calculateAchievementRate(actualQty, targetQty) {
     if (targetQty === 0) return 0;
-    return (actualQty / targetQty) * 100;
+    return percent(actualQty, targetQty);
 }
 
 /**
@@ -124,6 +124,14 @@ export function calculateAchievementRate(actualQty, targetQty) {
  * @returns {number} 小數 1 位的數值
  * @description 與後端 C# 的 Math.Round(x, 1, MidpointRounding.AwayFromZero) 對齊,
  *              兩份實作必須輸出完全相同的數值(見 docs/spec20260903-s3-v1.md §5.1)。
+ *
+ *              本函式維持最單純的寫法是刻意的:S8 的黃金向量抓到的 x.x5 漂移,
+ *              根因在**進來之前**的運算順序(見 percent()),不在這裡。
+ *              修好順序之後,已驗證這個寫法在三個 x.x5 邊界與 OEE 乘積路徑上
+ *              都與後端 decimal 完全一致,不需要額外的十進位移位技巧。
+ *
+ *              註:JS 的 Math.round 對負半數是往 +∞ 進位(-0.5 → -0),與 AwayFromZero 不同。
+ *              本模組所有輸入都先經 clampNonNegative 夾到 0 以上,走不到負值分支。
  */
 function round1(value) {
     return Math.round(value * 10) / 10;
@@ -139,6 +147,23 @@ function clampNonNegative(value) {
     const n = Number(value);
     if (!Number.isFinite(n) || n < 0) return 0;
     return n;
+}
+
+/**
+ * 計算百分比 numerator / denominator × 100
+ * @param {number} numerator - 分子
+ * @param {number} denominator - 分母(呼叫端須先確保 > 0)
+ * @returns {number} 百分比
+ * @description **先乘 100 再除,順序不可調換**(S8 的黃金向量抓到的實際漂移)。
+ *              後端 C# 用 decimal 精確運算,前端用二進位浮點,先除會多一次捨入而分岔:
+ *              6665 / 10000 = 0.66649999999999998…,再乘 100 得 66.649999999999991,
+ *              比真值 66.65 小,四捨五入後變成 66.6 —— 後端卻是 66.7。
+ *              先乘後除只有一次(正確捨入的)除法,結果是最接近真值的那個 double,
+ *              round1 才與後端一致。這個順序由 tests/fixtures/oee-golden-vectors.json
+ *              的「稼動率原始值剛好 66.65」釘住 —— 換回先除後乘,該筆立刻轉紅。
+ */
+function percent(numerator, denominator) {
+    return (numerator * 100) / denominator;
 }
 
 /**
@@ -170,7 +195,7 @@ export function calculateUtilization(runTime, stopTime, prepTime = 0) {
     const run = clampNonNegative(runTime);
     const load = calculateLoadTime(runTime, stopTime, prepTime);
     if (load <= 0) return 0;
-    return (Math.min(run, load) / load) * 100;
+    return percent(Math.min(run, load), load);
 }
 
 /**
@@ -202,14 +227,14 @@ export function calculateOEE({ runTime = 0, stopTime = 0, prepTime = 0, goodQty 
 
     // 規則 1 + 2:負荷時間與稼動率
     const load = calculateLoadTime(runTime, stopTime, prepTime);
-    const availabilityRaw = load <= 0 ? 0 : (Math.min(run, load) / load) * 100;
+    const availabilityRaw = load <= 0 ? 0 : percent(Math.min(run, load), load);
 
     // 規則 3:效能（分子用良品數，超產以 100% 封頂）
-    const performanceRaw = target <= 0 ? 0 : Math.min(good / target, 1) * 100;
+    const performanceRaw = target <= 0 ? 0 : Math.min(percent(good, target), 100);
 
     // 規則 4:良率
     const produced = good + defect;
-    const qualityRaw = produced <= 0 ? 0 : (good / produced) * 100;
+    const qualityRaw = produced <= 0 ? 0 : percent(good, produced);
 
     const availability = round1(availabilityRaw);
     const performance = round1(performanceRaw);

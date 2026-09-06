@@ -420,15 +420,16 @@ const ReportsPage = () => {
                         else setEndDate(value);
                     }}
                     onShiftChange={(shift) => setSelectedShift(shift)}
+                    localOnlyCount={localOnlyCount}
                 />
             )}
 
             {activeReport === 'monthly' && (
-                <MonthlyReportView productionHistory={productionHistory} onRangeChange={handleMonthlyRangeChange} />
+                <MonthlyReportView productionHistory={productionHistory} onRangeChange={handleMonthlyRangeChange} localOnlyCount={localOnlyCount} />
             )}
 
             {activeReport === 'stop' && (
-                <StopReasonView productionHistory={productionHistory} onRangeChange={handleStopRangeChange} />
+                <StopReasonView productionHistory={productionHistory} onRangeChange={handleStopRangeChange} localOnlyCount={localOnlyCount} />
             )}
             </div>
         </div>

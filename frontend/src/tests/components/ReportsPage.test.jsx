@@ -134,7 +134,7 @@ describe('ReportsPage 改讀後端(S4 / F4.1)', () => {
         expect(screen.getByTestId('alert-local-only').textContent).toContain(tw.reportView.state.localOnly);
     });
 
-    it('AC-S4-06:班別變更不觸發新的 API 請求(仍由 filterByShift 前端處理)', async () => {
+    it('AC-S4-06:班別變更不重抓逐筆紀錄(明細仍由 filterByShift 前端處理)', async () => {
         mockInstance.get.mockResolvedValue({ data: [] });
 
         renderPage();
@@ -143,12 +143,20 @@ describe('ReportsPage 改讀後端(S4 / F4.1)', () => {
         // 切到日報分頁(班別下拉在該頁)
         fireEvent.click(screen.getByText(tw.reportView.tab.daily));
         await waitFor(() => expect(screen.getByDisplayValue(tw.reportView.shift.all)).toBeTruthy());
-        const callsAfterTabSwitch = mockInstance.get.mock.calls.length;
+
+        const completionCalls = () => mockInstance.get.mock.calls
+            .filter(([url]) => url.includes('/production/completions')).length;
+        const before = completionCalls();
 
         fireEvent.change(screen.getByDisplayValue(tw.reportView.shift.all), { target: { value: 'A' } });
 
         await act(async () => { });
-        expect(mockInstance.get).toHaveBeenCalledTimes(callsAfterTabSwitch);
+
+        // S8 更新:原本這裡斷言的是「總請求數不變」,但那個判準已經和意圖分岔了 ——
+        // 彙總端點自 S8 起由後端做班別過濾,換班別本來就**應該**重打彙總。
+        // 這條測試真正要守的是「不要為了換個班別就把整個區間的逐筆紀錄重抓一次」,
+        // 所以改成只數逐筆端點,而不是放寬成一個不會失敗的斷言。
+        expect(completionCalls()).toBe(before);
     });
 
     it('AC-S4-28:切到月報並選 2026 年 9 月後,API 請求區間為當月首末日', async () => {

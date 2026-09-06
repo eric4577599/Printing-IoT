@@ -7,6 +7,8 @@ import {
     formatNumber
 } from '../../utils/reportUtils';
 import { useLanguage } from '../language/LanguageContext';
+import { useProductionSummary } from '../../hooks/useProductionSummary';
+import SummarySourceNote from './SummarySourceNote';
 
 /**
  * 停車原因分析元件
@@ -15,8 +17,9 @@ import { useLanguage } from '../language/LanguageContext';
  * @param {Array} productionHistory - 生產紀錄陣列(父層提供)
  * @param {Function} [onRangeChange] - S4 / F4.1:選用回呼,以 { startDate, endDate } 回報本元件
  *        自持的時間區間(預設近 7 天),讓父層能把該區間下推給後端查詢。未傳入時行為不變。
+ * @param {number} [localOnlyCount=0] - S8:區間內僅存在本機的筆數,大於 0 時不採用後端彙總
  */
-const StopReasonView = ({ productionHistory, onRangeChange }) => {
+const StopReasonView = ({ productionHistory, onRangeChange, localOnlyCount = 0 }) => {
     const { t } = useLanguage();
     const today = new Date().toISOString().split('T')[0];
 
@@ -37,11 +40,42 @@ const StopReasonView = ({ productionHistory, onRangeChange }) => {
         }
     }, [startDate, endDate, onRangeChange]);
 
-    // 篩選並分組停車原因
-    const stopReasonSummaries = useMemo(() => {
+    // 前端分組:S8 之後仍然必要 —— 它是備援,**而且是展開列明細的唯一來源**。
+    // 彙總端點刻意不回下鑽明細(回了會讓回應大小隨區間內訂單數無上限成長),
+    // 所以「哪幾張單」永遠從這裡取(見 spec20260906-s8-v1 §1.3)。
+    const localSummaries = useMemo(() => {
         const filtered = filterByDateRange(productionHistory, startDate, endDate);
         return groupStopReasonsByReason(filtered);
     }, [productionHistory, startDate, endDate]);
+
+    // 後端彙總(S8):次數與總時長的單一事實來源
+    const { data: backendSummaries, source, reason: sourceReason } = useProductionSummary({
+        kind: 'stop-reasons',
+        from: startDate,
+        to: endDate,
+        localOnlyCount,
+    });
+
+    // 採用後端的次數 / 時長,再把展開列要的訂單明細從前端分組接回去。
+    // 欄位名沿用既有的 totalDuration,渲染層不必改。
+    const stopReasonSummaries = useMemo(() => {
+        if (source !== 'backend' || !Array.isArray(backendSummaries)) return localSummaries;
+
+        const drilldown = new Map(localSummaries.map(g => [g.reason, g.records]));
+        return backendSummaries.map(g => ({
+            reason: g.reason,
+            code: g.code,
+            count: g.count,
+            totalDuration: g.totalDurationMinutes,
+            records: drilldown.get(g.reason) || [],
+        }));
+    }, [source, backendSummaries, localSummaries]);
+
+    // 後端回應不是陣列(改版、走錯端點)時已在上面退回前端分組,
+    // 畫面就不可以還說「數字來自後端」,一律以降級呈現。
+    const backendUsable = source === 'backend' && Array.isArray(backendSummaries);
+    const effectiveSource = backendUsable ? 'backend' : 'local';
+    const effectiveReason = backendUsable ? null : (source === 'backend' ? 'error' : sourceReason);
 
     // 計算總計
     const totals = useMemo(() => {
@@ -113,6 +147,7 @@ const StopReasonView = ({ productionHistory, onRangeChange }) => {
                     <span>{t('reportView.stop.totalCount')}: <strong>{totals.count}</strong></span>
                     <span>{t('reportView.stop.totalTime')}: <strong>{minutesToHHMM(totals.duration)}</strong></span>
                 </div>
+                <SummarySourceNote source={effectiveSource} reason={effectiveReason} />
             </div>
 
             {/* 停車原因列表 */}

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using PrintingIoT.Core.DTOs;
 using PrintingIoT.Core.Entities;
@@ -34,16 +35,32 @@ public class ProductionService : IProductionService
     // §F2 查詢分頁上限
     private const int MaxPageSize = 500;
 
+    // S8 §1.3:停機原因為空白時的歸類,與前端 groupStopReasonsByReason 一致
+    private const string UncategorizedReason = "未分類";
+
+    // S8 §1.4:彙總不分頁,故以列數上限取代截斷
+    private const int DefaultMaxSummaryRows = 20000;
+    private readonly int _maxSummaryRows;
+
     public ProductionService(
         PrintingContext context,
         IOrderService orderService,
         IFactoryTimeProvider factoryTime,
-        ILogger<ProductionService> logger)
+        ILogger<ProductionService> logger,
+        IConfiguration? configuration = null)
     {
         _context = context;
         _orderService = orderService;
         _factoryTime = factoryTime;
         _logger = logger;
+
+        // 用 indexer 而不是 GetValue<T>:後者在 Configuration.Binder 套件裡,Infrastructure 沒引用,
+        // 為了一個設定值加相依不划算。設定不存在或值不合理時退回預設,
+        // 不讓一個打錯的設定值把彙總鎖死。
+        _maxSummaryRows = int.TryParse(configuration?["Production:SummaryMaxRows"], out var configured)
+            && configured > 0
+                ? configured
+                : DefaultMaxSummaryRows;
     }
 
     /// <summary>
@@ -357,4 +374,182 @@ public class ProductionService : IProductionService
             DurationMinutes = s.DurationMinutes,
         }).ToList(),
     };
+
+    // ── S8:彙總查詢 ───────────────────────────────────────────────────────
+    //
+    // 三支端點共用同一條取數路徑,算術全部委由 OeeCalculator ——
+    // 這是本輪的核心紀律:不在這裡自己寫任何一行率值公式,否則就成了第三份實作。
+
+    /// <summary>
+    /// S8 / §1.1:日報彙總。
+    /// 輸入:工廠日區間(含端點)與班別;輸出:彙總結果,空區間為全 0 實例。
+    /// 邏輯:率值一律以「區間總量」重算,不是把逐筆率值平均掉 ——
+    ///       只有 avgOEE 例外,它依規則 6 以產量加權自逐筆 OEE 求得。
+    /// </summary>
+    public async Task<SummaryResultDto<DailySummaryDto>> GetDailySummaryAsync(
+        DateOnly? from, DateOnly? to, string? shift)
+    {
+        var (rows, error) = await LoadForSummaryAsync(from, to, shift, includeStops: false);
+        if (error != null) return SummaryResultDto<DailySummaryDto>.Fail(error);
+
+        return SummaryResultDto<DailySummaryDto>.Ok(Aggregate(rows!));
+    }
+
+    /// <summary>
+    /// S8 / §1.2:月報彙總。
+    /// 輸入同上;輸出:DailyRows 依工廠日遞增,加上整月 Totals。
+    /// 邏輯:每日一列以「當日彙總數據」重算 OEE 與稼動率,Totals 以「整月彙總數據」重算 ——
+    ///       兩層都不是把下一層的率值平均掉(S3 GAP-05 的裁決)。
+    /// </summary>
+    public async Task<SummaryResultDto<MonthlySummaryDto>> GetMonthlySummaryAsync(
+        DateOnly? from, DateOnly? to, string? shift)
+    {
+        var (rows, error) = await LoadForSummaryAsync(from, to, shift, includeStops: false);
+        if (error != null) return SummaryResultDto<MonthlySummaryDto>.Fail(error);
+
+        var dailyRows = rows!
+            .GroupBy(c => c.ProductionDate)
+            .OrderBy(g => g.Key)
+            .Select(g => BuildRow(g.Key.ToString("yyyy-MM-dd"), g.ToList()))
+            .ToList();
+
+        return SummaryResultDto<MonthlySummaryDto>.Ok(new MonthlySummaryDto
+        {
+            DailyRows = dailyRows,
+            // 總計拿「全部完工列」重算,而不是把 dailyRows 的率值再平均一次
+            Totals = BuildRow(string.Empty, rows!),
+        });
+    }
+
+    /// <summary>
+    /// S8 / §1.3:停機原因彙總。
+    /// 輸入同上;輸出:每個原因一項,依次數遞減(同次數時依總時長遞減,讓排序穩定)。
+    /// 邏輯:原因為空白者歸入「未分類」,與前端 groupStopReasonsByReason 的既有行為一致。
+    ///       Code 取該原因第一筆非空的代碼 —— 快照可能因主檔改版而不一致,以先出現者為準。
+    /// </summary>
+    public async Task<SummaryResultDto<List<StopReasonSummaryDto>>> GetStopReasonSummaryAsync(
+        DateOnly? from, DateOnly? to, string? shift)
+    {
+        var (rows, error) = await LoadForSummaryAsync(from, to, shift, includeStops: true);
+        if (error != null) return SummaryResultDto<List<StopReasonSummaryDto>>.Fail(error);
+
+        var summary = rows!
+            .SelectMany(c => c.Stops)
+            .GroupBy(s => string.IsNullOrWhiteSpace(s.Reason) ? UncategorizedReason : s.Reason)
+            .Select(g => new StopReasonSummaryDto
+            {
+                Reason = g.Key,
+                Code = g.FirstOrDefault(s => !string.IsNullOrWhiteSpace(s.Code))?.Code ?? string.Empty,
+                Count = g.Count(),
+                TotalDurationMinutes = OeeCalculator.Round1(g.Sum(s => Math.Max(0m, s.DurationMinutes))),
+            })
+            .OrderByDescending(x => x.Count)
+            .ThenByDescending(x => x.TotalDurationMinutes)
+            .ToList();
+
+        return SummaryResultDto<List<StopReasonSummaryDto>>.Ok(summary);
+    }
+
+    /// <summary>
+    /// 取出彙總所需的完工列。
+    /// 輸入:工廠日區間、班別、是否需要停機明細。
+    /// 輸出:(列, null) 或 (null, 錯誤訊息);超過 MaxSummaryRows 時回錯誤而不是截斷。
+    /// 邏輯:先 Count 再取,避免把超量資料整批載進記憶體才發現太多。
+    ///       班別以 ToUpper() 比對達成不分大小寫,Npgsql 與 InMemory 都翻譯得出來。
+    /// </summary>
+    private async Task<(List<ProductionCompletion>? Rows, string? Error)> LoadForSummaryAsync(
+        DateOnly? from, DateOnly? to, string? shift, bool includeStops)
+    {
+        var query = _context.ProductionCompletions.AsNoTracking().AsQueryable();
+
+        if (from.HasValue) query = query.Where(c => c.ProductionDate >= from.Value);
+        if (to.HasValue) query = query.Where(c => c.ProductionDate <= to.Value);
+
+        if (!string.IsNullOrWhiteSpace(shift))
+        {
+            var normalized = shift.Trim().ToUpperInvariant();
+            query = query.Where(c => c.Shift.ToUpper() == normalized);
+        }
+
+        var total = await query.CountAsync();
+        if (total > _maxSummaryRows)
+            return (null, $"區間內有 {total} 筆完工實績,超過彙總上限 {_maxSummaryRows} 筆,請縮小查詢區間。");
+
+        if (includeStops) query = query.Include(c => c.Stops);
+
+        return (await query.ToListAsync(), null);
+    }
+
+    /// <summary>
+    /// 把一組完工列彙總成日報結果。
+    /// 輸入:完工列(可為空);輸出:DailySummaryDto,空清單回全 0。
+    /// </summary>
+    private static DailySummaryDto Aggregate(List<ProductionCompletion> rows)
+    {
+        var totalGood = rows.Sum(c => (long)c.GoodQty);
+        var totalDefect = rows.Sum(c => (long)c.DefectQty);
+        var totalTarget = rows.Sum(c => (long)c.TargetQty);
+        var totalRun = rows.Sum(c => c.RunTimeMinutes);
+        var totalStop = rows.Sum(c => c.StopTimeMinutes);
+        var totalPrep = rows.Sum(c => c.PrepTimeMinutes);
+
+        return new DailySummaryDto
+        {
+            TotalOrders = rows.Count,
+            TotalTarget = ToInt(totalTarget),
+            TotalGood = ToInt(totalGood),
+            TotalDefect = ToInt(totalDefect),
+            AvgYieldRate = OeeCalculator.YieldRate(totalGood, totalDefect),
+            AvgAchievementRate = OeeCalculator.AchievementRate(totalGood, totalTarget),
+            TotalRunTime = OeeCalculator.Round1(totalRun),
+            TotalStopTime = OeeCalculator.Round1(totalStop),
+            TotalPrepTime = OeeCalculator.Round1(totalPrep),
+            TotalStopCount = rows.Sum(c => c.StopCount),
+            // 規則 6:依產量加權,不是算術平均 —— 算術平均會讓 10 張小單稀釋掉 1 張大單
+            AvgOEE = OeeCalculator.WeightedAverageOee(rows.Select(c => (c.Oee, c.GoodQty + c.DefectQty))),
+            Utilization = OeeCalculator.Utilization(totalRun, totalStop, 0m),
+        };
+    }
+
+    /// <summary>
+    /// 把一組完工列彙總成月報的一列(也用於整月總計)。
+    /// 輸入:該列的日期標籤(總計列傳空字串)、該層級的完工列。
+    /// 輸出:MonthlyDailyRowDto;oee 與 utilizationRate 以本層級的彙總數據重算。
+    /// </summary>
+    private static MonthlyDailyRowDto BuildRow(string date, List<ProductionCompletion> rows)
+    {
+        var good = rows.Sum(c => (long)c.GoodQty);
+        var defect = rows.Sum(c => (long)c.DefectQty);
+        var target = rows.Sum(c => (long)c.TargetQty);
+        var run = rows.Sum(c => c.RunTimeMinutes);
+        var stop = rows.Sum(c => c.StopTimeMinutes);
+        var prep = rows.Sum(c => c.PrepTimeMinutes);
+
+        var oee = OeeCalculator.Calculate(run, stop, prep, ToInt(good), ToInt(defect), ToInt(target));
+
+        return new MonthlyDailyRowDto
+        {
+            Date = date,
+            OrderCount = rows.Count,
+            TotalQty = ToInt(good + defect),
+            GoodQty = ToInt(good),
+            DefectQty = ToInt(defect),
+            TargetQty = ToInt(target),
+            YieldRate = OeeCalculator.YieldRate(good, defect),
+            AvgSpeed = rows.Count == 0 ? 0m : OeeCalculator.Round1(rows.Average(c => c.AvgSpeed)),
+            RunTime = OeeCalculator.Round1(run),
+            StopTime = OeeCalculator.Round1(stop),
+            PrepTime = OeeCalculator.Round1(prep),
+            UtilizationRate = OeeCalculator.Utilization(run, stop, prep),
+            Oee = oee.Oee,
+        };
+    }
+
+    /// <summary>
+    /// 把加總後的 long 夾回 int。
+    /// 輸入:任意 long;輸出:超出 int 範圍時夾到 int.MaxValue / MinValue,不 overflow 成負數。
+    /// 現實資料不會走到這裡,但溢位造成的負數量會讓報表無聲說謊,寧可夾住。
+    /// </summary>
+    private static int ToInt(long value) =>
+        value > int.MaxValue ? int.MaxValue : (value < int.MinValue ? int.MinValue : (int)value);
 }

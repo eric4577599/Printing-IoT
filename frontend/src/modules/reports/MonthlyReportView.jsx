@@ -8,6 +8,8 @@ import {
     minutesToHHMM
 } from '../../utils/reportUtils';
 import { useLanguage } from '../language/LanguageContext';
+import { useProductionSummary } from '../../hooks/useProductionSummary';
+import SummarySourceNote from './SummarySourceNote';
 
 /**
  * 生產月報表元件
@@ -16,8 +18,9 @@ import { useLanguage } from '../language/LanguageContext';
  * @param {Array} productionHistory - 生產紀錄陣列(父層提供)
  * @param {Function} [onRangeChange] - S4 / F4.1:選用回呼,以 { startDate, endDate } 回報本元件
  *        自持的月份區間,讓父層能把該區間下推給後端查詢。未傳入時行為與加入本參數前完全相同。
+ * @param {number} [localOnlyCount=0] - S8:區間內僅存在本機的筆數,大於 0 時不採用後端彙總
  */
-const MonthlyReportView = ({ productionHistory, onRangeChange }) => {
+const MonthlyReportView = ({ productionHistory, onRangeChange, localOnlyCount = 0 }) => {
     const { t } = useLanguage();
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth() + 1;
@@ -53,11 +56,34 @@ const MonthlyReportView = ({ productionHistory, onRangeChange }) => {
         }
     }, [dateRange, onRangeChange]);
 
-    // 篩選並計算月報表資料
-    const { dailyRows, totals } = useMemo(() => {
+    // 前端計算的月報:S8 之後降為備援,涵蓋僅存在本機的舊實績(見 spec20260906-s8-v1 §4)
+    const localSummary = useMemo(() => {
         const filtered = filterByDateRange(productionHistory, dateRange.startDate, dateRange.endDate);
         return calculateMonthlySummary(filtered);
     }, [productionHistory, dateRange]);
+
+    // 後端彙總(S8):每日一列與整月總計都由後端以彙總數據重算
+    const { data: backendSummary, source, reason } = useProductionSummary({
+        kind: 'monthly',
+        from: dateRange.startDate,
+        to: dateRange.endDate,
+        localOnlyCount,
+    });
+
+    // 形狀檢查不是多餘的防禦:後端回應一旦不是預期形狀(改版、代理插手、走錯端點),
+    // 直接解構會讓 dailyRows 變成 undefined,下面的 .length 就把整個報表頁炸掉。
+    // 寧可退回前端計算 —— 報表數字略有落差遠好過白畫面。
+    const backendUsable = source === 'backend'
+        && backendSummary
+        && Array.isArray(backendSummary.dailyRows)
+        && backendSummary.totals;
+
+    // 形狀被守衛擋下來時,畫面不可以還說「數字來自後端」—— 那是騙人的。
+    // 這種情況等同取不到後端彙總,一律以降級呈現。
+    const effectiveSource = backendUsable ? 'backend' : 'local';
+    const effectiveReason = backendUsable ? null : (source === 'backend' ? 'error' : reason);
+
+    const { dailyRows, totals } = backendUsable ? backendSummary : localSummary;
 
     // 匯出 Excel（待實作）
     const handleExport = () => {
@@ -105,6 +131,7 @@ const MonthlyReportView = ({ productionHistory, onRangeChange }) => {
             {/* 報表標題 */}
             <div className={styles.reportHeader}>
                 <h2>📈 {selectedYear} {t('reportView.monthly.year')} {selectedMonth} {t('reportView.monthly.month')} {t('reportView.monthly.title')}</h2>
+                <SummarySourceNote source={effectiveSource} reason={effectiveReason} />
             </div>
 
             {/* 資料表格 */}
