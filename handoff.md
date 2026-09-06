@@ -1,5 +1,5 @@
 # Handoff — Claude(Printing IoT)
-> 最後更新:2026-09-06 06:10
+> 最後更新:2026-09-06 09:45
 
 ## ⛔ 下一個接手的人先看這段
 
@@ -17,8 +17,11 @@
 
 ## Current Task
 **依架構稽核修正七批問題**:三輪對抗性稽核 → 依客戶手繪架構圖做設計意圖對照
-→ 分趟實作修正。分支 `fix/audit-20260903`。
-S1–S6 共 6 個 commit 已 push;**S7 的 3 個 commit 已在本機,尚未 push**。
+→ 分趟實作修正。**這件事已收尾** —— 2026-09-06 PR #2 與 PR #3 都已合併,
+S1–S7 全部進了 `main`(`ae1d45a`)。分支 `fix/audit-20260903` 與 `feat/extract-maintenance` 已完成任務。
+
+**下一步不是寫功能,是上線**:七個 EF migration 還沒實際套用、現場帳號還沒建立,
+在建立帳號完成之前現場完全無法操作系統(見置頂段落與 Next Step 1)。
 
 ## Done
 
@@ -51,9 +54,7 @@ S1–S6 共 6 個 commit 已 push;**S7 的 3 個 commit 已在本機,尚未 push
 **實測**:dotnet build 0 錯 0 警;**dotnet test 305 全過**(基準線 249);
 **npm test 313 過 1 略過**(基準線 297);npm lint 49 err / 18 warn(**與基準線相同**);npm build 成功。
 
-### 先前回合
-
-### 本回合(2026-09-03 → 09-04)
+### 先前回合(2026-09-03 → 09-05)
 
 **一、三輪對抗性架構稽核**(`docs/report20260903-1.md`)
 14 個代理分三輪:六面向分工稽核(141 條)→ 六名對抗驗證員逐條試圖反駁(刪 2 條)→ 完整性批判者補漏 6 條並彙整。去重後 77 條定稿,critical 8、high 25。
@@ -114,10 +115,10 @@ CORS 之後;移除已進版控的 JWT 密鑰。前端接真登入、只存權杖
 - S2 排程拖拉排序 Phase 1+2、全站 i18n 三回合、UI 稽核 30 筆修正、C′ 遷移 P0–P5、MM 安全三項修復。
 
 ## Next Step
-1. **`git push`(需 Eric 明確同意)**。分支 `fix/audit-20260903` 共 9 個 commit,
-   前 6 個(S1–S6)已與 origin 一致,**S7 的 3 個只在本機**:
-   `8cf801b` 後端憑證 / `2053390` 前端接線 / `f75e9b6` 文件。
-   尚未開 PR;注意這個分支是從 `feat/extract-maintenance` 開出來的,不是 `main`,開 PR 時要確認基底。
+1. ~~`git push` / 開 PR / 合併~~ ✅ 2026-09-06 全部完成。
+   PR #3(`fix/audit-20260903` → `feat/extract-maintenance`)先併,
+   再併 PR #2(`feat/extract-maintenance` → `main`),`main` 現在是 `ae1d45a`。
+   **本機 `main` 已同步**;兩個功能分支留著沒刪,確認上線無誤後可清掉。
 2. ~~**S7 · ERP 的機器對機器認證**~~ ✅ 2026-09-06 完成(**只做管道,尚未串接**)。
    **不是上線當下的必辦事項** —— 等 ERP 那側真的要接時,才由 ADMIN 建一支金鑰交過去
    (`docs/report20260906-1.md` §2.1,明文只回傳一次)。
@@ -155,7 +156,8 @@ CORS 之後;移除已進版控的 JWT 密鑰。前端接真登入、只存權杖
    硬上限一萬列在未虛擬捲動的明細表上的渲染成本。
 
 ## Key Context
-- 分支 `fix/audit-20260903`(自 `feat/extract-maintenance` 開出),6 個 commit 全部已 push,與 origin 一致。
+- **工作分支在 `main`**。稽核修正 S1–S7 已於 2026-09-06 隨 PR #3 → PR #2 合併進 `main`(`ae1d45a`);
+  `fix/audit-20260903` 與 `feat/extract-maintenance` 已無後續工作。
 - **主系統現在需要登入才能用**。角色與權限矩陣見 `docs/spec20260905-s5-v1.md`;
   帳號不分大小寫(以 `UsernameNormalized` 唯一索引背書);存取權杖效期 2 小時,
   **S7 起到期會由前端以刷新憑證自動換發**(憑證 12 小時,`Auth:RefreshTokenHours`),
@@ -170,9 +172,11 @@ CORS 之後;移除已進版控的 JWT 密鑰。前端接真登入、只存權杖
 - MM 與主系統的設計整合形狀是**並列掛同一訊息來源、共用 Parameter**,不是主系統轉手 → `[[printingiot-mm-parallel-signal-source]]`
 
 ## Risk / Note
-- **這台機器的 `git` 與 `python3` 被 Xcode 授權擋住**(2026-09-06 發現):
-  `You have not agreed to the Xcode license agreements.`,走 `/usr/bin` shim 的指令全部直接退出。
-  `sudo xcodebuild -license accept` 之後才會恢復。`dotnet` 不受影響。
+- ~~這台機器的 `git` 與 `python3` 被 Xcode 授權擋住~~ ✅ 2026-09-06 09:45 複驗已恢復
+  (`git`、`python3 3.9.6` 皆正常)。若再出現 `You have not agreed to the Xcode license agreements.`,
+  解法是 `sudo xcodebuild -license accept`。`dotnet` 從頭到尾不受影響。
+- **`gh` 在沙箱內會 TLS 憑證驗證失敗**(`x509: OSStatus -26276`),
+  查 PR / API 要帶 `dangerouslyDisableSandbox`。`git` 走 https 不受影響。
 - **`git push` 是全域紅線**,一律需 Eric 明確同意。
 - **這台機器的沙箱會讓 `dotnet` 指令假失敗**:卡滿 5 分鐘後回報「建置失敗,0 個警告,0 個錯誤」。
   沙箱外同一條指令 1.7 秒成功。跑 dotnet 一律要 `dangerouslyDisableSandbox: true`,
