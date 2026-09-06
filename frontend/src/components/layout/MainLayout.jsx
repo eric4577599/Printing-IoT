@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import styles from './MainLayout.module.css';
-import { updateSimulationSpeed, getOrders as apiGetOrders, syncSchedule as apiSyncSchedule } from '../../services/api';
-import { fromBackendOrder, toBackendOrder, sortBySequence, isGuid } from '../../utils/orderMapper';
+import { updateSimulationSpeed, getOrders as apiGetOrders, syncSchedule as apiSyncSchedule, deleteOrder as apiDeleteOrder } from '../../services/api';
+import { fromBackendOrder, toBackendOrder, sortBySequence, isGuid, isSchedulableBackendOrder } from '../../utils/orderMapper';
 
 // 空排程時的等待列(純 UI,id 固定 'placeholder',不上傳後端)
 const PLACEHOLDER_ORDER = {
@@ -199,11 +199,15 @@ const MainLayout = () => {
             try {
                 const be = await apiGetOrders();
                 if (cancelled) return;
-                const mapped = sortBySequence((be || []).map(fromBackendOrder));
+                // S1 / v2.0:完工單改以狀態(Completed/Cancelled)留在後端而非刪除,載入端一律過濾掉,
+                // 否則完工單會在下次開頁以「執行中」回到佇列頭部。
+                const mapped = sortBySequence((be || []).filter(isSchedulableBackendOrder).map(fromBackendOrder));
                 if (mapped.length > 0) {
                     setOrders(mapped);
                 } else {
-                    const local = (ordersRef.current || []).filter(o => o.id !== 'placeholder');
+                    const local = (ordersRef.current || []).filter(
+                        o => o.id !== 'placeholder' && o.status !== 'Completed' && o.status !== 'Cancelled'
+                    );
                     if (local.length > 0) {
                         const withGuids = local.map(o => ({ ...o, id: isGuid(o.id) ? o.id : genOrderId() }));
                         const payload = withGuids.map((o, i) => toBackendOrder(o, i));
@@ -237,15 +241,16 @@ const MainLayout = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [orders, ordersLoaded]);
 
-    // debounced 鏡像同步:orders 任何變動(拖拉、完工、佇列推進、F 鍵、新增/刪除/編輯)
-    // 800ms 後把整份排程(排除 placeholder)上傳後端;後端 upsert + 刪除清單外的列。
+    // debounced 排程同步:orders 任何變動(拖拉、完工、佇列推進、F 鍵、新增/刪除/編輯)
+    // 800ms 後把整份排程(排除 placeholder)上傳後端做 upsert。
+    // S1 / DF-04:deleteIds 一律送空陣列 —— 刪除改由 deleteOrder 直接呼叫 DELETE 端點。
     useEffect(() => {
         if (!ordersLoaded) return;
         const payload = orders
             .filter(o => o.id !== 'placeholder' && isGuid(o.id))
             .map((o, i) => toBackendOrder(o, i));
         const handle = setTimeout(() => {
-            apiSyncSchedule(payload).catch(e => console.warn('[orders] 鏡像同步失敗', e));
+            apiSyncSchedule(payload, []).catch(e => console.warn('[orders] 排程同步失敗', e));
         }, 800);
         return () => clearTimeout(handle);
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -275,9 +280,14 @@ const MainLayout = () => {
         setOrders(prev => spliceMove(prev, fromIndex, toIndex));
     };
 
+    // S1 / DF-04:鏡像刪除已由後端拿掉,刪除必須由前端主動送出 DELETE,
+    // 否則排程列只會在本機消失。後端失敗只 console.warn,不阻塞 UI。
     const deleteOrder = (orderId) => {
         setOrders(prev => prev.filter(o => String(o.id) !== String(orderId)));
         addLog(`Order ${orderId} Deleted`);
+        if (isGuid(orderId)) {
+            apiDeleteOrder(orderId).catch(e => console.warn('[orders] 後端刪除失敗', e));
+        }
     };
 
     const saveOrder = (formData, isEdit = false, existingId = null) => {

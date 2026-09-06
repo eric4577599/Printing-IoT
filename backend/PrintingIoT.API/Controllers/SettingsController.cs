@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authorization;
+using PrintingIoT.Core.Constants;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PrintingIoT.Core.Entities;
@@ -5,6 +7,7 @@ using PrintingIoT.Core.Interfaces;
 
 namespace PrintingIoT.API.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class SettingsController : ControllerBase
@@ -23,6 +26,7 @@ public class SettingsController : ControllerBase
         return Ok(settings);
     }
 
+    [Authorize(Policy = AppRoles.Policies.SystemConfig)]
     [HttpPut("communication")]
     public async Task<IActionResult> UpdateCommunicationSettings([FromBody] object settings)
     {
@@ -37,6 +41,7 @@ public class SettingsController : ControllerBase
         return Ok(sections);
     }
 
+    [Authorize(Policy = AppRoles.Policies.SystemConfig)]
     [HttpPost("machine-sections")]
     public async Task<ActionResult<MachineSection>> CreateMachineSection(MachineSection section)
     {
@@ -44,6 +49,7 @@ public class SettingsController : ControllerBase
         return CreatedAtAction(nameof(GetMachineSections), new { id = createdSection.Id }, createdSection);
     }
 
+    [Authorize(Policy = AppRoles.Policies.SystemConfig)]
     [HttpPut("machine-sections/{id}")]
     public async Task<IActionResult> UpdateMachineSection(Guid id, MachineSection section)
     {
@@ -52,6 +58,7 @@ public class SettingsController : ControllerBase
         return Ok(new { success = true });
     }
 
+    [Authorize(Policy = AppRoles.Policies.SystemConfig)]
     [HttpDelete("machine-sections/{id}")]
     public async Task<IActionResult> DeleteMachineSection(Guid id)
     {
@@ -67,6 +74,7 @@ public class SettingsController : ControllerBase
         return Ok(types);
     }
 
+    [Authorize(Policy = AppRoles.Policies.SystemConfig)]
     [HttpPut("box-types")]
     public async Task<IActionResult> UpdateBoxTypes([FromBody] List<object> types)
     {

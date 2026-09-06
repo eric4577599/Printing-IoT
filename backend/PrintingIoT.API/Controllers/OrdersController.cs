@@ -1,10 +1,13 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using PrintingIoT.Core.DTOs;
 using PrintingIoT.Core.Entities;
 using PrintingIoT.Core.Interfaces;
 
 namespace PrintingIoT.API.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class OrdersController : ControllerBase
@@ -71,11 +74,15 @@ public class OrdersController : ControllerBase
         return Ok(new { success = true });
     }
 
-    // Phase 2(全量鏡像同步):前端上傳整份排程,後端 upsert + 刪除清單外的列,回傳正規清單。
+    // S1 / DF-04(排程同步改 upsert 語意):前端上傳 { orders, deleteIds },
+    // 後端只 upsert 清單內的列並刪除 deleteIds 明確列出的列,清單外的既有排程一律保留。
     [HttpPost("sync")]
-    public async Task<ActionResult<IEnumerable<Order>>> SyncSchedule([FromBody] List<Order> orders)
+    public async Task<ActionResult<IEnumerable<Order>>> SyncSchedule([FromBody] ScheduleSyncRequest? request)
     {
-        var result = await _orderService.SyncScheduleAsync(orders);
+        if (request == null)
+            return BadRequest(new { success = false, error = "請求本體不可為空" });
+
+        var result = await _orderService.SyncScheduleAsync(request);
         return Ok(result);
     }
 }

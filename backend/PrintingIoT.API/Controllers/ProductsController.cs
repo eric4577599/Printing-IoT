@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authorization;
+using PrintingIoT.Core.Constants;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PrintingIoT.Core.Entities;
@@ -5,6 +7,7 @@ using PrintingIoT.Core.Interfaces;
 
 namespace PrintingIoT.API.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class ProductsController : ControllerBase
@@ -31,6 +34,7 @@ public class ProductsController : ControllerBase
         return Ok(product);
     }
 
+    [Authorize(Policy = AppRoles.Policies.MasterDataWrite)]
     [HttpPost]
     public async Task<ActionResult<Product>> CreateProduct(Product product)
     {
@@ -38,6 +42,7 @@ public class ProductsController : ControllerBase
         return CreatedAtAction(nameof(GetProduct), new { id = createdProduct.Id }, createdProduct);
     }
 
+    [Authorize(Policy = AppRoles.Policies.MasterDataWrite)]
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateProduct(Guid id, Product product)
     {
@@ -46,6 +51,7 @@ public class ProductsController : ControllerBase
         return NoContent();
     }
 
+    [Authorize(Policy = AppRoles.Policies.MasterDataWrite)]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteProduct(Guid id)
     {

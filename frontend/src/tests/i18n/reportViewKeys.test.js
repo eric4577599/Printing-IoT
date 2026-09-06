@@ -77,6 +77,13 @@ const REPORT_VIEW_KEYS = [
     // 空狀態
     'reportView.empty.noRecords', 'reportView.empty.noStopRecords', 'reportView.empty.noData',
     'reportView.empty.noMonth', 'reportView.empty.noStopInRange',
+    // S4:資料狀態(載入中 / 錯誤 / 無資料)與警示列(降級 / 未取完 / 本機列)
+    'reportView.state.loading', 'reportView.state.error', 'reportView.state.empty',
+    'reportView.state.degraded', 'reportView.state.truncated', 'reportView.state.localOnly',
+    // S4:資料來源欄與來源標示
+    'reportView.col.source', 'reportView.source.backend', 'reportView.source.local',
+    // S4:重試按鈕與後端列唯讀提示
+    'reportView.btn.retry', 'reportView.alert.backendRecordReadOnly',
 ];
 
 describe('reportView i18n 鍵(生產報表四檔)', () => {

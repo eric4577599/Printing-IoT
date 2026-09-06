@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace PrintingIoT.API.Controllers;
@@ -13,6 +14,7 @@ namespace PrintingIoT.API.Controllers;
 /// - 使用 Path.GetFileName 防止目錄遍歷攻擊
 /// - 限制在 doc/ 目錄範圍內
 /// </summary>
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class DocsController : ControllerBase

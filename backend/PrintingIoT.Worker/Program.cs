@@ -18,6 +18,10 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 // Register Worker Services
 builder.Services.AddSingleton<IDeviceLockManager, DeviceLockManager>();
 builder.Services.AddSingleton<ISpeedCalculator, SpeedCalculator>();
+// 以下三者皆持有跨訊息狀態(設定快取、節流狀態),與上面兩者一致註冊為 Singleton
+builder.Services.AddSingleton<ISignalMappingProvider, SignalMappingProvider>();
+builder.Services.AddSingleton<IWisePayloadParser, WisePayloadParser>();
+builder.Services.AddSingleton<ITelemetryPipeline, TelemetryPipeline>();
 
 builder.Services.AddHostedService<MqttWorker>();
 

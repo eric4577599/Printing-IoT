@@ -17,6 +17,9 @@ namespace PrintingIoT.Tests.Controllers;
 /// </summary>
 public class AuthControllerTests : IDisposable
 {
+    private const string SetupToken = "unit-test-setup-token";
+    private const string StrongPassword = "UnitTestPassw0rd";
+
     private readonly PrintingContext _context;
     private readonly AuthController _controller;
     private readonly Mock<ILogger<AuthController>> _loggerMock;
@@ -32,7 +35,10 @@ public class AuthControllerTests : IDisposable
         {
             {"Jwt:Secret", "TestSuperSecretKeyThatIsAtLeast32CharactersLong!"},
             {"Jwt:Issuer", "TestIssuer"},
-            {"Jwt:Audience", "TestAudience"}
+            {"Jwt:Audience", "TestAudience"},
+            // S5:setup-admin 需要設定權杖才會啟用;未設定時端點回 404
+            {"Auth:SetupToken", SetupToken},
+            {"Auth:MinPasswordLength", "12"}
         };
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(configCache)
@@ -49,30 +55,65 @@ public class AuthControllerTests : IDisposable
         _context.Dispose();
     }
 
+    /// <summary>
+    /// S5:空資料庫 + 正確設定權杖 + 合格密碼 → 建立 ADMIN 使用者(角色為大寫)。
+    /// </summary>
     [Fact]
     public async Task SetupAdmin_CreatesUser_WhenDatabaseEmpty()
     {
-        var result = await _controller.SetupAdmin("password123");
+        var result = await _controller.SetupAdmin(
+            new SetupAdminRequest(SetupToken, "admin", StrongPassword, "系統管理者"));
 
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal("Admin user created successfully.", okResult.Value);
+        Assert.IsType<OkObjectResult>(result);
 
         var adminUser = await _context.Users.Include(u => u.UserRoles).ThenInclude(ur => ur.Role).FirstOrDefaultAsync(u => u.Username == "admin");
         Assert.NotNull(adminUser);
-        Assert.True(BCrypt.Net.BCrypt.Verify("password123", adminUser.PasswordHash));
-        Assert.Contains(adminUser.UserRoles, ur => ur.Role.Name == "Admin");
+        Assert.True(BCrypt.Net.BCrypt.Verify(StrongPassword, adminUser.PasswordHash));
+        Assert.Contains(adminUser.UserRoles, ur => ur.Role.Name == "ADMIN");
     }
 
+    /// <summary>
+    /// S5:Users 表非空時語意由 400 改為 409 Conflict(前提「只在空庫可用」不變)。
+    /// </summary>
     [Fact]
-    public async Task SetupAdmin_ReturnsBadRequest_WhenDatabaseNotEmpty()
+    public async Task SetupAdmin_ReturnsConflict_WhenDatabaseNotEmpty()
     {
         _context.Users.Add(new User { Username = "user", PasswordHash = "hash" });
         await _context.SaveChangesAsync();
 
-        var result = await _controller.SetupAdmin("password");
+        var result = await _controller.SetupAdmin(
+            new SetupAdminRequest(SetupToken, "admin", StrongPassword, null));
 
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
-        Assert.Contains("Users already exist", badRequestResult.Value?.ToString());
+        var conflict = Assert.IsType<ConflictObjectResult>(result);
+        Assert.Contains("Users already exist", conflict.Value?.ToString());
+    }
+
+    /// <summary>
+    /// S5:設定權杖不符 → 401,且資料庫維持為空(不得留下半套資料)。
+    /// </summary>
+    [Fact]
+    public async Task SetupAdmin_ReturnsUnauthorized_WhenSetupTokenWrong()
+    {
+        var result = await _controller.SetupAdmin(
+            new SetupAdminRequest("wrong-token", "admin", StrongPassword, null));
+
+        Assert.IsType<UnauthorizedObjectResult>(result);
+        Assert.Empty(await _context.Users.ToListAsync());
+        Assert.Empty(await _context.Roles.ToListAsync());
+    }
+
+    /// <summary>
+    /// S5:密碼強度不足 → 400,且 Users 與 Roles 皆維持為空。
+    /// </summary>
+    [Fact]
+    public async Task SetupAdmin_ReturnsBadRequest_WhenPasswordTooWeak()
+    {
+        var result = await _controller.SetupAdmin(
+            new SetupAdminRequest(SetupToken, "admin", "short1", null));
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Empty(await _context.Users.ToListAsync());
+        Assert.Empty(await _context.Roles.ToListAsync());
     }
 
     [Fact]
@@ -109,7 +150,7 @@ public class AuthControllerTests : IDisposable
         var response = Assert.IsType<LoginResponse>(okResult.Value);
 
         Assert.Equal("op1", response.Username);
-        Assert.Contains("Operator", response.Roles);
+        Assert.Contains("OPERATOR", response.Roles); // S5:角色一律大寫正規化
         Assert.False(string.IsNullOrEmpty(response.Token));
     }
 }

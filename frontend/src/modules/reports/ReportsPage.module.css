@@ -290,3 +290,62 @@
     gap: 10px;
     margin-top: 15px;
 }
+/* S4:報表主區(狀態列 + 報表內容以直向排列,避免狀態列被 container 的 flex row 擠到側欄旁) */
+.mainArea {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* S4 / spec §5:資料狀態與警示列 */
+.stateArea {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stateArea:empty {
+    display: none;
+}
+
+.stateLoading,
+.stateEmpty,
+.stateError,
+.stateWarn {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stateLoading {
+    background-color: #eef4ff;
+    color: #14396b;
+    border-bottom: 1px solid #c8dcff;
+}
+
+.stateEmpty {
+    background-color: #f5f5f5;
+    color: #666;
+    border-bottom: 1px solid #ddd;
+}
+
+.stateError {
+    background-color: #fdecec;
+    color: #a11;
+    border-bottom: 1px solid #f5c2c2;
+}
+
+.stateWarn {
+    background-color: #fff8e1;
+    color: #8a6100;
+    border-bottom: 1px solid #f0dfa8;
+}
+
+/* 僅存在本機快取的列(尚未同步至後端) */
+.localRow {
+    background-color: #fffbe6;
+}

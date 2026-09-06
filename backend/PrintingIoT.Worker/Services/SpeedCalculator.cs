@@ -39,7 +39,8 @@ public class SpeedCalculator : ISpeedCalculator
         await RefreshMaxSpeedCacheAsync();
 
         // Reset Detection
-        if (state.LastCount != -1 && currentRaw < state.LastCount)
+        // 加上 hasQty:沒有計數的呼叫不得被誤判為「計數歸零」,否則會把速度基準打回 0(COMM-09)
+        if (hasQty && state.LastCount != -1 && currentRaw < state.LastCount)
         {
             _logger.LogInformation($"Count Reset Detected for {deviceId}: {state.LastCount} -> {currentRaw}");
             state.LastCount = currentRaw;

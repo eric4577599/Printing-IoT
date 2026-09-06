@@ -22,6 +22,93 @@ namespace PrintingIoT.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("PrintingIoT.Core.Entities.Auth.ApiKey", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("KeyHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Prefix")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Prefix")
+                        .IsUnique();
+
+                    b.ToTable("ApiKeys");
+                });
+
+            modelBuilder.Entity("PrintingIoT.Core.Entities.Auth.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshTokens");
+                });
+
             modelBuilder.Entity("PrintingIoT.Core.Entities.Auth.Role", b =>
                 {
                     b.Property<Guid>("Id")
@@ -54,6 +141,10 @@ namespace PrintingIoT.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
@@ -62,7 +153,16 @@ namespace PrintingIoT.Infrastructure.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<string>("Shift")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
                     b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("UsernameNormalized")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
@@ -71,6 +171,10 @@ namespace PrintingIoT.Infrastructure.Migrations
 
                     b.HasIndex("Username")
                         .IsUnique();
+
+                    b.HasIndex("UsernameNormalized")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Users_UsernameNormalized");
 
                     b.ToTable("Users");
                 });
@@ -290,7 +394,135 @@ namespace PrintingIoT.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ProductCode")
+                        .IsUnique();
+
                     b.ToTable("Products");
+                });
+
+            modelBuilder.Entity("PrintingIoT.Core.Entities.ProductionCompletion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("AvailabilityRate")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("AvgSpeed")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("ClientRecordId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DefectQty")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("DeviceId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("GoodQty")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("Oee")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Operator")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("OrderNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<decimal>("PerformanceRate")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("PrepTimeMinutes")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateOnly>("ProductionDate")
+                        .HasColumnType("date");
+
+                    b.Property<decimal>("QualityRate")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("RunTimeMinutes")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Shift")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("ShortageReason")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("StopCount")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("StopTimeMinutes")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("TargetQty")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientRecordId")
+                        .IsUnique();
+
+                    b.HasIndex("ProductionDate");
+
+                    b.ToTable("ProductionCompletions");
+                });
+
+            modelBuilder.Entity("PrintingIoT.Core.Entities.ProductionDefect", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("CompletionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Qty")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompletionId");
+
+                    b.ToTable("ProductionDefects");
                 });
 
             modelBuilder.Entity("PrintingIoT.Core.Entities.ProductionLog", b =>
@@ -305,6 +537,9 @@ namespace PrintingIoT.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("Speed")
                         .HasColumnType("numeric");
@@ -326,6 +561,95 @@ namespace PrintingIoT.Infrastructure.Migrations
                     b.ToTable("ProductionLogs");
                 });
 
+            modelBuilder.Entity("PrintingIoT.Core.Entities.ProductionStop", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("CompletionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("DurationMinutes")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompletionId");
+
+                    b.ToTable("ProductionStops");
+                });
+
+            modelBuilder.Entity("PrintingIoT.Core.Entities.ReasonCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Type", "Code")
+                        .IsUnique();
+
+                    b.ToTable("ReasonCodes");
+                });
+
+            modelBuilder.Entity("PrintingIoT.Core.Entities.Auth.RefreshToken", b =>
+                {
+                    b.HasOne("PrintingIoT.Core.Entities.Auth.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("PrintingIoT.Core.Entities.Auth.UserRole", b =>
                 {
                     b.HasOne("PrintingIoT.Core.Entities.Auth.Role", "Role")
@@ -345,6 +669,24 @@ namespace PrintingIoT.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("PrintingIoT.Core.Entities.ProductionDefect", b =>
+                {
+                    b.HasOne("PrintingIoT.Core.Entities.ProductionCompletion", null)
+                        .WithMany("Defects")
+                        .HasForeignKey("CompletionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PrintingIoT.Core.Entities.ProductionStop", b =>
+                {
+                    b.HasOne("PrintingIoT.Core.Entities.ProductionCompletion", null)
+                        .WithMany("Stops")
+                        .HasForeignKey("CompletionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("PrintingIoT.Core.Entities.Auth.Role", b =>
                 {
                     b.Navigation("UserRoles");
@@ -353,6 +695,13 @@ namespace PrintingIoT.Infrastructure.Migrations
             modelBuilder.Entity("PrintingIoT.Core.Entities.Auth.User", b =>
                 {
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("PrintingIoT.Core.Entities.ProductionCompletion", b =>
+                {
+                    b.Navigation("Defects");
+
+                    b.Navigation("Stops");
                 });
 #pragma warning restore 612, 618
         }

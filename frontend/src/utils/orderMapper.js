@@ -62,6 +62,14 @@ export function toBackendOrder(order, sequence) {
         // 完整前端 payload 原樣保存(含 BoxDiagram 規格);還原時以此為顯示真相
         specJson: JSON.stringify(stripId(order)),
     };
+    // S1 / DF-05:楞別與目標長度採「有值才送」——
+    // 後端把 null 視為「呼叫端未提供」而不覆寫,避免每次鏡像同步把 ERP 推來的值歸零/清空。
+    const paperSpec = order.paperSpec || order.flute;
+    if (typeof paperSpec === 'string' && paperSpec !== '') out.paperSpec = paperSpec;
+
+    const targetLength = Number(order.targetLength ?? order.targetLen);
+    if (Number.isFinite(targetLength)) out.targetLength = targetLength;
+
     // 帶上 GUID id 讓後端 upsert 命中既有列(非 GUID 的前端暫時 id 不送,由後端新建並配 GUID)
     if (isGuid(order.id)) out.id = order.id;
     return out;
@@ -87,9 +95,25 @@ export function fromBackendOrder(be) {
         customer: be.customerName ?? spec.customer ?? '',
         qty: be.quantity ?? spec.qty ?? 0,
         boxType: be.boxType ?? spec.boxType ?? '',
+        // S1 / DF-05:後端 typed 欄位為空時退回 SpecJson 的值(flute 不動,仍由 SpecJson 還原)
+        paperSpec: be.paperSpec || spec.paperSpec || '',
+        targetLength: Number(be.targetLength ?? spec.targetLength ?? 0),
         status: STATUS_FROM_BACKEND[statusNum] ?? spec.status ?? 'Queued',
         _sequence: Number(be.sequence) || 0,       // 供排序用,非顯示
     };
+}
+
+/**
+ * 後端訂單是否應進入前端排程佇列。
+ * @param {Object} be 後端 Order(camelCase)
+ * @returns {boolean} Completed(3) / Cancelled(4) 回 false,其餘(含未知或缺漏狀態)回 true
+ * 邏輯:狀態推導方式與 fromBackendOrder 一致(數字直接用,字串查 BACKEND_STATUS);
+ *       採寬鬆策略 —— 認不出來的狀態照樣入列,寧可多顯示也不要把資料藏起來。
+ */
+export function isSchedulableBackendOrder(be) {
+    if (!be) return true;
+    const statusNum = typeof be.status === 'number' ? be.status : BACKEND_STATUS[be.status];
+    return statusNum !== BACKEND_STATUS.Completed && statusNum !== BACKEND_STATUS.Cancelled;
 }
 
 /**

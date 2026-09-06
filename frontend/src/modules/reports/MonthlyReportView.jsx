@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import styles from './MonthlyReportView.module.css';
 import {
     filterByDateRange,
@@ -12,8 +12,12 @@ import { useLanguage } from '../language/LanguageContext';
 /**
  * 生產月報表元件
  * 按月份彙總顯示每日生產統計，並計算月度總計
+ *
+ * @param {Array} productionHistory - 生產紀錄陣列(父層提供)
+ * @param {Function} [onRangeChange] - S4 / F4.1:選用回呼,以 { startDate, endDate } 回報本元件
+ *        自持的月份區間,讓父層能把該區間下推給後端查詢。未傳入時行為與加入本參數前完全相同。
  */
-const MonthlyReportView = ({ productionHistory }) => {
+const MonthlyReportView = ({ productionHistory, onRangeChange }) => {
     const { t } = useLanguage();
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth() + 1;
@@ -40,6 +44,14 @@ const MonthlyReportView = ({ productionHistory }) => {
         const endDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${lastDay}`;
         return { startDate, endDate };
     }, [selectedYear, selectedMonth]);
+
+    // S4 / F4.1:本元件的區間是自持的(父層不知道使用者選了哪個月),
+    // 初始化與每次變更都往上回報一次,否則父層只會抓到明細分頁的區間,月報會空白。
+    useEffect(() => {
+        if (typeof onRangeChange === 'function') {
+            onRangeChange({ startDate: dateRange.startDate, endDate: dateRange.endDate });
+        }
+    }, [dateRange, onRangeChange]);
 
     // 篩選並計算月報表資料
     const { dailyRows, totals } = useMemo(() => {

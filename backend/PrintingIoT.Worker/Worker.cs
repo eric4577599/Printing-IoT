@@ -2,42 +2,39 @@ using System.Text.Json;
 using MQTTnet;
 using MQTTnet.Client;
 using StackExchange.Redis;
-using PrintingIoT.Core.Entities;
 using PrintingIoT.Core.Models;
-using PrintingIoT.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
 using PrintingIoT.Worker.Services;
 
 namespace PrintingIoT.Worker;
 
 public class MqttWorker : BackgroundService
 {
+    private static readonly JsonSerializerOptions JsonOptions =
+        new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
     private readonly ILogger<MqttWorker> _logger;
     private readonly IConfiguration _configuration;
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ISpeedCalculator _speedCalculator;
-    private readonly IDeviceLockManager _lockManager;
+    private readonly IWisePayloadParser _wiseParser;
+    private readonly ITelemetryPipeline _pipeline;
     private IMqttClient? _mqttClient;
     private IConnectionMultiplexer? _redis;
     private readonly string _brokerAddress;
     private readonly int _brokerPort;
 
     public MqttWorker(
-        ILogger<MqttWorker> logger, 
-        IConfiguration configuration, 
-        IServiceScopeFactory scopeFactory,
-        ISpeedCalculator speedCalculator,
-        IDeviceLockManager lockManager)
+        ILogger<MqttWorker> logger,
+        IConfiguration configuration,
+        IWisePayloadParser wiseParser,
+        ITelemetryPipeline pipeline)
     {
         _logger = logger;
         _configuration = configuration;
-        _scopeFactory = scopeFactory;
-        
+
         _brokerAddress = _configuration["Mqtt:BrokerAddress"] ?? "localhost";
         _brokerPort = int.Parse(_configuration["Mqtt:Port"] ?? "1883");
-        
-        _speedCalculator = speedCalculator;
-        _lockManager = lockManager;
+
+        _wiseParser = wiseParser;
+        _pipeline = pipeline;
     }
 
     public override async Task StartAsync(CancellationToken cancellationToken)
@@ -58,12 +55,12 @@ public class MqttWorker : BackgroundService
 
         _logger.LogInformation($"Connecting to MQTT Broker at {_brokerAddress}:{_brokerPort}");
         await _mqttClient.ConnectAsync(mqttOptions, cancellationToken);
-        
+
         await _mqttClient.SubscribeAsync("factory/machine/update");
 
         var db = _redis.GetDatabase();
         var configJson = await db.StringGetAsync("config/communication");
-        string wiseTopic = "Advantech/+/data"; 
+        string wiseTopic = "Advantech/+/data";
 
         if (configJson.HasValue)
         {
@@ -131,84 +128,28 @@ public class MqttWorker : BackgroundService
         }
     }
 
+    /// <summary>
+    /// 處理真機訊息。
+    /// 輸入:MQTT topic 與 payload。邏輯:解析成 MachineSample 後交給統一管線,取得 MonitorData 才發布。
+    /// 輸出:無;解析失敗(回 null)時什麼都不做。
+    /// </summary>
     private async Task ProcessWiseUpdate(string topic, string payload)
     {
-        using var doc = JsonDocument.Parse(payload);
-        var root = doc.RootElement;
-
-        var parts = topic.Split('/');
-        var deviceId = parts.Length > 1 ? parts[1] : "WISE";
-
-        long currentRaw = 0;
-        bool hasQty = false;
-
-        if (root.TryGetProperty("di1", out var di1Element) && di1Element.ValueKind == JsonValueKind.Number)
-        {
-            currentRaw = di1Element.GetInt64();
-            hasQty = true;
-        }
-
-        if (!_lockManager.TryAcquireLock(deviceId)) return;
-        
-        var now = DateTime.UtcNow;
-        decimal speed = await _speedCalculator.CalculateSpeedAsync(deviceId, currentRaw, now, hasQty);
-
-        var monitorData = new MonitorData(deviceId, speed, currentRaw, "1", now);
-        
-        var db = _redis!.GetDatabase();
-        var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-        await db.StringSetAsync("factory/monitor", JsonSerializer.Serialize(monitorData, jsonOptions));
-        await PublishMonitorUpdate(monitorData, jsonOptions);
+        var sample = await _wiseParser.ParseAsync(topic, payload);
+        var monitorData = await _pipeline.ProcessAsync(sample);
+        if (monitorData != null) await PublishMonitorUpdate(monitorData, JsonOptions);
     }
 
+    /// <summary>
+    /// 處理模擬器訊息。
+    /// 輸入:payload。邏輯:與真機共用同一條管線,只差在解析器。
+    /// 輸出:無;解析失敗或被設備鎖擋下時不發布。
+    /// </summary>
     private async Task ProcessMachineUpdate(string payload)
     {
-        using var doc = JsonDocument.Parse(payload);
-        var root = doc.RootElement;
-
-        string deviceId = "unknown";
-        if (root.TryGetProperty("deviceId", out var dId)) deviceId = dId.GetString() ?? "unknown";
-        
-        decimal speed = 0;
-        if (root.TryGetProperty("speed", out var sp)) speed = sp.GetDecimal();
-        else if (root.TryGetProperty("line_speed", out var lsp)) speed = lsp.GetDecimal();
-
-        decimal length = 0;
-        if (root.TryGetProperty("length", out var len)) length = len.GetDecimal();
-        else if (root.TryGetProperty("total_length", out var tlen)) length = tlen.GetDecimal();
-        else if (root.TryGetProperty("d1", out var d1)) length = d1.GetDecimal();
-
-        int statusInt = 0;
-        if (root.TryGetProperty("status", out var st)) statusInt = st.GetInt32();
-        else if (root.TryGetProperty("status_code", out var stc)) statusInt = stc.GetInt32();
-        
-        if (deviceId == "unknown") _logger.LogWarning($"Sim Payload missing deviceId. Raw: {payload}");
-
-        if (!_lockManager.TryAcquireLock(deviceId)) return;
-
-        var log = new ProductionLog
-        {
-            DeviceId = deviceId,
-            Speed = speed,
-            TotalLength = length,
-            Status = (MachineStatus)statusInt,
-            Timestamp = DateTime.UtcNow
-        };
-
-        var db = _redis!.GetDatabase();
-        var monitorData = new MonitorData(deviceId, speed, length, log.Status.ToString(), log.Timestamp);
-        
-        var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-        await db.StringSetAsync("factory/monitor", JsonSerializer.Serialize(monitorData, jsonOptions));
-        
-        await PublishMonitorUpdate(monitorData, jsonOptions);
-
-        using (var scope = _scopeFactory.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<PrintingContext>();
-            dbContext.ProductionLogs.Add(log);
-            await dbContext.SaveChangesAsync();
-        }
+        var sample = SimulatorPayloadParser.Parse(payload, _logger);
+        var monitorData = await _pipeline.ProcessAsync(sample);
+        if (monitorData != null) await PublishMonitorUpdate(monitorData, JsonOptions);
     }
 
     private async Task PublishMonitorUpdate(MonitorData data, JsonSerializerOptions? options = null)

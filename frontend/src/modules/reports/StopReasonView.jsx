@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import styles from './StopReasonView.module.css';
 import {
     filterByDateRange,
@@ -11,8 +11,12 @@ import { useLanguage } from '../language/LanguageContext';
 /**
  * 停車原因分析元件
  * 支援時間區間篩選，按原因分類彙總，可展開顯示訂單細節
+ *
+ * @param {Array} productionHistory - 生產紀錄陣列(父層提供)
+ * @param {Function} [onRangeChange] - S4 / F4.1:選用回呼,以 { startDate, endDate } 回報本元件
+ *        自持的時間區間(預設近 7 天),讓父層能把該區間下推給後端查詢。未傳入時行為不變。
  */
-const StopReasonView = ({ productionHistory }) => {
+const StopReasonView = ({ productionHistory, onRangeChange }) => {
     const { t } = useLanguage();
     const today = new Date().toISOString().split('T')[0];
 
@@ -24,6 +28,14 @@ const StopReasonView = ({ productionHistory }) => {
     const [startDate, setStartDate] = useState(defaultStart);
     const [endDate, setEndDate] = useState(today);
     const [expandedReasons, setExpandedReasons] = useState(new Set());
+
+    // S4 / F4.1:本元件的區間是自持的(預設近 7 天),初始化與每次變更都往上回報一次,
+    // 否則父層只會抓到明細分頁的區間,停車原因頁會顯示不出資料。
+    useEffect(() => {
+        if (typeof onRangeChange === 'function') {
+            onRangeChange({ startDate, endDate });
+        }
+    }, [startDate, endDate, onRangeChange]);
 
     // 篩選並分組停車原因
     const stopReasonSummaries = useMemo(() => {

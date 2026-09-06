@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import Schedule from './pages/Schedule';
 import { LanguageProvider } from './modules/language/LanguageContext';
 import { AuthProvider } from './modules/auth/AuthContext';
+import RequireAuth from './modules/auth/RequireAuth';
 import './App.css';
 
 // 懶加載大型頁面（縮小首屏 Bundle 體積）
@@ -31,8 +32,15 @@ const App = () => {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* Debug Route */}
-            <Route path="/debug" element={<Suspense fallback={<PageLoader />}><DebugDashboard /></Suspense>} />
+            {/* Debug Route:S5 納入保護 —— 與 MainLayout 內 canDebug 的判斷條件一致 */}
+            <Route
+              path="/debug"
+              element={
+                <RequireAuth roles={['ADMIN', 'ENGINEER']}>
+                  <Suspense fallback={<PageLoader />}><DebugDashboard /></Suspense>
+                </RequireAuth>
+              }
+            />
 
             <Route path="/" element={<MainLayout />}>
               {/* 核心頁面：靜態載入（首屏必要） */}

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useLanguage } from '../../../modules/language/LanguageContext';
+import { useProductionRecords } from '../../../hooks/useProductionRecords';
 
 export const useAnalysisData = () => {
     const { t } = useLanguage();
@@ -21,18 +22,17 @@ export const useAnalysisData = () => {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
     // === 資料讀取 ===
-    const productionHistory = useMemo(() => {
-        try {
-            const history = JSON.parse(localStorage.getItem('productionHistory') || '[]');
-            return history.filter(record => {
-                const recordDate = record.date;
-                return recordDate >= startDate && recordDate <= endDate;
-            });
-        } catch (e) {
-            console.error('Failed to load production history:', e);
-            return [];
-        }
-    }, [startDate, endDate]);
+    // S4 / F4.2:改由共用 hook 供資料(後端為主、本機快取補洞並標示來源),
+    // 不再直讀 localStorage;日期區間直接下推給後端查詢。
+    const {
+        records: productionHistory,
+        isLoading,
+        error,
+        isDegraded,
+        truncated,
+        localOnlyCount,
+        reload,
+    } = useProductionRecords({ from: startDate, to: endDate });
 
     // === 資料分組 ===
     const groupedData = useMemo(() => {
@@ -80,6 +80,13 @@ export const useAnalysisData = () => {
         productionHistory,
         groupedData,
         summaryStats,
-        t
+        t,
+        // S4 / F4.2:新增的資料狀態(既有回傳欄位一個不少,只做加法)
+        isLoading,
+        error,
+        isDegraded,
+        truncated,
+        localOnlyCount,
+        reload
     };
 };
