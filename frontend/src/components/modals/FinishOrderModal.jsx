@@ -1,6 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../../modules/language/LanguageContext';
+import { useReasonCodes } from '../../hooks/useReasonCodes';
 import styles from './ModalStyles.module.css';
+
+/**
+ * 不良原因的內建預設清單(S3 / F8 的最後一道降級)
+ * @param {Function} t - i18n 翻譯函式
+ * @returns {Array} 四筆不良原因 { code, name }
+ * @description 原本是元件內 useState 寫死的四筆,改為後端主檔的 fallback。
+ *              名稱仍走 i18n 鍵,語言切換時內建預設也跟著翻譯。
+ */
+const buildDefaultDefectReasons = (t) => [
+    { code: 'A01', name: t('modalExt.finishOrder.defectFlat') || '壓扁' },
+    { code: 'A02', name: t('modalExt.finishOrder.defectPrint') || '印刷不良' },
+    { code: 'A03', name: t('modalExt.finishOrder.defectSelf') || '自檢不良' },
+    { code: 'A04', name: t('modalExt.finishOrder.defectOver') || '超量' },
+];
 
 const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
     const { t } = useLanguage();
@@ -19,24 +34,35 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
         targetQty: 0,
     });
 
-    const [defects, setDefects] = useState([
-        { id: 'A01', reason: '不良平板', qty: 0 },
-        { id: 'A02', reason: '不良印製', qty: 0 },
-        { id: 'A03', reason: '不良本身', qty: 0 },
-        { id: 'A04', reason: '超製', qty: 0 },
-    ]);
+    // S3 / F8:不良品表格改由後端原因主檔產生列;API 不可用時退回內建四筆
+    const { reasons: defectReasons } = useReasonCodes('defect', buildDefaultDefectReasons(t));
+
+    // 各代碼對應的輸入數量;列由 defectReasons 決定,qty 一律初始 0
+    const [defectQtys, setDefectQtys] = useState({});
+
+    // 修正:原 effect 依賴 [isOpen, initialData],父層(Dashboard)每秒重建 initialData 物件,
+    // 導致 goodQty 每秒被即時計數覆寫、操作員無法手動修改。改為只在 closed→open 邊緣以最新
+    // initialData 初始化一次;用 ref 持有最新 initialData,effect 僅依賴 isOpen。
+    const initialDataRef = useRef(initialData);
+    initialDataRef.current = initialData;
 
     useEffect(() => {
-        if (isOpen && initialData) {
-            setFormData(prev => ({
-                ...prev,
-                operator: initialData.operator || '',
-                shift: initialData.shift || 'A',
-                goodQty: initialData.qty || 0,
-                targetQty: initialData.targetQty || 0
-            }));
+        if (isOpen) {
+            // S3 / F8:每次開啟都把不良數量歸零,避免上一張工單的輸入殘留
+            setDefectQtys({});
+            const init = initialDataRef.current;
+            if (init) {
+                setFormData(prev => ({
+                    ...prev,
+                    operator: init.operator || '',
+                    shift: init.shift || 'A',
+                    goodQty: init.qty || 0,
+                    targetQty: init.targetQty || 0
+                }));
+            }
         }
-    }, [isOpen, initialData]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen]);
 
     const handleInputChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -46,9 +72,27 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
         }));
     };
 
-    const handleDefectChange = (id, newQty) => {
-        setDefects(prev => prev.map(d => d.id === id ? { ...d, qty: Number(newQty) } : d));
+    /**
+     * 更新某一不良原因的數量
+     * @param {string} code - 不良原因代碼
+     * @param {string|number} newQty - 使用者輸入的數量
+     * @returns {void}
+     */
+    const handleDefectChange = (code, newQty) => {
+        setDefectQtys(prev => ({ ...prev, [code]: Number(newQty) || 0 }));
     };
+
+    /**
+     * 組出送出用的不良明細陣列
+     * @returns {Array} [{ code, reason, qty }]
+     * @description 形狀對齊後端 DTO(docs/spec20260903-s3-v1.md §F2);
+     *              數量為 0 的列也照實送出 —— 0 也是資訊。
+     */
+    const buildDefectsPayload = () => defectReasons.map(r => ({
+        code: r.code,
+        reason: r.name,
+        qty: Number(defectQtys[r.code]) || 0,
+    }));
 
     const handleSubmit = () => {
         // Validation: If Good Qty < Target Qty, Shortage Reason is required
@@ -67,11 +111,11 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
         }
 
         if (shortageGap > 0 && shortageGap > threshold && !formData.shortageReason) {
-            alert(`未達目標產量 (${formData.targetQty}) 且差異大於 ${threshold}，請輸入欠量原因 (Shortage Reason Required)`);
+            alert(`${t('modalExt.finishOrder.shortageAlertPre')} (${formData.targetQty}) ${t('modalExt.finishOrder.shortageAlertMid')} ${threshold}${t('modalExt.finishOrder.shortageAlertPost')}`);
             return;
         }
 
-        onConfirm({ ...formData, defects });
+        onConfirm({ ...formData, defects: buildDefectsPayload() });
         onClose();
     };
 
@@ -88,7 +132,7 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
                     {/* Left Column: Form Info */}
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('dashboard.monitor.operator')}</label>
+                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('fix.monitorOperator')}</label>
                             <input
                                 name="operator"
                                 value={formData.operator}
@@ -97,7 +141,7 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
                             />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('dashboard.monitor.shift')}</label>
+                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('fix.monitorShift')}</label>
                             <input
                                 name="shift"
                                 value={formData.shift}
@@ -116,7 +160,7 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
                             />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('modals.finishOrder.splitCount')}</label>
+                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('fix.splitCount')}</label>
                             <input
                                 type="number"
                                 name="splitCount"
@@ -126,7 +170,7 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
                             />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('modals.finishOrder.shortageWen')}</label>
+                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('fix.shortageWen')}</label>
                             <input
                                 type="number"
                                 name="shortageWen"
@@ -136,7 +180,7 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
                             />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('modals.finishOrder.shortageWu')}</label>
+                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('fix.shortageWu')}</label>
                             <input
                                 type="number"
                                 name="shortageWu"
@@ -146,40 +190,40 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
                             />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('modals.finishOrder.shortageReason')}</label>
+                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('fix.shortageReason')}</label>
                             <select
                                 name="shortageReason"
                                 value={formData.shortageReason}
                                 onChange={handleInputChange}
                                 style={{ flex: 1, padding: '4px' }}
                             >
-                                <option value="">請選擇</option>
-                                <option value="Reason A">原因 A</option>
-                                <option value="Reason B">原因 B</option>
+                                <option value="">{t('modalExt.finishOrder.pleaseSelect')}</option>
+                                <option value="Reason A">{t('modalExt.finishOrder.reasonA')}</option>
+                                <option value="Reason B">{t('modalExt.finishOrder.reasonB')}</option>
                             </select>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('modals.finishOrder.processType')}</label>
+                            <label style={{ width: '80px', textAlign: 'right', marginRight: '10px' }}>{t('fix.processType')}</label>
                             <select
                                 name="processType"
                                 value={formData.processType}
                                 onChange={handleInputChange}
                                 style={{ flex: 1, padding: '4px' }}
                             >
-                                <option value="">請選擇</option>
-                                <option value="Type A">類別 A</option>
-                                <option value="Type B">類別 B</option>
+                                <option value="">{t('modalExt.finishOrder.pleaseSelect')}</option>
+                                <option value="Type A">{t('modalExt.finishOrder.typeA')}</option>
+                                <option value="Type B">{t('modalExt.finishOrder.typeB')}</option>
                             </select>
                         </div>
                         <div style={{ paddingLeft: '90px' }}>
                             <label style={{ display: 'block' }}>
-                                <input type="checkbox" name="isSplit" checked={formData.isSplit} onChange={handleInputChange} /> {t('modals.finishOrder.isSplit')}
+                                <input type="checkbox" name="isSplit" checked={formData.isSplit} onChange={handleInputChange} /> {t('fix.isSplit')}
                             </label>
                             <label style={{ display: 'block' }}>
-                                <input type="checkbox" name="isFinished" checked={formData.isFinished} onChange={handleInputChange} /> {t('modals.finishOrder.isFinished')}
+                                <input type="checkbox" name="isFinished" checked={formData.isFinished} onChange={handleInputChange} /> {t('fix.isFinished')}
                             </label>
                             <label style={{ display: 'block' }}>
-                                <input type="checkbox" name="saveOptimized" checked={formData.saveOptimized} onChange={handleInputChange} /> {t('modals.finishOrder.saveOptimized')}
+                                <input type="checkbox" name="saveOptimized" checked={formData.saveOptimized} onChange={handleInputChange} /> {t('fix.saveOptimized')}
                             </label>
                         </div>
                     </div>
@@ -189,19 +233,19 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
                         <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #ccc' }}>
                             <thead style={{ backgroundColor: '#f0f0f0' }}>
                                 <tr>
-                                    <th style={{ border: '1px solid #ccc', padding: '5px', textAlign: 'left' }}>{t('reports.table.reason')}</th>
+                                    <th style={{ border: '1px solid #ccc', padding: '5px', textAlign: 'left' }}>{t('fix.tableReason')}</th>
                                     <th style={{ border: '1px solid #ccc', padding: '5px', width: '60px' }}>{t('reports.table.qty')}</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {defects.map(d => (
-                                    <tr key={d.id}>
-                                        <td style={{ border: '1px solid #ccc', padding: '5px' }}>{d.id} {d.reason}</td>
+                                {defectReasons.map(d => (
+                                    <tr key={d.code}>
+                                        <td style={{ border: '1px solid #ccc', padding: '5px' }}>{d.code} {d.name}</td>
                                         <td style={{ border: '1px solid #ccc', padding: '0' }}>
                                             <input
                                                 type="number"
-                                                value={d.qty}
-                                                onChange={(e) => handleDefectChange(d.id, e.target.value)}
+                                                value={defectQtys[d.code] ?? 0}
+                                                onChange={(e) => handleDefectChange(d.code, e.target.value)}
                                                 style={{ width: '100%', border: 'none', padding: '5px' }}
                                             />
                                         </td>

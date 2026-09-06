@@ -79,34 +79,7 @@ async function delay(time) {
         console.log('Capturing Schedule...');
         await page.screenshot({ path: path.join(OUTPUT_DIR, 'schedule.png') });
 
-        // 5. CAPTURE MAINTENANCE
-        // url: /maintenance
-        console.log('Navigating to Maintenance...');
-        await page.goto(`${TARGET_URL}/maintenance`);
-        await delay(2000);
-
-        // Switch to "Schedule" tab (Text: ⏰ 保養排程)
-        const tabs = await page.$$('button');
-        for (const tab of tabs) {
-            const text = await page.evaluate(el => el.textContent, tab);
-            if (text.includes('保養排程')) {
-                await tab.click();
-                console.log('Switched to Schedule Tab.');
-                await delay(500);
-                break;
-            }
-        }
-
-        // In this tab, we should see the form "MaintenanceScheduleForm" immediately 
-        // OR we see a list and "Save Schedule".
-        // MaintenancePage.jsx logic: Case 'schedule': renders MaintenanceScheduleForm directly?
-        // Let's check MachineMaintenance.jsx logic:
-        // case 'schedule': returns <MaintenanceScheduleForm ... />
-        // So the form IS visible.
-
-        console.log('Capturing Maintenance Form...');
-        // We might want to capture just the form area, but user asked for "screen". Full page is fine.
-        await page.screenshot({ path: path.join(OUTPUT_DIR, 'maintenance.png') });
+        // 保養維修頁已於 2026-06-06 移出主系統(獨立 MM 程式),不再截圖 /maintenance
 
         console.log('--- All Screenshots Captured Automatically ---');
 

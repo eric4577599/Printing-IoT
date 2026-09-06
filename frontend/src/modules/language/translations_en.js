@@ -178,6 +178,9 @@ const enTranslations = {
             confirm: 'Confirm Finish',
             cancel: 'Cancel'
         },
+        productDetail: {
+            title: 'Product Specification'
+        },
         orderDetails: {
             title: 'Order Details',
             orderNo: 'Order No',

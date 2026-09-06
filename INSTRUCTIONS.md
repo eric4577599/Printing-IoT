@@ -4,7 +4,7 @@ This project has been initialized by the Antigravity AI Team.
 
 ## Structure
 *   `frontend/`: React application (Copied from Flexo IoT)
-*   `backend/`: .NET 8 Solution
+*   `backend/`: .NET 9 Solution
     *   `PrintingIoT.API`: Web API service
     *   `PrintingIoT.Worker`: Background service for MQTT
 *   `.gent/`: AI Skills and Context

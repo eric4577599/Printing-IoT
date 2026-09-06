@@ -1,107 +1,84 @@
+using Microsoft.AspNetCore.Authorization;
+using PrintingIoT.Core.Constants;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PrintingIoT.Core.Entities;
-using PrintingIoT.Infrastructure.Data;
+using PrintingIoT.Core.Interfaces;
 
 namespace PrintingIoT.API.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class SettingsController : ControllerBase
 {
-    private readonly PrintingContext _context;
-    private readonly StackExchange.Redis.IConnectionMultiplexer _redis;
-    private const string RedisKey = "config/communication";
+    private readonly ISettingsService _settingsService;
 
-    public SettingsController(PrintingContext context, StackExchange.Redis.IConnectionMultiplexer redis)
+    public SettingsController(ISettingsService settingsService)
     {
-        _context = context;
-        _redis = redis;
+        _settingsService = settingsService;
     }
 
     [HttpGet("communication")]
     public async Task<IActionResult> GetCommunicationSettings()
     {
-        var db = _redis.GetDatabase();
-        var json = await db.StringGetAsync(RedisKey);
-        if (json.HasValue)
-        {
-            return Ok(System.Text.Json.JsonSerializer.Deserialize<object>(json.ToString()));
-        }
-        
-        // Default
-        return Ok(new { 
-            plc_enabled = true,
-            plc_simulate = false,
-            plc_device_type = "wise",
-            plc_ip = "192.168.1.1",
-            plc_port = 502,
-            mqtt_broker_url = "mqtt.infotech-consultant.com",
-            mqtt_topic = "Advantech/+/data", // Default wildcard, user can change to specific
-            machine_id = "MACHINE_01",
-            data_log_interval = 300
-        });
+        var settings = await _settingsService.GetCommunicationSettingsAsync();
+        return Ok(settings);
     }
 
+    [Authorize(Policy = AppRoles.Policies.SystemConfig)]
     [HttpPut("communication")]
     public async Task<IActionResult> UpdateCommunicationSettings([FromBody] object settings)
     {
-        var db = _redis.GetDatabase();
-        await db.StringSetAsync(RedisKey, System.Text.Json.JsonSerializer.Serialize(settings));
+        await _settingsService.UpdateCommunicationSettingsAsync(settings);
         return Ok(new { success = true });
     }
 
     [HttpGet("machine-sections")]
     public async Task<ActionResult<IEnumerable<MachineSection>>> GetMachineSections()
     {
-        return await _context.MachineSections.OrderBy(s => s.DisplayOrder).ToListAsync();
+        var sections = await _settingsService.GetMachineSectionsAsync();
+        return Ok(sections);
     }
 
+    [Authorize(Policy = AppRoles.Policies.SystemConfig)]
     [HttpPost("machine-sections")]
     public async Task<ActionResult<MachineSection>> CreateMachineSection(MachineSection section)
     {
-        _context.MachineSections.Add(section);
-        await _context.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetMachineSections), new { id = section.Id }, section);
+        var createdSection = await _settingsService.CreateMachineSectionAsync(section);
+        return CreatedAtAction(nameof(GetMachineSections), new { id = createdSection.Id }, createdSection);
     }
 
+    [Authorize(Policy = AppRoles.Policies.SystemConfig)]
     [HttpPut("machine-sections/{id}")]
     public async Task<IActionResult> UpdateMachineSection(Guid id, MachineSection section)
     {
-        if (id != section.Id) return BadRequest();
-        
-        _context.Entry(section).State = EntityState.Modified;
-        await _context.SaveChangesAsync();
+        var success = await _settingsService.UpdateMachineSectionAsync(id, section);
+        if (!success) return BadRequest();
         return Ok(new { success = true });
     }
 
+    [Authorize(Policy = AppRoles.Policies.SystemConfig)]
     [HttpDelete("machine-sections/{id}")]
     public async Task<IActionResult> DeleteMachineSection(Guid id)
     {
-        var section = await _context.MachineSections.FindAsync(id);
-        if (section == null) return NotFound();
-
-        _context.MachineSections.Remove(section);
-        await _context.SaveChangesAsync();
+        var success = await _settingsService.DeleteMachineSectionAsync(id);
+        if (!success) return NotFound();
         return Ok(new { success = true });
     }
+
     [HttpGet("box-types")]
     public async Task<IActionResult> GetBoxTypes()
     {
-        var db = _redis.GetDatabase();
-        var json = await db.StringGetAsync("config/box-types");
-        if (json.HasValue)
-        {
-            return Ok(System.Text.Json.JsonSerializer.Deserialize<List<object>>(json.ToString()));
-        }
-        return Ok(new List<object>()); 
+        var types = await _settingsService.GetBoxTypesAsync();
+        return Ok(types);
     }
 
+    [Authorize(Policy = AppRoles.Policies.SystemConfig)]
     [HttpPut("box-types")]
     public async Task<IActionResult> UpdateBoxTypes([FromBody] List<object> types)
     {
-        var db = _redis.GetDatabase();
-        await db.StringSetAsync("config/box-types", System.Text.Json.JsonSerializer.Serialize(types));
+        await _settingsService.UpdateBoxTypesAsync(types);
         return Ok(new { success = true });
     }
 }

@@ -1,10 +1,70 @@
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import {
+    DndContext,
+    closestCenter,
+    PointerSensor,
+    KeyboardSensor,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core';
+import {
+    SortableContext,
+    verticalListSortingStrategy,
+    useSortable,
+    sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useLanguage } from '../modules/language/LanguageContext';
+import { resolveDragReorder } from '../utils/scheduleDnd';
 import BoxDiagram from '../components/common/BoxDiagram';
 import ProductFormModal from '../components/modals/ProductFormModal';
+import ProductDetailModal from '../components/modals/ProductDetailModal';
 import AddScheduleModal from '../modules/maintenance/AddScheduleModal';
 import styles from './Schedule.module.css';
+
+/**
+ * 可拖拉的排程列。
+ * - 執行中訂單(index 0)鎖定:disabled 且不掛拖拉 listener,僅可點選檢視。
+ * - 其餘列掛上 dnd-kit 的 attributes/listeners,支援滑鼠拖拉與鍵盤(Tab 聚焦 + 空白鍵抓取 + 方向鍵)。
+ * @param {Object} order 訂單資料
+ * @param {number} index 於陣列中的位置(0 為執行中)
+ * @param {boolean} isSelected 是否為目前選取列
+ * @param {Function} onSelect (order, index) 點選回呼
+ */
+const SortableOrderRow = ({ order, index, isSelected, onSelect }) => {
+    const isRunning = index === 0;
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+        useSortable({ id: order.id, disabled: isRunning });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.6 : 1,
+        cursor: isRunning ? 'default' : 'grab',
+    };
+
+    return (
+        <tr
+            ref={setNodeRef}
+            style={style}
+            onClick={() => onSelect(order, index)}
+            className={`${isSelected ? styles.selectedRow : ''} ${isRunning ? styles.runningRow : ''}`}
+            {...(isRunning ? {} : attributes)}
+            {...(isRunning ? {} : listeners)}
+        >
+            <td style={{ fontWeight: isRunning ? 'bold' : 'normal', color: isRunning ? '#2e7d32' : 'inherit' }}>
+                {order.seqNo || (index + 1) * 10}
+            </td>
+            <td>{order.customer}</td>
+            <td>{order.orderNo}</td>
+            <td>{order.boxNo}</td>
+            <td>{order.qty}</td>
+            <td>{order.msg || order.productName}</td>
+            <td>{order.boxType}</td>
+        </tr>
+    );
+};
 
 const Schedule = () => {
     const { t } = useLanguage();
@@ -25,6 +85,10 @@ const Schedule = () => {
     const [selectedScheduleId, setSelectedScheduleId] = useState(null);
     const [selectedProductIndex, setSelectedProductIndex] = useState(null);
 
+    // 產品庫搜尋狀態(修正:原搜尋框與 boxNo/customer radio 皆未實作)
+    const [productSearch, setProductSearch] = useState('');
+    const [productSearchType, setProductSearchType] = useState('boxNo'); // 'boxNo' | 'customer'
+
     // --- Graphic Linking Logic ---
     const [lastClickedSection, setLastClickedSection] = useState('none'); // 'schedule', 'product'
 
@@ -34,6 +98,28 @@ const Schedule = () => {
     const [pendingProduct, setPendingProduct] = useState(null); // [新增] 待新增的產品
     const [modalMode, setModalMode] = useState('add_product');
     const [editingProduct, setEditingProduct] = useState(null);
+    const [detailProduct, setDetailProduct] = useState(null); // 點選產品列時顯示的唯讀詳情
+
+    // 拖拉感測器:PointerSensor 設 5px 啟動門檻,讓「點選檢視」與「拖拉排序」不衝突
+    // (小於門檻視為點擊 → 觸發 onClick 選取;超過才進入拖拉);KeyboardSensor 保留無滑鼠可操作性。
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    );
+
+    /**
+     * 拖拉放開:依商規解析來源/目標索引,允許時 splice 搬移並重新編號 seqNo。
+     * 執行中訂單(index 0)鎖定由 resolveDragReorder 一併擋下(來源或目標為 0 皆忽略)。
+     */
+    const handleDragEnd = (event) => {
+        const { active, over } = event;
+        if (!over) return;
+        const { allowed, oldIndex, newIndex } = resolveDragReorder(orders, active.id, over.id);
+        if (!allowed) return;
+        moveOrder(oldIndex, newIndex);   // splice 搬移(MainLayout)
+        reorderOrders();                 // 重新編號 seqNo 10,20,30…
+        addLog(`Reordered Order ${active.id} to position ${newIndex + 1}`);
+    };
 
     // --- Schedule Controls (Left) ---
     const handleMoveOrder = (direction) => {
@@ -41,7 +127,7 @@ const Schedule = () => {
         const idx = orders.findIndex(o => o.id === selectedScheduleId);
 
         if (idx === 0) {
-            alert('無法移動正在生產中的工單 (Cannot move Running Order)!');
+            alert(t('modalExt.ordersAlert.cannotMoveRunning'));
             return;
         }
 
@@ -79,12 +165,12 @@ const Schedule = () => {
             const remainingQty = orderQty - currentQty;
 
             if (lineSpeed > 0) {
-                alert(`❌ 無法刪除：車速不為 0\n當前車速: ${Math.floor(lineSpeed)} m/min\n\n請先停止生產後再試。`);
+                alert(t('modalExt.ordersAlert.cannotDeleteSpeedNotZero').replace('{speed}', Math.floor(lineSpeed)));
                 return;
             }
 
             if (remainingQty > 0) {
-                alert(`❌ 無法刪除：未生產量不為 0\n剩餘數量: ${remainingQty} 張\n\n請完成生產後再試。`);
+                alert(t('modalExt.ordersAlert.cannotDeleteQtyRemaining').replace('{qty}', remainingQty));
                 return;
             }
 
@@ -140,6 +226,29 @@ const Schedule = () => {
         setShowProductModal(false);
     };
 
+    // 產品庫重新載入(修正:原 🔄 按鈕無 onClick)。由 localStorage 重新同步產品清單並清除搜尋與選取。
+    const handleReloadProducts = () => {
+        try {
+            const saved = localStorage.getItem('products');
+            if (saved) setProducts(JSON.parse(saved));
+        } catch (e) {
+            console.error('Failed to reload products', e);
+        }
+        setProductSearch('');
+        setSelectedProductIndex(null);
+        addLog('Product library reloaded');
+    };
+
+    // 依搜尋條件過濾產品(保留原始 index 供選取/刪除正確對應 products 陣列)
+    const filteredProductEntries = products
+        .map((prod, i) => ({ prod, i }))
+        .filter(({ prod }) => {
+            const q = productSearch.trim().toLowerCase();
+            if (!q) return true;
+            const field = productSearchType === 'customer' ? prod.customer : prod.boxNo;
+            return String(field || '').toLowerCase().includes(q);
+        });
+
     /**
      * 新增排程 - 彈出 Modal 讓使用者輸入訂單參數
      */
@@ -187,45 +296,42 @@ const Schedule = () => {
                     <button onClick={handleReorderSchedule}>{t('orders.schedule.reorder')}</button>
                 </div>
 
-                {/* Middle: Schedule Table */}
+                {/* Middle: Schedule Table(支援拖拉排序;執行中訂單鎖定) */}
                 <div className={styles.scheduleTableContainer}>
-                    <table className={styles.scheduleTable}>
-                        <thead>
-                            <tr>
-                                <th style={{ width: '50px' }}>{t('dashboard.schedule.seqNo')}</th>
-                                <th>{t('dashboard.schedule.customer')}</th>
-                                <th>{t('dashboard.schedule.orderNo')}</th>
-                                <th>{t('dashboard.schedule.boxNo')}</th>
-                                <th style={{ width: '60px' }}>{t('dashboard.schedule.qty')}</th>
-                                <th>{t('dashboard.schedule.productName')}</th>
-                                <th style={{ width: '80px' }}>{t('dashboard.schedule.boxType')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {orders.map((order, index) => (
-                                <tr key={order.id}
-                                    onClick={() => {
-                                        setSelectedScheduleId(order.id);
-                                        setLastClickedSection('schedule');
-                                        if (index === 0) {
-                                            addLog(`Viewing Running Order: ${order.orderNo}`);
-                                        }
-                                    }}
-                                    className={`${selectedScheduleId === order.id ? styles.selectedRow : ''} ${index === 0 ? styles.runningRow : ''}`}
-                                >
-                                    <td style={{ fontWeight: index === 0 ? 'bold' : 'normal', color: index === 0 ? '#2e7d32' : 'inherit' }}>
-                                        {order.seqNo || (index + 1) * 10}
-                                    </td>
-                                    <td>{order.customer}</td>
-                                    <td>{order.orderNo}</td>
-                                    <td>{order.boxNo}</td>
-                                    <td>{order.qty}</td>
-                                    <td>{order.msg || order.productName}</td>
-                                    <td>{order.boxType}</td>
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                        <table className={styles.scheduleTable}>
+                            <thead>
+                                <tr>
+                                    <th style={{ width: '50px' }}>{t('dashboard.schedule.seqNo')}</th>
+                                    <th>{t('dashboard.schedule.customer')}</th>
+                                    <th>{t('dashboard.schedule.orderNo')}</th>
+                                    <th>{t('dashboard.schedule.boxNo')}</th>
+                                    <th style={{ width: '60px' }}>{t('dashboard.schedule.qty')}</th>
+                                    <th>{t('dashboard.schedule.productName')}</th>
+                                    <th style={{ width: '80px' }}>{t('dashboard.schedule.boxType')}</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <SortableContext items={orders.map(o => o.id)} strategy={verticalListSortingStrategy}>
+                                <tbody>
+                                    {orders.map((order, index) => (
+                                        <SortableOrderRow
+                                            key={order.id}
+                                            order={order}
+                                            index={index}
+                                            isSelected={selectedScheduleId === order.id}
+                                            onSelect={(o, i) => {
+                                                setSelectedScheduleId(o.id);
+                                                setLastClickedSection('schedule');
+                                                if (i === 0) {
+                                                    addLog(`Viewing Running Order: ${o.orderNo}`);
+                                                }
+                                            }}
+                                        />
+                                    ))}
+                                </tbody>
+                            </SortableContext>
+                        </table>
+                    </DndContext>
                 </div>
 
                 {/* Bottom: Box Diagram */}
@@ -235,8 +341,7 @@ const Schedule = () => {
                     ) : (
                         <div style={{ color: '#1976d2', fontSize: '1rem', fontWeight: 'bold', textAlign: 'center' }}>
                             <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📦</div>
-                            <div>請選取左側排程以顯示紙箱展開圖</div>
-                            <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px' }}>Select an order from the left to display box diagram</div>
+                            <div>{t('modalExt.ordersAlert.selectToShowDiagram')}</div>
                         </div>
                     )}
                 </div>
@@ -259,15 +364,15 @@ const Schedule = () => {
                             {/* Radios */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#fff', fontSize: '0.9rem', marginRight: '5px' }}>
                                 <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                    <input type="radio" name="searchType" defaultChecked style={{ marginRight: '4px' }} /> {t('dashboard.schedule.boxNo')}
+                                    <input type="radio" name="searchType" checked={productSearchType === 'boxNo'} onChange={() => setProductSearchType('boxNo')} style={{ marginRight: '4px' }} /> {t('dashboard.schedule.boxNo')}
                                 </label>
                                 <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                    <input type="radio" name="searchType" style={{ marginRight: '4px' }} /> {t('dashboard.schedule.customer')}
+                                    <input type="radio" name="searchType" checked={productSearchType === 'customer'} onChange={() => setProductSearchType('customer')} style={{ marginRight: '4px' }} /> {t('dashboard.schedule.customer')}
                                 </label>
                             </div>
 
                             {/* Refresh Icon */}
-                            <button className={styles.iconBtn} title="Reload" style={{ fontSize: '1.2rem', padding: '0 5px' }}>🔄</button>
+                            <button onClick={handleReloadProducts} className={styles.iconBtn} title="Reload" style={{ fontSize: '1.2rem', padding: '0 5px' }}>🔄</button>
 
                             {/* Spacer */}
                             <div style={{ flex: 1 }}></div>
@@ -279,7 +384,7 @@ const Schedule = () => {
 
                         {/* Row 2: Search & Delete */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                            <input className={styles.searchInput} placeholder={t('ui.buttons.search')} style={{ flex: 1, height: '30px' }} />
+                            <input className={styles.searchInput} placeholder={t('ui.buttons.search')} value={productSearch} onChange={(e) => setProductSearch(e.target.value)} style={{ flex: 1, height: '30px' }} />
                             <button onClick={handleDeleteProduct} className={styles.redBtn} style={{ minWidth: '70px', height: '30px' }}>{t('ui.buttons.delete')}</button>
                         </div>
                     </div>
@@ -301,11 +406,12 @@ const Schedule = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {products.map((prod, i) => (
+                            {filteredProductEntries.map(({ prod, i }) => (
                                 <tr key={prod.id || `product-${i}`}
                                     onClick={() => {
                                         setSelectedProductIndex(i);
                                         setLastClickedSection('product');
+                                        setDetailProduct(prod); // 點選即彈出規格詳情與圖面
                                     }}
                                     className={selectedProductIndex === i ? styles.selectedProductRow : ''}
                                 >
@@ -328,6 +434,12 @@ const Schedule = () => {
                     onClose={() => setShowProductModal(false)}
                     onSave={handleModalSave}
                     initialData={editingProduct}
+                />
+
+                <ProductDetailModal
+                    isOpen={detailProduct !== null}
+                    onClose={() => setDetailProduct(null)}
+                    product={detailProduct}
                 />
 
                 <AddScheduleModal

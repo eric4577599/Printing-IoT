@@ -1,16 +1,44 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import mqtt from 'mqtt'; // Added for MQTT Monitor Loop
+import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import mqtt from 'mqtt';
 import styles from './Dashboard.module.css';
+import SchedulePanel from '../components/dashboard/SchedulePanel';
+import StatusPanel from '../components/dashboard/StatusPanel';
 import OrderDetailsModal from '../components/modals/OrderDetailsModal';
 import StopReasonModal from '../components/modals/StopReasonModal';
 import FinishOrderModal from '../components/modals/FinishOrderModal';
-import ProductFormModal from '../components/modals/ProductFormModal';
 import {
-    setCurrentOrder, clearCurrentOrder, getRealtimeData, getMachineSections // Imported
+    setCurrentOrder, clearCurrentOrder, getRealtimeData, getMachineSections, // Imported
+    updateOrderStatus, createProductionCompletion, getFactoryTimeSettings
 } from '../services/api';
-import { withCooldown } from '../utils/debounce';
+import { finishHeadOrder, promoteSelectedToHead, returnCurrentToQueue } from '../utils/orderQueue';
+import { isGuid } from '../utils/orderMapper';
+import { calculateOEE, durationToMinutes } from '../utils/reportUtils';
+import { resolveFactoryDate, DEFAULT_DAY_BOUNDARY_HOUR, DEFAULT_TIME_ZONE } from '../utils/factoryDate';
 import { useLanguage } from '../modules/language/LanguageContext';
+
+/**
+ * 修補 localStorage 內某一筆生產歷史紀錄
+ * @param {number|string} recordId - productionRecord.id
+ * @param {Object} patch - 要覆寫的欄位
+ * @returns {boolean} 是否找到並更新
+ * @description S3 / F6:後端落地成功後,把後端算出的工廠日與四個率值寫回離線快取,
+ *              讓報表(本輪仍讀 localStorage)顯示的是後端的權威數字。
+ *              寫入失敗只記 warning,不得影響現場流程。
+ */
+const patchProductionRecord = (recordId, patch) => {
+    try {
+        const history = JSON.parse(localStorage.getItem('productionHistory') || '[]');
+        const index = history.findIndex(r => String(r.id) === String(recordId));
+        if (index === -1) return false;
+        history[index] = { ...history[index], ...patch };
+        localStorage.setItem('productionHistory', JSON.stringify(history));
+        return true;
+    } catch (err) {
+        console.warn('回寫生產歷史紀錄失敗', err);
+        return false;
+    }
+};
 
 const Dashboard = () => {
     const { t } = useLanguage();
@@ -25,10 +53,7 @@ const Dashboard = () => {
         orders,
         setOrders,
         moveOrder,       // From Context
-        deleteOrder,     // From Context
-        saveOrder,       // From Context
         saveProduct,     // From Context (New)
-        reorderOrders,   // From Context
         setShowLoginModal, // From Context
         setCurrentMonitorData, // 共享即時監控資料
         isPlcConnected, // New: Disconnection state
@@ -45,19 +70,24 @@ const Dashboard = () => {
         setCurrentMonitorData: () => { },
         isPlcConnected: true
     };
-    const wsRef = useRef(null);
+
+    // WISE DI 模擬:保留機台部位故障訊號(di3~di10)於虛擬 PLC 記憶體。
+    // 預設 0(無故障);機台部位在設定頁(MachineTab)可對應不同 DI,實訊號到位前由模擬供值。
+    const simulatedDiDefaults = { di3: 0, di4: 0, di5: 0, di6: 0, di7: 0, di8: 0, di9: 0, di10: 0 };
 
     const [currentData, setCurrentData] = useState({
         line_speed: 0,
         di1: 0,
-        status_code: 0
+        status_code: 0,
+        ...simulatedDiDefaults
     });
 
     // Simulation Internal State (Virtual PLC Memory)
     const simStateRef = useRef({
         line_speed: 0,
         di1: 0,
-        status_code: 0
+        status_code: 0,
+        ...simulatedDiDefaults
     });
     // MQTT Client Ref
     const mqttClientRef = useRef(null);
@@ -79,7 +109,7 @@ const Dashboard = () => {
     const [stopStartTime, setStopStartTime] = useState(null);
 
     // 從設定頁面讀取機台極速 (Max Speed)
-    const [machineMaxSpeed, setMachineMaxSpeed] = useState(() => {
+    const [machineMaxSpeed] = useState(() => {
         const saved = localStorage.getItem('unitSettings');
         if (saved) {
             const settings = JSON.parse(saved);
@@ -89,7 +119,7 @@ const Dashboard = () => {
     });
 
     // 從設定頁面讀取閾值設定
-    const [thresholdSettings, setThresholdSettings] = useState(() => {
+    const [thresholdSettings] = useState(() => {
         const saved = localStorage.getItem('formulaSettings');
         if (saved) {
             const settings = JSON.parse(saved);
@@ -120,7 +150,6 @@ const Dashboard = () => {
     const [todayRunTime, setTodayRunTime] = useState(0);
     const [jobStopTime, setJobStopTime] = useState(0);
     const [todayStopTime, setTodayStopTime] = useState(0);
-    const [stopCount, setStopCount] = useState(0);
 
     // Machine Sections (Error/Run Status Configuration)
     const [machineSections, setMachineSections] = useState([]);
@@ -135,6 +164,26 @@ const Dashboard = () => {
             }
         };
         fetchSections();
+    }, []);
+
+    // Effect: MQTT 連線(供 remote 模擬發佈與完工紀錄上傳)
+    // 修正:mqttClientRef 原本從未 connect,導致 remote 模擬不會發訊、完工紀錄永遠送不到後端。
+    // 參考 DebugDashboard 的 getBrokerUrl / mqtt.connect 模式,連 docker-compose 暴露的 ws 9001 埠。
+    useEffect(() => {
+        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const brokerUrl = `${protocol}://${window.location.hostname}:9001`;
+        const client = mqtt.connect(brokerUrl, {
+            clientId: `dashboard_${Math.random().toString(16).substring(2, 8)}`,
+            keepalive: 60,
+        });
+        client.on('connect', () => addLog('MQTT connected'));
+        client.on('error', (err) => console.error('MQTT connection error:', err));
+        mqttClientRef.current = client;
+        return () => {
+            client.end();
+            mqttClientRef.current = null;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
 
@@ -220,8 +269,31 @@ const Dashboard = () => {
 
     const [showFinishModal, setShowFinishModal] = useState(false);
 
+    // S3 / F7:工廠時區與日界(啟動時向後端取一次,取不到就用預設 8 / Asia/Taipei)。
+    // 用 ref 供 handleConfirmFinish 讀取,避免閉包捕捉到過期的設定值。
+    const factoryTimeRef = useRef({ dayBoundaryHour: DEFAULT_DAY_BOUNDARY_HOUR, timeZone: DEFAULT_TIME_ZONE });
+
+    useEffect(() => {
+        let cancelled = false;
+        getFactoryTimeSettings()
+            .then(settings => {
+                if (cancelled || !settings) return;
+                factoryTimeRef.current = {
+                    dayBoundaryHour: Number.isInteger(settings.dayBoundaryHour)
+                        ? settings.dayBoundaryHour
+                        : DEFAULT_DAY_BOUNDARY_HOUR,
+                    timeZone: settings.timeZone || DEFAULT_TIME_ZONE,
+                };
+            })
+            .catch(err => {
+                console.warn('取得工廠時間設定失敗,改用預設 08:00 / Asia/Taipei', err);
+            });
+        return () => { cancelled = true; };
+    }, []);
+
     const handleFinish = () => {
-        const currentCount = Math.floor(currentData.di1 - resetOffset);
+        // 修正:F4 完工透過 currentDataRef 取即時 di1,避免 keydown effect 閉包捕捉到過期 currentData 導致永遠判定「生產數量 0」
+        const currentCount = Math.floor(currentDataRef.current.di1 - resetOffset);
         if (currentCount > 0) {
             setShowFinishModal(true);
         } else {
@@ -231,7 +303,10 @@ const Dashboard = () => {
     };
 
     const handleConfirmFinish = (data) => {
-        const currentCount = Math.floor(currentData.total_length - resetOffset);
+        // 修正:原讀不存在的 currentData.total_length(恆為 NaN,連帶 avgSpeed/OEE 全 NaN),改用即時 di1
+        const currentCount = Math.floor(currentDataRef.current.di1 - resetOffset);
+        // 修正:FinishOrderModal 傳回的是 defects 陣列(非單一 defectQty),需加總各項不良數量
+        const defectQty = (data.defects || []).reduce((sum, d) => sum + (Number(d.qty) || 0), 0);
         addLog(`Order ${orders[0].id} Finished. Good: ${data.goodQty}, Operator: ${data.operator}`);
 
         // --- Auto-Save to Product Library ---
@@ -255,11 +330,30 @@ const Dashboard = () => {
         // --- 儲存生產歷史記錄到 localStorage ---
         // 計算平均車速：運轉時間 > 0 時，用生產數量 / 運轉時間(分鐘)
         const avgSpeedCalc = jobRunTime > 0 ? Math.round(currentCount / (jobRunTime / 60)) : 0;
-        // 計算 OEE：簡化公式 = (實際產量 / 目標產量) × (運轉時間 / (運轉時間 + 停車時間)) × 100
-        const totalTime = jobRunTime + jobStopTime;
-        const availability = totalTime > 0 ? jobRunTime / totalTime : 1;
-        const performance = finishedOrder.qty > 0 ? Math.min(1, currentCount / finishedOrder.qty) : 1;
-        const oeeCalc = Math.round(availability * performance * 100);
+
+        // S3 / GAP-05:三個計時器換成分鐘(後端與報表都以分鐘為單位)
+        const prepTimeMinutes = Math.round(prepTimeSeconds / 60 * 10) / 10;
+        const runTimeMinutes = Math.round(jobRunTime / 60 * 10) / 10;
+        const stopTimeMinutes = Math.round(jobStopTime / 60 * 10) / 10;
+        const goodQtyValue = data.goodQty || currentCount;
+        const targetQtyValue = finishedOrder.qty || 0;
+
+        // S3 / GAP-05:行內的簡化 OEE 公式整段移除,改呼叫唯一的 calculateOEE
+        //(舊公式:效能分子用含不良品的累計計數、分母為零時以 1 假裝滿分、且沒有良率因子)
+        const oeeResult = calculateOEE({
+            runTime: runTimeMinutes,
+            stopTime: stopTimeMinutes,
+            prepTime: prepTimeMinutes,
+            goodQty: goodQtyValue,
+            defectQty,
+            targetQty: targetQtyValue,
+        });
+        const oeeCalc = oeeResult.oee;
+
+        // S3 / F7:完工日改用工廠日規則(舊寫法 toISOString 取的是 UTC 日,
+        // 台北 00:00–08:00 完工的大夜班會落在前一個 UTC 日)
+        const finishedAtIso = new Date().toISOString();
+        const factoryDate = resolveFactoryDate(finishedAtIso, factoryTimeRef.current);
 
         const productionRecord = {
             id: Date.now(),
@@ -272,18 +366,28 @@ const Dashboard = () => {
             flute: finishedOrder.flute || '-',
             operator: data.operator || user?.name || 'Unknown',
             shift: user?.shift || 'Day',
-            targetQty: finishedOrder.qty || 0,
-            goodQty: data.goodQty || currentCount,
-            defectQty: data.defectQty || 0,
-            prepTime: Math.round(prepTimeSeconds / 60 * 10) / 10,   // 準備時間（分鐘，保留1位小數）
-            runTime: Math.round(jobRunTime / 60 * 10) / 10,         // 運轉時間（分鐘）
-            stopTime: Math.round(jobStopTime / 60 * 10) / 10,       // 停車時間（分鐘）
+            targetQty: targetQtyValue,
+            goodQty: goodQtyValue,
+            defectQty: defectQty,
+            prepTime: prepTimeMinutes,                               // 準備時間（分鐘，保留1位小數）
+            runTime: runTimeMinutes,                                 // 運轉時間（分鐘）
+            stopTime: stopTimeMinutes,                               // 停車時間（分鐘）
             stopCount: stopReasons.length,                           // 停車次數
             avgSpeed: avgSpeedCalc,                                  // 平均車速（張/分）
+            availabilityRate: oeeResult.availability,                // 稼動率（%）
+            performanceRate: oeeResult.performance,                  // 效能（%）
+            qualityRate: oeeResult.quality,                          // 良率（%）
             oee: oeeCalc,                                            // OEE 百分比
-            date: new Date().toISOString().split('T')[0],            // 生產日期 (YYYY-MM-DD)
-            finishedAt: new Date().toISOString(),                    // 完工時間戳
+            date: factoryDate,                                       // 工廠日 (YYYY-MM-DD)
+            finishedAt: finishedAtIso,                               // 完工時間戳
+            syncState: 'pending',                                    // S3 / F6:後端落地成功後改為 'synced'
+            defects: (data.defects || []).map(d => ({                // 不良明細（形狀對齊後端 DTO）
+                code: d.code,
+                reason: d.reason,
+                qty: Number(d.qty) || 0
+            })),
             stopReasons: stopReasons.map(r => ({                     // 停車原因記錄
+                code: r.code || '',
                 time: r.time,
                 duration: r.duration,
                 reason: r.reason
@@ -294,12 +398,61 @@ const Dashboard = () => {
             const history = JSON.parse(localStorage.getItem('productionHistory') || '[]');
             history.unshift(productionRecord);
             // 限制保留最近 1000 筆記錄，避免 localStorage 超容量
+            // (S3 起這裡只是離線快取,真相在後端 —— 截斷不再等於資料遺失)
             if (history.length > 1000) history.length = 1000;
             localStorage.setItem('productionHistory', JSON.stringify(history));
             addLog(`Production history saved: ${finishedOrder.orderNo}`);
         } catch (err) {
             console.error('Failed to save production history:', err);
         }
+        // -----------------------------------------
+
+        // --- S3 / F6:完工實績落地後端(後端才是實績的權威來源)---
+        const completionPayload = {
+            clientRecordId: String(productionRecord.id),
+            orderId: isGuid(finishedOrder.id) ? finishedOrder.id : null,
+            orderNumber: productionRecord.orderNo === '-' ? '' : productionRecord.orderNo,
+            deviceId: currentDataRef.current?.device_id || '',
+            operator: productionRecord.operator,
+            shift: productionRecord.shift,
+            targetQty: targetQtyValue,
+            goodQty: goodQtyValue,
+            prepTimeMinutes,
+            runTimeMinutes,
+            stopTimeMinutes,
+            avgSpeed: avgSpeedCalc,
+            shortageReason: data.shortageReason || '',
+            completedAt: finishedAtIso,
+            defects: productionRecord.defects,
+            stops: stopReasons.map(r => ({
+                code: r.code || '',
+                reason: r.reason,
+                // S4 / F6:補送停車起始時間(後端 ProductionStopRequest.StartedAt 早已存在,不需後端變更);
+                // 沒有 ISO 時間戳的舊項送 null,回讀時由對映層顯示 '-'。
+                startedAt: r.startedAtIso || null,
+                durationMinutes: durationToMinutes(r.duration),
+            })),
+        };
+
+        createProductionCompletion(completionPayload)
+            .then(result => {
+                // 後端算出的工廠日與四個率值覆寫回本地紀錄,避免兩份數字打架
+                patchProductionRecord(productionRecord.id, {
+                    syncState: 'synced',
+                    backendId: result.id,
+                    date: result.productionDate || productionRecord.date,
+                    oee: result.oee,
+                    availabilityRate: result.availabilityRate,
+                    performanceRate: result.performanceRate,
+                    qualityRate: result.qualityRate,
+                });
+                addLog(`Completion synced to backend: ${result.id}`);
+            })
+            .catch(err => {
+                // 斷網 / 4xx / 5xx 一律不阻擋現場:不 alert、不中止換單,本地紀錄留 pending
+                console.warn('完工實績落地後端失敗,本地紀錄標記為 pending', err);
+                addLog('Completion sync FAILED (kept locally as pending)');
+            });
         // -----------------------------------------
 
         // --- Publish to MQTT for Backend Storage ---
@@ -311,7 +464,7 @@ const Dashboard = () => {
                 timestamp: new Date().toISOString(),
                 details: {
                     goodQty: data.goodQty || currentCount,
-                    defectQty: data.defectQty || 0,
+                    defectQty: defectQty,
                     operator: data.operator || user?.name || 'Unknown',
                     avgSpeed: avgSpeedCalc,
                     oee: oeeCalc,
@@ -327,11 +480,15 @@ const Dashboard = () => {
         }
         // -----------------------------------------
 
-        if (orders.length > 1) {
-            const nextOrders = orders.slice(1);
+        // 修正:原僅 orders.length > 1 才處理,佇列剩最後 1 筆完工時工單不移除/計數不歸零/後端不清除。
+        // slice(1) 對長度 1 會得到空陣列,可同時處理「換下一筆」與「完成最後一筆」兩種情境。
+        if (orders.length >= 1) {
+            // S1 / v2.0:完工單不從後端刪除(它是生產紀錄),改回寫狀態為 Completed;
+            // 載入端由 isSchedulableBackendOrder 過濾,避免它下次開頁以「執行中」回到佇列。
+            const { nextOrders } = finishHeadOrder(orders, { updateStatus: updateOrderStatus });
             setOrders(nextOrders);
-            setResetOffset(currentData.di1);
-            if (selectedOrderId === orders[1].id) setSelectedOrderId(null);
+            setResetOffset(currentDataRef.current.di1);
+            if (orders[1] && selectedOrderId === orders[1].id) setSelectedOrderId(null);
 
             setHasLoggedStop(false);
             setStopReasons([]);
@@ -346,53 +503,6 @@ const Dashboard = () => {
             });
 
             setIsMotorOn(true);
-        }
-    };
-
-    // Product Form Modal State
-    const [showProductModal, setShowProductModal] = useState(false);
-    const [editingOrder, setEditingOrder] = useState(null); // null = Add, obj = Edit
-
-    const handleAddOrder = () => {
-        setEditingOrder(null);
-        setShowProductModal(true);
-    };
-
-    const handleEditOrder = () => {
-        if (!selectedOrderId) {
-            alert(t('dashboard.alerts.selectOrderFirst'));
-            return;
-        }
-        const order = orders.find(o => o.id === selectedOrderId);
-        if (order) {
-            setEditingOrder(order);
-            setShowProductModal(true);
-        }
-    };
-
-    const handleSaveOrder = (formData) => {
-        if (editingOrder) {
-            saveOrder(formData, true, editingOrder.id);
-        } else {
-            saveOrder(formData, false);
-        }
-        setShowProductModal(false);
-    };
-
-    const handleDeleteOrder = () => {
-        if (!selectedOrderId) {
-            alert(t('dashboard.alerts.selectOrderFirst'));
-            return;
-        }
-        if (confirm(`${t('dashboard.alerts.confirmDelete')} ${selectedOrderId}?`)) {
-            deleteOrder(selectedOrderId);
-            setSelectedOrderId(null);
-        }
-    };
-
-    const handleReorder = () => {
-        if (confirm(t('dashboard.alerts.confirmReorder'))) {
-            reorderOrders();
         }
     };
 
@@ -428,7 +538,15 @@ const Dashboard = () => {
             durationStr = `${mm}:${ss}`;
         }
 
-        setStopReasons(prev => [{ time: startTimeStr, duration: durationStr, reason: reason.name }, ...prev]);
+        // S4 / F6:除了顯示用的 time 字串,另存一份 ISO 時間戳,
+        // 完工時一併送給後端 ProductionStopRequest.StartedAt —— 否則回讀報表時停車起始時間永遠是 '-'。
+        setStopReasons(prev => [{
+            code: reason.code || '',
+            time: startTimeStr,
+            startedAtIso: (stopStartTime || endTime).toISOString(),
+            duration: durationStr,
+            reason: reason.name
+        }, ...prev]);
         addLog(`Stop Reason Logged: ${reason.name} (${durationStr})`);
         setStopStartTime(null);
     };
@@ -475,11 +593,9 @@ const Dashboard = () => {
                             if (selectedOrderId) {
                                 const idx = orders.findIndex(o => o.id === selectedOrderId);
                                 if (idx > 0) {
-                                    const newOrders = [...orders];
-                                    // Move selected to 0, remove placeholder
-                                    const selected = newOrders[idx];
-                                    newOrders[0] = { ...selected, status: 'Running' };
-                                    newOrders.splice(idx, 1); // Remove from queue
+                                    // Move selected to 0, remove placeholder(行為保持重構:陣列變換抽到 orderQueue)
+                                    const selected = orders[idx];
+                                    const newOrders = promoteSelectedToHead(orders, selectedOrderId);
 
                                     setOrders(newOrders);
 
@@ -571,8 +687,7 @@ const Dashboard = () => {
                         }
                         if (orders.length > 0 && orders[0].id !== 'placeholder') {
                             const curLen = currentDataRef.current.di1;
-                            const newOrders = [...orders];
-                            const returnedOrder = { ...newOrders[0], status: 'Queued' };
+                            const returnedOrder = { ...orders[0], status: 'Queued' };
 
                             // Force placeholder to ensure Green Box becomes EMPTY (Idle) as requested
                             // "Long green box should have NO order inside"
@@ -586,21 +701,13 @@ const Dashboard = () => {
                                 status: 'Idle'
                             };
 
-                            if (autoNext && newOrders.length > 1) {
-                                // Auto Next ON: Swap with next available
-                                // Even in Auto Next, maybe we should transiently show empty? 
-                                // Standard logic: Auto Next means immediacy. 
-                                // But if user wants "Empty", maybe Auto Next implies *immediate* replacement. 
-                                // Let's keep Auto Next as "Swap" (Immediate fill). 
-                                // Only Manual Return (F10 default) creates the "Empty" state.
-                                newOrders[0] = { ...newOrders[1], status: 'Running' };
-                                newOrders[1] = returnedOrder;
+                            // 行為保持重構:陣列變換抽到 orderQueue.returnCurrentToQueue,
+                            // Auto Next ON 為「與次筆交換」(立即遞補)、Manual 為「插入 placeholder」(綠框留空)。
+                            const newOrders = returnCurrentToQueue(orders, { autoNext, placeholder });
+
+                            if (autoNext && orders.length > 1) {
                                 addLog(`F10 (Auto): Swapped ${returnedOrder.id} with ${newOrders[0].id}`);
                             } else {
-                                // Manual / Default Return:
-                                // Move current [0] to [1], Insert Placeholder at [0]
-                                newOrders.splice(0, 0, placeholder);
-                                newOrders[1] = returnedOrder;
                                 addLog(`F10: Returned ${returnedOrder.id} to queue. Box is Empty.`);
                             }
 
@@ -623,7 +730,7 @@ const Dashboard = () => {
                     }
                     break;
                 case 'F12':
-                    if (confirm('確定離開?')) {
+                    if (confirm(t('dashboard.alerts.confirmExit'))) {
                         addLog('F12: Exit System');
                         window.close();
                     }
@@ -769,9 +876,8 @@ const Dashboard = () => {
 
     // Ref for Timer Access (Avoid re-render loop)
     const currentDataRef = useRef(currentData);
-    useEffect(() => {
-        currentDataRef.current = currentData;
-    }, [currentData]);
+    // eslint-disable-next-line react-hooks/immutability
+    currentDataRef.current = currentData; // Update ref directly in render to satisfy strict lint if needed
 
     // 同步即時資料到共享狀態 (供 Schedule 頁面使用)
     useEffect(() => {
@@ -897,245 +1003,20 @@ const Dashboard = () => {
 
             {/* Split Section */}
             <div className={styles.splitSection}>
-                {/* Schedule Panel */}
-                {/* Schedule Panel */}
-                <div className={styles.schedulePanel} style={{ position: 'relative' }}>
-
-                    {/* Running Order Section (The Green Box) - Dynamic colors based on prep time */}
-                    <div style={{ padding: '8px 12px', borderBottom: '2px solid var(--bg-secondary)', marginBottom: '4px' }}>
-                        {(() => {
-                            // 計算動態背景色和邊框色
-                            let bgColor = 'var(--bg-primary)'; // 預設白色
-                            let borderColor = 'var(--status-ok)'; // 預設綠色邊框
-
-                            if (!isContinuousProduction && orders[0] && orders[0].id !== 'placeholder') {
-                                // 未達連續生產：根據準備時間變化顏色
-                                bgColor = getPrepTimeColor(prepTimeSeconds);
-                                const stdPrepTimeSec = thresholdSettings.stdPrepTime * 60;
-                                const yellowThresholdSec = stdPrepTimeSec * (thresholdSettings.prepTimeYellowThreshold / 100);
-
-                                if (prepTimeSeconds < stdPrepTimeSec) {
-                                    borderColor = 'var(--status-ok)'; // 綠色
-                                } else if (prepTimeSeconds <= yellowThresholdSec) {
-                                    borderColor = 'var(--status-warning)'; // 黃色
-                                } else {
-                                    borderColor = 'var(--status-error)'; // 紅色
-                                }
-                            }
-
-                            // 計算剩餘數量和字體顏色
-                            const currentQty = Math.floor(currentData.di1 - resetOffset);
-                            const orderQty = orders[0]?.qty || 0;
-                            const remaining = orderQty - currentQty;
-                            const isNearComplete = remaining > 0 && remaining <= thresholdSettings.shortageThreshold;
-                            const textColor = isNearComplete ? 'var(--status-ok)' : 'var(--text-primary)'; // 接近完成時字體變綠
-
-                            return (
-                                <div style={{
-                                    border: `3px solid ${borderColor}`,
-                                    borderRadius: '6px',
-                                    backgroundColor: bgColor,
-                                    minHeight: '60px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    padding: '0 10px',
-                                    boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
-                                    transition: 'background-color 0.5s, border-color 0.5s'
-                                }}>
-                                    {(!orders[0] || orders[0].id === 'placeholder') ? (
-                                        <div style={{ width: '100%', textAlign: 'center', color: '#999', fontSize: '1.1rem', fontWeight: 'bold' }}>
-                                            【 {t('dashboard.monitor.idle')} 】 - {t('dashboard.monitor.waitForF3')}
-                                        </div>
-                                    ) : (
-                                        <div style={{ display: 'flex', width: '100%', alignItems: 'center', fontSize: '1.1rem', fontWeight: 'bold', color: textColor }}>
-                                            {/* Using same flex ratios as header for alignment */}
-                                            <div style={{ flex: 0.8, color: borderColor }}>{t('dashboard.monitor.running')}</div>
-                                            <div style={{ flex: 2 }}>{orders[0].customer || '-'}</div>
-                                            <div style={{ flex: 1.5 }}>{orders[0].orderNo}</div>
-                                            <div style={{ flex: 1.5 }}>{orders[0].boxNo}</div>
-                                            <div style={{ flex: 1 }}>{orders[0].qty}</div>
-                                            <div style={{ flex: 1.5 }}>{orders[0].msg || orders[0].productName}</div>
-                                            <div style={{ flex: 1 }}>{orders[0].boxType || '-'}</div>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })()}
-                    </div>
-
-                    {/* Schedule List Header */}
-                    <div className={styles.gridHeaderRow}>
-                        <div style={{ flex: 0.8 }}>{t('dashboard.schedule.seqNo')}</div>
-                        <div style={{ flex: 2 }}>{t('dashboard.schedule.customer')}</div>
-                        <div style={{ flex: 1.5 }}>{t('dashboard.schedule.orderNo')}</div>
-                        <div style={{ flex: 1.5 }}>{t('dashboard.schedule.boxNo')}</div>
-                        <div style={{ flex: 1 }}>{t('dashboard.schedule.qty')}</div>
-                        <div style={{ flex: 1.5 }}>{t('dashboard.schedule.productName')}</div>
-                        <div style={{ flex: 1 }}>{t('dashboard.schedule.boxType')}</div>
-                    </div>
-
-                    {/* Render Order List (Queue Only - Index 1+) */}
-                    <div style={{ flex: 1, overflowY: 'auto' }}>
-                        {orders.slice(1).map((order, index) => {
-                            // original index = index + 1
-                            const displaySeq = (index + 1) * 10;
-
-                            return (
-                                <div
-                                    key={order.id}
-                                    className={styles.gridRow}
-                                    style={selectedOrderId === order.id ? { backgroundColor: '#e6f7ff' } : {}}
-                                    onClick={() => setSelectedOrderId(order.id)} // Allow selecting queued items
-                                >
-                                    <div style={{ flex: 0.8 }}>{displaySeq}</div>
-                                    <div style={{ flex: 2 }}>{order.customer || '-'}</div>
-                                    <div style={{ flex: 1.5 }}>{order.orderNo}</div>
-                                    <div style={{ flex: 1.5 }}>{order.boxNo}</div>
-                                    <div style={{ flex: 1 }}>{order.qty}</div>
-                                    <div style={{ flex: 1.5 }}>{order.msg || order.productName}</div>
-                                    <div style={{ flex: 1 }}>{order.boxType || '-'}</div>
-                                </div>
-                            );
-                        })}
-                        {orders.length <= 1 && (
-                            <div style={{ padding: '20px', textAlign: 'center', color: '#aaa' }}>
-                                {t('dashboard.schedule.noQueuedOrders')}
-                            </div>
-                        )}
-                        <div className={styles.gridFill}></div>
-                    </div>
-                </div>
-
-                {/* Status Panel (with Auto Next Toggle) */}
-                <div className={styles.machineStatusPanel}>
-                    {/* Auto Next Indicator */}
-                    <div style={{
-                        backgroundColor: autoNext ? 'var(--bg-block)' : 'var(--bg-secondary)',
-                        color: autoNext ? 'var(--primary-blue)' : 'var(--text-secondary)',
-                        padding: '8px',
-                        textAlign: 'center',
-                        fontWeight: 'bold',
-                        borderBottom: '1px solid var(--border-color)'
-                    }}>
-                        {autoNext ? t('dashboard.schedule.autoNextOn') : t('dashboard.schedule.autoNextOff')}
-                    </div>
-
-                    {/* Tabs */}
-                    <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)' }}>
-                        <div
-                            style={{
-                                flex: 1,
-                                padding: '8px',
-                                textAlign: 'center',
-                                cursor: 'pointer',
-                                backgroundColor: activeTab === 'status' ? 'var(--bg-panel)' : 'var(--bg-secondary)',
-                                color: activeTab === 'status' ? 'var(--primary-blue)' : 'var(--text-secondary)',
-                                fontWeight: activeTab === 'status' ? '600' : 'normal',
-                                borderBottom: activeTab === 'status' ? '2px solid var(--primary-blue)' : 'none'
-                            }}
-                            onClick={() => setActiveTab('status')}
-                        >
-                            {t('dashboard.machineStatus.title')}
-                        </div>
-                        <div
-                            style={{
-                                flex: 1,
-                                padding: '8px',
-                                textAlign: 'center',
-                                cursor: 'pointer',
-                                backgroundColor: activeTab === 'reason' ? 'var(--bg-panel)' : 'var(--bg-secondary)',
-                                color: activeTab === 'reason' ? 'var(--primary-blue)' : 'var(--text-secondary)',
-                                fontWeight: activeTab === 'reason' ? '600' : 'normal',
-                                borderBottom: activeTab === 'reason' ? '2px solid var(--primary-blue)' : 'none'
-                            }}
-                            onClick={() => setActiveTab('reason')}
-                        >
-                            {t('dashboard.machineStatus.stopReason')}
-                        </div>
-                    </div>
-
-                    {/* Machine Status - Dynamic Sections */}
-                    {activeTab === 'status' ? (
-                        <div className={styles.errorList} style={{ padding: '10px' }}>
-                            {machineSections && machineSections.length > 0 ? (
-                                machineSections.map((section, i) => {
-                                    // Status Logic
-                                    // 1. Fault maps to Red
-                                    let isFault = false;
-                                    if (section.errorSignal && currentData) {
-                                        const signalVal = currentData[section.errorSignal];
-                                        // Compare loosely (string/number)
-                                        // eslint-disable-next-line eqeqeq
-                                        if (signalVal != undefined && signalVal == section.errorValue) {
-                                            isFault = true;
-                                        }
-                                    }
-
-                                    // 2. Run maps to Green
-                                    let isRun = false;
-                                    if (section.runSignal && currentData) {
-                                        const signalVal = currentData[section.runSignal];
-                                        // eslint-disable-next-line eqeqeq
-                                        if (signalVal != undefined && signalVal == section.runValue) {
-                                            isRun = true;
-                                        }
-                                    }
-
-                                    // 3. Fallback (Global Motor)
-                                    // If no specific signals configured, use global IsMotorOn
-                                    if (!section.errorSignal && !section.runSignal) {
-                                        isFault = !(isPlcConnected && isMotorOn);
-                                        isRun = !isFault;
-                                    }
-
-                                    // Determine Color
-                                    let color = 'var(--text-secondary)'; // Grey
-                                    if (isFault) color = 'var(--digital-text-red)';
-                                    else if (isRun) color = 'var(--digital-text)'; // Green
-
-                                    return (
-                                        <div key={section.id || i} className={styles.errorItem}>
-                                            <div className={styles.errorBox} style={{ backgroundColor: color }}></div>
-                                            <span>{section.name}</span>
-                                            <span style={{ marginLeft: 'auto', fontWeight: 'bold', color: color }}>
-                                                {isFault ? 'ERR' : (isRun ? 'RUN' : 'OFF')}
-                                            </span>
-                                        </div>
-                                    );
-                                })
-                            ) : (
-                                <div style={{ color: '#888', textAlign: 'center' }}>{t('ui.messages.loading')}</div>
-                            )}
-                        </div>
-                    ) : (
-                        // Reason Tab
-                        <div className={styles.errorList} style={{ display: 'flex', flexDirection: 'column' }}>
-                            <div className={styles.statusHeaderRow} style={{ background: 'transparent', borderBottom: '1px solid var(--border-color)' }}>
-                                <div style={{ flex: 1 }}>{t('dashboard.stopReasons.startTime')}</div>
-                                <div style={{ flex: 1 }}>{t('dashboard.stopReasons.duration')}</div>
-                                <div style={{ flex: 2 }}>{t('dashboard.stopReasons.reason')}</div>
-                            </div>
-                            <div style={{ flex: 1, overflowY: 'auto' }}>
-                                {stopReasons.length === 0 ? (
-                                    <div style={{ padding: '16px', color: 'var(--text-secondary)', textAlign: 'center' }}>{t('ui.messages.noData')}</div>
-                                ) : (
-                                    stopReasons.map((stop, i) => (
-                                        <div key={i} style={{ display: 'flex', borderBottom: '1px solid var(--bg-secondary)', padding: '8px 4px', fontSize: '0.9rem' }}>
-                                            <div style={{ flex: 1, color: 'var(--text-primary)' }}>{stop.time}</div>
-                                            <div style={{ flex: 1, color: 'var(--primary-blue)' }}>{stop.duration}</div>
-                                            <div style={{ flex: 2, color: 'var(--digital-text-red)' }}>{stop.reason}</div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
+                                <SchedulePanel 
+                    orders={orders} selectedOrderId={selectedOrderId} setSelectedOrderId={setSelectedOrderId}
+                    isContinuousProduction={isContinuousProduction} prepTimeSeconds={prepTimeSeconds} 
+                    thresholdSettings={thresholdSettings} getPrepTimeColor={getPrepTimeColor}
+                    currentData={currentData} resetOffset={resetOffset}
+                />
+                
+                <StatusPanel 
+                    autoNext={autoNext} activeTab={activeTab} setActiveTab={setActiveTab} 
+                    machineSections={machineSections} currentData={currentData} 
+                    isPlcConnected={isPlcConnected} isMotorOn={isMotorOn} stopReasons={stopReasons} 
+                />
             </div>
-
-
-
-            <OrderDetailsModal
+<OrderDetailsModal
                 isOpen={showOrderModal}
                 onClose={() => setShowOrderModal(false)}
                 order={
@@ -1161,12 +1042,6 @@ const Dashboard = () => {
                     qty: Math.floor(currentData.di1 - resetOffset),
                     targetQty: orders[0]?.qty || 0
                 }}
-            />
-            <ProductFormModal
-                isOpen={showProductModal}
-                onClose={() => setShowProductModal(false)}
-                onSave={handleSaveOrder}
-                initialData={editingOrder}
             />
         </div >
     );

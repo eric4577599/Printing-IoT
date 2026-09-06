@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import styles from './StopReasonView.module.css';
 import {
     filterByDateRange,
@@ -6,12 +6,18 @@ import {
     minutesToHHMM,
     formatNumber
 } from '../../utils/reportUtils';
+import { useLanguage } from '../language/LanguageContext';
 
 /**
  * 停車原因分析元件
  * 支援時間區間篩選，按原因分類彙總，可展開顯示訂單細節
+ *
+ * @param {Array} productionHistory - 生產紀錄陣列(父層提供)
+ * @param {Function} [onRangeChange] - S4 / F4.1:選用回呼,以 { startDate, endDate } 回報本元件
+ *        自持的時間區間(預設近 7 天),讓父層能把該區間下推給後端查詢。未傳入時行為不變。
  */
-const StopReasonView = ({ productionHistory }) => {
+const StopReasonView = ({ productionHistory, onRangeChange }) => {
+    const { t } = useLanguage();
     const today = new Date().toISOString().split('T')[0];
 
     // 預設顯示近7天
@@ -22,6 +28,14 @@ const StopReasonView = ({ productionHistory }) => {
     const [startDate, setStartDate] = useState(defaultStart);
     const [endDate, setEndDate] = useState(today);
     const [expandedReasons, setExpandedReasons] = useState(new Set());
+
+    // S4 / F4.1:本元件的區間是自持的(預設近 7 天),初始化與每次變更都往上回報一次,
+    // 否則父層只會抓到明細分頁的區間,停車原因頁會顯示不出資料。
+    useEffect(() => {
+        if (typeof onRangeChange === 'function') {
+            onRangeChange({ startDate, endDate });
+        }
+    }, [startDate, endDate, onRangeChange]);
 
     // 篩選並分組停車原因
     const stopReasonSummaries = useMemo(() => {
@@ -61,7 +75,7 @@ const StopReasonView = ({ productionHistory }) => {
 
     // 匯出
     const handleExport = () => {
-        alert('匯出功能開發中...');
+        alert(t('reportView.alert.exportWip'));
     };
 
     return (
@@ -69,7 +83,7 @@ const StopReasonView = ({ productionHistory }) => {
             {/* 控制列 */}
             <div className={styles.controlBar}>
                 <div className={styles.filters}>
-                    <span className={styles.label}>📅 時間區間:</span>
+                    <span className={styles.label}>📅 {t('reportView.stop.timeRange')}:</span>
                     <input
                         type="date"
                         className={styles.dateInput}
@@ -86,18 +100,18 @@ const StopReasonView = ({ productionHistory }) => {
                 </div>
                 <div className={styles.actions}>
                     <button className={styles.btn} onClick={toggleAll}>
-                        {expandedReasons.size === stopReasonSummaries.length ? '🔼 全部收合' : '🔽 全部展開'}
+                        {expandedReasons.size === stopReasonSummaries.length ? `🔼 ${t('reportView.btn.collapseAll')}` : `🔽 ${t('reportView.btn.expandAll')}`}
                     </button>
-                    <button className={styles.btn} onClick={handleExport}>📊 匯出</button>
+                    <button className={styles.btn} onClick={handleExport}>📊 {t('reportView.btn.export')}</button>
                 </div>
             </div>
 
             {/* 報表標題 */}
             <div className={styles.reportHeader}>
-                <h2>⚠️ 停車原因分析</h2>
+                <h2>⚠️ {t('reportView.stop.title')}</h2>
                 <div className={styles.summaryInfo}>
-                    <span>總停車次數: <strong>{totals.count}</strong></span>
-                    <span>總停車時間: <strong>{minutesToHHMM(totals.duration)}</strong></span>
+                    <span>{t('reportView.stop.totalCount')}: <strong>{totals.count}</strong></span>
+                    <span>{t('reportView.stop.totalTime')}: <strong>{minutesToHHMM(totals.duration)}</strong></span>
                 </div>
             </div>
 
@@ -105,7 +119,7 @@ const StopReasonView = ({ productionHistory }) => {
             <div className={styles.reasonList}>
                 {stopReasonSummaries.length === 0 ? (
                     <div className={styles.emptyMessage}>
-                        📋 此時間區間內無停車記錄
+                        📋 {t('reportView.empty.noStopInRange')}
                     </div>
                 ) : (
                     stopReasonSummaries.map((item, idx) => {
@@ -127,7 +141,7 @@ const StopReasonView = ({ productionHistory }) => {
                                         {item.reason}
                                     </div>
                                     <div className={styles.reasonStats}>
-                                        <span className={styles.count}>{item.count} 次</span>
+                                        <span className={styles.count}>{item.count} {t('reportView.unit.times')}</span>
                                         <span className={styles.percentage}>({percentage}%)</span>
                                         <span className={styles.duration}>{minutesToHHMM(item.totalDuration)}</span>
                                     </div>
@@ -143,12 +157,12 @@ const StopReasonView = ({ productionHistory }) => {
                                 {isExpanded && (
                                     <div className={styles.orderDetails}>
                                         <div className={styles.detailHeader}>
-                                            <span>日期</span>
-                                            <span>訂單編號</span>
-                                            <span>客戶</span>
-                                            <span>品名</span>
-                                            <span>時間</span>
-                                            <span>時長</span>
+                                            <span>{t('reportView.col.date')}</span>
+                                            <span>{t('reportView.col.orderNo')}</span>
+                                            <span>{t('reportView.col.customer')}</span>
+                                            <span>{t('reportView.col.productName')}</span>
+                                            <span>{t('reportView.col.time')}</span>
+                                            <span>{t('reportView.col.durationShort')}</span>
                                         </div>
                                         {item.records.map((record, rIdx) => (
                                             <div key={rIdx} className={styles.detailRow}>

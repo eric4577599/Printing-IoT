@@ -25,4 +25,18 @@ public class Order
     public string ProductCode { get; set; } = string.Empty;
     public decimal? OptPhase { get; set; }
     public decimal? OptGap { get; set; }
+
+    // Phase 8: Detailed Specs
+    public DateTime? DeliveryDate { get; set; }
+
+    // Traceability
+    [MaxLength(50)]
+    public string ProductionBatch { get; set; } = string.Empty;
+    [MaxLength(100)]
+    public string TraceCode { get; set; } = string.Empty;
+
+    // Phase 2(排程拖拉後端持久化):存前端排程列的完整規格 payload(BoxDiagram 需要的
+    // boxLen/boxWid/dim*/l*/w*/h*/dieCutType 等後端未逐一建欄的欄位),以 JSON 字串保存。
+    // nullable、加法式欄位,不影響既有查詢與寫入。
+    public string? SpecJson { get; set; }
 }

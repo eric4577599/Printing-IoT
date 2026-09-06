@@ -1,13 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import styles from './MainLayout.module.css';
+import { updateSimulationSpeed, getOrders as apiGetOrders, syncSchedule as apiSyncSchedule, deleteOrder as apiDeleteOrder } from '../../services/api';
+import { fromBackendOrder, toBackendOrder, sortBySequence, isGuid, isSchedulableBackendOrder } from '../../utils/orderMapper';
+
+// 空排程時的等待列(純 UI,id 固定 'placeholder',不上傳後端)
+const PLACEHOLDER_ORDER = {
+    id: 'placeholder',
+    boxNo: 'WAITING',
+    msg: '等待派工 (Waiting)',
+    orderNo: '-',
+    qty: 0,
+    eta: '-',
+    status: 'Idle',
+};
+
+// 產生後端可 upsert 的 GUID 訂單 id(全量鏡像同步以 GUID 為身分真相)
+const genOrderId = () =>
+    (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 6)}`;
 
 import DebugPanel from '../debug/DebugPanel';
 import { useLanguage } from '../../modules/language/LanguageContext';
 import LanguageSwitcher from '../../modules/language/LanguageSwitcher';
+import LanguageNavMenu from '../../modules/language/LanguageNavMenu';
 import { useAuth } from '../../modules/auth/AuthContext';
 import LoginModal from '../../modules/auth/LoginModal';
 import HelpModal from '../modals/HelpModal';
+import { createSeedProducts } from '../../data/seedProducts';
+import { spliceMove, renumberSeq } from '../../utils/scheduleDnd';
 
 const MainLayout = () => {
     const location = useLocation();
@@ -160,14 +182,91 @@ const MainLayout = () => {
         localStorage.setItem('orders', JSON.stringify(orders));
     }, [orders]);
 
-    // Shared Product Data (Lifted from Maintenance)
+    // ── Phase 2:全量鏡像同步(後端 Orders 表為跨 session 持久化真相)──────────────
+    // orders 最新值的 ref(供 mount 載入時讀當前 localStorage 訂單而不建立相依)
+    const ordersRef = useRef(orders);
+    useEffect(() => { ordersRef.current = orders; }, [orders]);
+
+    // 是否已完成首次「從後端載入」;完成前不觸發鏡像同步,避免用 localStorage 初值覆寫後端
+    const [ordersLoaded, setOrdersLoaded] = useState(false);
+
+    // 開頁載入:GET 後端 → 還原(含 SpecJson 規格)→ 依 Sequence 排序;
+    // 後端為空則「首次匯入」現有 localStorage 訂單(排除 placeholder,補 GUID)。
+    // 後端無法連線時保留 localStorage 初值(離線容錯)。
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const be = await apiGetOrders();
+                if (cancelled) return;
+                // S1 / v2.0:完工單改以狀態(Completed/Cancelled)留在後端而非刪除,載入端一律過濾掉,
+                // 否則完工單會在下次開頁以「執行中」回到佇列頭部。
+                const mapped = sortBySequence((be || []).filter(isSchedulableBackendOrder).map(fromBackendOrder));
+                if (mapped.length > 0) {
+                    setOrders(mapped);
+                } else {
+                    const local = (ordersRef.current || []).filter(
+                        o => o.id !== 'placeholder' && o.status !== 'Completed' && o.status !== 'Cancelled'
+                    );
+                    if (local.length > 0) {
+                        const withGuids = local.map(o => ({ ...o, id: isGuid(o.id) ? o.id : genOrderId() }));
+                        const payload = withGuids.map((o, i) => toBackendOrder(o, i));
+                        const synced = await apiSyncSchedule(payload);
+                        if (cancelled) return;
+                        const remapped = sortBySequence((synced || []).map(fromBackendOrder));
+                        setOrders(remapped.length ? remapped : [PLACEHOLDER_ORDER]);
+                    }
+                    // 後端空且本地也空 → 維持 placeholder 初值
+                }
+            } catch (e) {
+                console.warn('[orders] 後端載入失敗,改用 localStorage 離線初值', e);
+            } finally {
+                if (!cancelled) setOrdersLoaded(true);
+            }
+        })();
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // 身分正規化:確保每筆非 placeholder 訂單都有 GUID id(任何程式路徑新增的訂單皆納入),
+    // 讓鏡像同步能穩定 upsert 而非重複新建。
+    useEffect(() => {
+        if (!ordersLoaded) return;
+        let changed = false;
+        const normalized = orders.map(o => {
+            if (o.id !== 'placeholder' && !isGuid(o.id)) { changed = true; return { ...o, id: genOrderId() }; }
+            return o;
+        });
+        if (changed) setOrders(normalized);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [orders, ordersLoaded]);
+
+    // debounced 排程同步:orders 任何變動(拖拉、完工、佇列推進、F 鍵、新增/刪除/編輯)
+    // 800ms 後把整份排程(排除 placeholder)上傳後端做 upsert。
+    // S1 / DF-04:deleteIds 一律送空陣列 —— 刪除改由 deleteOrder 直接呼叫 DELETE 端點。
+    useEffect(() => {
+        if (!ordersLoaded) return;
+        const payload = orders
+            .filter(o => o.id !== 'placeholder' && isGuid(o.id))
+            .map((o, i) => toBackendOrder(o, i));
+        const handle = setTimeout(() => {
+            apiSyncSchedule(payload, []).catch(e => console.warn('[orders] 排程同步失敗', e));
+        }, 800);
+        return () => clearTimeout(handle);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [orders, ordersLoaded]);
+    // ──────────────────────────────────────────────────────────────────────────────
+
+    // Shared Product Data(供生產排程與產品庫共用)
+    // 產品檔為空時種入 RSC/HSC 測試料號(供生產排程右側顯示 + 加入排程生成工單)。
     const [products, setProducts] = useState(() => {
         try {
             const saved = localStorage.getItem('products');
-            return saved ? JSON.parse(saved) : [];
+            const initial = saved ? JSON.parse(saved) : [];
+            return initial.length === 0 ? createSeedProducts() : initial;
         } catch (e) {
             console.error("Failed to load products", e);
-            return [];
+            return createSeedProducts();
         }
     });
 
@@ -175,16 +274,20 @@ const MainLayout = () => {
         localStorage.setItem('products', JSON.stringify(products));
     }, [products]);
 
+    // 以 splice 搬移取代原本的相鄰交換:相鄰移動(上/下移按鈕)結果不變,
+    // 額外支援任意 from→to(拖拉排序需要把某列插到非相鄰位置)。
     const moveOrder = (fromIndex, toIndex) => {
-        if (toIndex < 0 || toIndex >= orders.length) return;
-        const newOrders = [...orders];
-        [newOrders[fromIndex], newOrders[toIndex]] = [newOrders[toIndex], newOrders[fromIndex]];
-        setOrders(newOrders);
+        setOrders(prev => spliceMove(prev, fromIndex, toIndex));
     };
 
+    // S1 / DF-04:鏡像刪除已由後端拿掉,刪除必須由前端主動送出 DELETE,
+    // 否則排程列只會在本機消失。後端失敗只 console.warn,不阻塞 UI。
     const deleteOrder = (orderId) => {
         setOrders(prev => prev.filter(o => String(o.id) !== String(orderId)));
         addLog(`Order ${orderId} Deleted`);
+        if (isGuid(orderId)) {
+            apiDeleteOrder(orderId).catch(e => console.warn('[orders] 後端刪除失敗', e));
+        }
     };
 
     const saveOrder = (formData, isEdit = false, existingId = null) => {
@@ -194,8 +297,9 @@ const MainLayout = () => {
             addLog(`Order ${existingId} Updated`);
         } else {
             // Add New - Generate unique ID and sequence number
+            // Phase 2:改用 GUID 作為 id,讓全量鏡像同步能穩定 upsert 至後端 Orders 表
             const timestamp = Date.now();
-            const newId = `ord_${timestamp}`;
+            const newId = genOrderId();
 
             // 產生唯一序號：使用時間戳的後4位數字 × 10 來確保唯一性
             // 例如：timestamp = 1736915298135 → seqNo = 8130 (取後3位813 * 10)
@@ -221,16 +325,19 @@ const MainLayout = () => {
 
     // Product Management Helpers
     const saveProduct = (productData) => {
-        // Check if exists
-        const exists = products.find(p => p.boxNo === productData.boxNo);
-        if (exists) {
-            // Update? Or just skip? Req says "Auto save if not exists". 
-            // Let's perform upsert or update if explicitly asked. 
-            // For now, pure add if new.
+        // 修正:原以 boxNo 為 upsert 鍵,編輯時若修改 boxNo 會找不到舊記錄而新增一筆,造成重複。
+        // 編輯流程(ProductFormModal)會帶回既有 id,優先以 id 比對更新;僅在無 id 時(儀表板自動存檔)才退回以 boxNo upsert。
+        const existsById = productData.id && products.find(p => p.id === productData.id);
+        const existsByBoxNo = !productData.id && products.find(p => p.boxNo === productData.boxNo);
+
+        if (existsById) {
+            setProducts(prev => prev.map(p => p.id === productData.id ? { ...p, ...productData } : p));
+            addLog(`Product ${productData.boxNo} Updated in Library`);
+        } else if (existsByBoxNo) {
             setProducts(prev => prev.map(p => p.boxNo === productData.boxNo ? { ...p, ...productData } : p));
             addLog(`Product ${productData.boxNo} Updated in Library`);
         } else {
-            setProducts(prev => [...prev, { ...productData, id: `p${Date.now()}` }]);
+            setProducts(prev => [...prev, { ...productData, id: productData.id || `p${Date.now()}` }]);
             addLog(`Product ${productData.boxNo} Auto-Saved to Library`);
         }
     };
@@ -241,10 +348,7 @@ const MainLayout = () => {
     };
 
     const reorderOrders = () => {
-        setOrders(prev => prev.map((o, index) => ({
-            ...o,
-            seqNo: (index + 1) * 10  // 重新編號序號，但保留原始 id
-        })));
+        setOrders(prev => renumberSeq(prev));  // 重新編號 seqNo 為 10,20,30…,保留原始 id 與其餘欄位
         addLog('Orders Renumbered (seqNo updated)');
     };
 
@@ -258,13 +362,14 @@ const MainLayout = () => {
     }, [user, canDebug]);
 
     // Nav Items (Dynamic)
+    // 導覽列改用 i18n,切換語言時同步更換(原為硬編碼中文,永不隨語言變動)
     const navItems = [
-        { path: '/', label: '即時監控 (Monitor)' },
-        { path: '/schedule', label: '生產排程 (Schedule)' },
-        { path: '/reports', label: '生產報表 (Report)' },
-        { path: '/analysis', label: '生產分析 (Analysis)' },
-        { path: '/maintenance', label: '保養維修 (Maintenance)' },
-        { path: '/settings', label: '系統設定 (Settings)' },
+        { path: '/', label: t('nav.monitor') },
+        { path: '/schedule', label: t('nav.schedule') },
+        { path: '/reports', label: t('nav.reports') },
+        { path: '/analysis', label: t('nav.analysis') },
+        { path: '/settings', label: t('nav.settings') },
+        { path: '/docs', label: `📖 ${t('nav.docs')}` },
     ];
 
     // F-Keys (Dynamic)
@@ -273,12 +378,12 @@ const MainLayout = () => {
         { key: 'F2', label: t('fkeys.f2') },
         { key: 'F3', label: t('fkeys.f3') },
         { key: 'F4', label: t('fkeys.f4') },
-        { key: 'F5+', label: t('fkeys.f5') },
-        { key: 'F6+', label: t('fkeys.f6') },
+        { key: 'F5+', label: t('fkeys.f5'), code: 'F5' }, // 修正:派發真實鍵 F5(原派發 'F5+' Dashboard 永不匹配),按鈕仍顯示 F5+
+        { key: 'F6+', label: t('fkeys.f6'), code: 'F6' }, // 修正:同上,派發 F6
         { key: 'F7', label: t('fkeys.f7') },
         { key: 'M/N', label: t('fkeys.f8'), className: styles.pinkBtn, code: 'F8' }, // Manual
-        { key: 'F9', label: '班別' },
-        { key: 'F10', label: '退回' },
+        { key: 'F9', label: t('fkeys.f9') },
+        { key: 'F10', label: t('fkeys.f10') },
         { key: 'F12', label: t('fkeys.f12') },
     ];
 
@@ -290,7 +395,7 @@ const MainLayout = () => {
         <div className={styles.container}>
             {/* Top Menu Bar */}
             <header className={styles.header}>
-                <div className={styles.appTitle}>Flexo IoT <span style={{ fontSize: '0.8em', fontWeight: 'normal' }}>({user.role})</span></div>
+                <div className={styles.appTitle}>PRIIOT <span style={{ fontSize: '0.8em', fontWeight: 'normal' }}>({user.role})</span></div>
                 <nav className={styles.nav}>
                     {navItems.map((item) => (
                         <Link
@@ -301,12 +406,14 @@ const MainLayout = () => {
                             {item.label}
                         </Link>
                     ))}
+                    {/* 語言切換 nav 選單(新增):即時同步切換全站語言 */}
+                    <LanguageNavMenu className={styles.navItem} />
                 </nav>
 
                 {/* Simulation Controls - Only for Admin (Req: Simulation [New] Only Admin) AND if Enabled in Settings */}
                 {canDebug && plcSimulateEnabled && (
                     <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto', marginRight: '10px', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.8rem', color: '#666', marginRight: '5px' }}>模擬生產:</span>
+                        <span style={{ fontSize: '0.8rem', color: '#666', marginRight: '5px' }}>{t('layout.sim.label')}</span>
                         <button
                             onClick={() => setIsSimulating(!isSimulating)}
                             style={{
@@ -337,7 +444,7 @@ const MainLayout = () => {
                                     fontWeight: 'bold',
                                     color: '#333'
                                 }}
-                                title="選擇模擬模式: 本地(直接顯示) vs 遠端(經由MQTT迴路)"
+                                title={t('layout.sim.modeTitle')}
                             >
                                 <option value="local">Local</option>
                                 <option value="remote">Remote</option>
@@ -363,7 +470,7 @@ const MainLayout = () => {
                         {/* 速度調整滑桿 */}
                         {isSimulating && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: '8px' }}>
-                                <span style={{ fontSize: '0.7rem', color: '#666' }}>0</span>
+                                <span style={{ fontSize: '0.7rem', color: '#666' }}>{t('layout.sim.stop')}</span>
                                 <input
                                     type="range"
                                     min="-1"
@@ -373,10 +480,7 @@ const MainLayout = () => {
                                     onChange={async (e) => {
                                         const newSpeedFactor = parseFloat(e.target.value);
                                         setSpeedFactor(newSpeedFactor);
-
-                                        // 呼叫 API 更新模擬速度
                                         try {
-                                            const { updateSimulationSpeed } = await import('../../services/api');
                                             await updateSimulationSpeed(newSpeedFactor);
                                         } catch (error) {
                                             console.error('Failed to update simulation speed:', error);
@@ -387,16 +491,16 @@ const MainLayout = () => {
                                         cursor: 'pointer',
                                         accentColor: speedFactor < 0 ? '#f44336' : speedFactor > 0 ? '#4caf50' : '#2196f3'
                                     }}
-                                    title={`速度: ${speedFactor === -1 ? '停止' : speedFactor === 0 ? '標準' : speedFactor === 1 ? '極速' : (speedFactor * 100).toFixed(0) + '%'}`}
+                                    title={`${t('layout.sim.speed')}: ${speedFactor === -1 ? t('layout.sim.stop') : speedFactor === 0 ? t('layout.sim.standard') : speedFactor === 1 ? t('layout.sim.max') : (speedFactor * 100).toFixed(0) + '%'}`}
                                 />
-                                <span style={{ fontSize: '0.7rem', color: '#666' }}>極速</span>
+                                <span style={{ fontSize: '0.7rem', color: '#666' }}>{t('layout.sim.max')}</span>
                                 <span style={{
                                     fontSize: '0.7rem',
                                     color: speedFactor < 0 ? '#f44336' : speedFactor > 0 ? '#4caf50' : '#2196f3',
                                     fontWeight: 'bold',
                                     minWidth: '35px'
                                 }}>
-                                    {speedFactor === -1 ? '停' : speedFactor === 0 ? '標準' : speedFactor === 1 ? '極速' : `${(speedFactor * 100).toFixed(0)}%`}
+                                    {speedFactor === -1 ? t('layout.sim.stopShort') : speedFactor === 0 ? t('layout.sim.standard') : speedFactor === 1 ? t('layout.sim.max') : `${(speedFactor * 100).toFixed(0)}%`}
                                 </span>
                             </div>
                         )}
@@ -422,9 +526,9 @@ const MainLayout = () => {
                     }}
                     onMouseOver={(e) => e.target.style.transform = 'scale(1.05)'}
                     onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
-                    title="操作說明"
+                    title={t('layout.help.title')}
                 >
-                    📖 說明
+                    📖 {t('layout.help.button')}
                 </button>
 
                 {/* Language Switcher Component */}
@@ -432,7 +536,7 @@ const MainLayout = () => {
 
                 <div className={styles.systemStatus} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span>User: {user.name}</span>
-                    <button onClick={logout} style={{ padding: '2px 8px', cursor: 'pointer' }}>登出</button>
+                    <button onClick={logout} style={{ padding: '2px 8px', cursor: 'pointer' }}>{t('layout.logout')}</button>
                     <span>Status: OK</span>
                 </div>
             </header>
@@ -515,18 +619,18 @@ const MainLayout = () => {
                 <div className={styles.statusBar}>
                     {/* Left: System Status */}
                     <div className={styles.statusItem}>
-                        <span>狀態: Idle</span>
+                        <span>{t('layout.status.state')}</span>
                     </div>
 
                     {/* Left-Center: Connection Status */}
                     <div className={styles.statusItem}>
                         <div style={{ display: 'flex', alignItems: 'center', marginRight: '15px' }}>
                             <span className={styles.statusIndicator} style={{ backgroundColor: isPlcConnected ? '#4caf50' : '#f44336' }}></span>
-                            <span>PLC: {isPlcConnected ? '連線 (Connected)' : '斷線 (Disconnected)'}</span>
+                            <span>PLC: {isPlcConnected ? t('layout.status.connected') : t('layout.status.disconnected')}</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
                             <span className={styles.statusIndicator} style={{ backgroundColor: erpStatus === 'connected' ? '#4caf50' : '#bdbdbd' }}></span>
-                            <span>ERP: {erpStatus === 'connected' ? '連線 (Connected)' : '未啟用 (Disabled)'}</span>
+                            <span>ERP: {erpStatus === 'connected' ? t('layout.status.connected') : t('layout.status.disabled')}</span>
                         </div>
                     </div>
 

@@ -1,0 +1,32 @@
+# EditorConfig — Printing IoT 統一編碼風格
+# https://editorconfig.org
+
+root = true
+
+[*]
+indent_style = space
+indent_size = 4
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# Frontend (JS/JSX/CSS)
+[*.{js,jsx,ts,tsx,css,json}]
+indent_size = 2
+
+# Markdown
+[*.md]
+trim_trailing_whitespace = false
+
+# YAML / Docker
+[*.{yml,yaml}]
+indent_size = 2
+
+# C# (.NET)
+[*.cs]
+indent_size = 4
+
+# Solution Files
+[*.sln]
+indent_style = tab

@@ -119,15 +119,130 @@ export function calculateAchievementRate(actualQty, targetQty) {
 }
 
 /**
+ * 四捨五入到小數 1 位
+ * @param {number} value - 數值
+ * @returns {number} 小數 1 位的數值
+ * @description 與後端 C# 的 Math.Round(x, 1, MidpointRounding.AwayFromZero) 對齊,
+ *              兩份實作必須輸出完全相同的數值(見 docs/spec20260903-s3-v1.md §5.1)。
+ */
+function round1(value) {
+    return Math.round(value * 10) / 10;
+}
+
+/**
+ * 把可能為負或非數值的輸入夾成 >= 0 的數字
+ * @param {number} value - 原始值
+ * @returns {number} 夾到 0 以上的數字
+ * @description §5.1 的防呆:時間類與數量類的負值先夾到 0 再套公式,避免出現負率或 NaN。
+ */
+function clampNonNegative(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 0) return 0;
+    return n;
+}
+
+/**
+ * 計算負荷時間（稼動率的分母）
+ * @param {number} runTime - 運轉時間（分鐘）
+ * @param {number} stopTime - 停車時間（分鐘）
+ * @param {number} prepTime - 準備時間（分鐘）
+ * @returns {number} 負荷時間 L = max(0, R + S - P)
+ * @description 準備時間與運轉/停車時間在計時器上是重疊累加的（見 useProductionTimer），
+ *              沒有明細可拆,故從分母扣掉一次。
+ */
+function calculateLoadTime(runTime, stopTime, prepTime) {
+    return Math.max(0, clampNonNegative(runTime) + clampNonNegative(stopTime) - clampNonNegative(prepTime));
+}
+
+/**
  * 計算稼動率
  * @param {number} runTime - 運轉時間（分鐘）
  * @param {number} stopTime - 停車時間（分鐘）
+ * @param {number} [prepTime=0] - 準備時間（分鐘），省略時行為與加入本參數前完全一致
  * @returns {number} 稼動率百分比 (0-100)
+ * @description §5.1 規則 2:A = min(R, L) / L × 100，L = max(0, R + S − P)；L ≤ 0 時回 0。
+ *              min 的理由是準備時間與運轉/停車重疊，以 L 夾住上限確保不超過 100%。
+ *
+ *              本函式是 PrintingIoT.Core.Services.OeeCalculator 的 JS 孿生，規則見
+ *              docs/spec20260903-s3-v1.md §5.1；僅用於本機列與彙總重算，後端列的率值一律採用後端回傳值。
  */
-export function calculateUtilization(runTime, stopTime) {
-    const total = runTime + stopTime;
-    if (total === 0) return 0;
-    return (runTime / total) * 100;
+export function calculateUtilization(runTime, stopTime, prepTime = 0) {
+    const run = clampNonNegative(runTime);
+    const load = calculateLoadTime(runTime, stopTime, prepTime);
+    if (load <= 0) return 0;
+    return (Math.min(run, load) / load) * 100;
+}
+
+/**
+ * 計算 OEE 三因子與 OEE
+ * @param {Object} params - 計算參數
+ * @param {number} params.runTime - 運轉時間（分鐘）
+ * @param {number} params.stopTime - 停車時間（分鐘）
+ * @param {number} params.prepTime - 準備時間（分鐘）
+ * @param {number} params.goodQty - 良品數
+ * @param {number} params.defectQty - 不良品數
+ * @param {number} params.targetQty - 目標數量
+ * @returns {{ availability: number, performance: number, quality: number, oee: number }}
+ *          四個值皆 0-100 且四捨五入到小數 1 位
+ * @description 本函式是 PrintingIoT.Core.Services.OeeCalculator 的 JS 孿生，規則見
+ *              docs/spec20260903-s3-v1.md §5.1，兩處實作由測試釘住相同數值；
+ *              僅用於本機列與彙總重算，後端列的率值一律採用後端回傳值。
+ *
+ *              分母為零一律回 0，不以 1 假裝滿分 —— 顯示 0 是誠實的「無法評估」。
+ *
+ *              設計註記:規則 3(效能)依客戶要求以「良品數」當分子,與規則 4 的良率因子在數學上
+ *              有部分重疊(良品被計入兩次),會使 OEE 略為保守。這是客戶明確指定的口徑,不是實作
+ *              疏漏;若日後改回「總產出 / 目標」需同步改 JS 與 C# 兩處實作與測試。
+ */
+export function calculateOEE({ runTime = 0, stopTime = 0, prepTime = 0, goodQty = 0, defectQty = 0, targetQty = 0 } = {}) {
+    const run = clampNonNegative(runTime);
+    const good = clampNonNegative(goodQty);
+    const defect = clampNonNegative(defectQty);
+    const target = clampNonNegative(targetQty);
+
+    // 規則 1 + 2:負荷時間與稼動率
+    const load = calculateLoadTime(runTime, stopTime, prepTime);
+    const availabilityRaw = load <= 0 ? 0 : (Math.min(run, load) / load) * 100;
+
+    // 規則 3:效能（分子用良品數，超產以 100% 封頂）
+    const performanceRaw = target <= 0 ? 0 : Math.min(good / target, 1) * 100;
+
+    // 規則 4:良率
+    const produced = good + defect;
+    const qualityRaw = produced <= 0 ? 0 : (good / produced) * 100;
+
+    const availability = round1(availabilityRaw);
+    const performance = round1(performanceRaw);
+    const quality = round1(qualityRaw);
+
+    // 規則 5:三者皆為百分比 → 除以 10000 回到百分比。
+    // 以「已四捨五入的三因子」相乘，讓 JS 與 C# 兩份實作得到完全相同的結果。
+    const oee = round1((availability * performance * quality) / 10000);
+
+    return { availability, performance, quality, oee };
+}
+
+/**
+ * 計算依產量加權的平均 OEE
+ * @param {Array} records - 生產記錄陣列（需含 oee、goodQty、defectQty）
+ * @returns {number} 加權平均 OEE，四捨五入到小數 1 位
+ * @description §5.1 規則 6:Σ(oeeᵢ × qtyᵢ) / Σ(qtyᵢ)，qtyᵢ = goodQtyᵢ + defectQtyᵢ；
+ *              Σqty ≤ 0 時回 0（不得退回算術平均 —— 算術平均會讓 10 張小單稀釋掉 1 張大單）。
+ */
+export function calculateWeightedAvgOEE(records) {
+    if (!records || records.length === 0) return 0;
+
+    let weighted = 0;
+    let totalQty = 0;
+
+    records.forEach(record => {
+        const qty = clampNonNegative(record.goodQty) + clampNonNegative(record.defectQty);
+        weighted += (Number(record.oee) || 0) * qty;
+        totalQty += qty;
+    });
+
+    if (totalQty <= 0) return 0;
+    return round1(weighted / totalQty);
 }
 
 /**
@@ -242,7 +357,7 @@ export function calculateDailySummary(records) {
         totalRunTime,
         totalStopTime,
         totalStopCount,
-        avgOEE: average(records, 'oee'),
+        avgOEE: calculateWeightedAvgOEE(records),   // GAP-05:改為依產量加權,不再用算術平均
         utilization: calculateUtilization(totalRunTime, totalStopTime)
     };
 }
@@ -306,6 +421,9 @@ export function calculateMonthlySummary(records) {
             const defectQty = sum(dayRecords, 'defectQty');
             const runTime = sum(dayRecords, 'runTime') || sum(dayRecords, 'runTimeMinutes') || 0;
             const stopTime = sum(dayRecords, 'stopTime') || sum(dayRecords, 'stopTimeMinutes') || 0;
+            // GAP-05:準備時間要從稼動率分母扣掉,故一併彙總
+            const prepTime = sum(dayRecords, 'prepTime') || sum(dayRecords, 'prepTimeMinutes') || 0;
+            const targetQty = sum(dayRecords, 'targetQty');
 
             return {
                 date,
@@ -313,26 +431,48 @@ export function calculateMonthlySummary(records) {
                 totalQty: goodQty + defectQty,
                 goodQty,
                 defectQty,
+                targetQty,
                 yieldRate: calculateYieldRate(goodQty, defectQty),
                 avgSpeed: average(dayRecords, 'avgSpeed'),
                 runTime,
                 stopTime,
-                utilizationRate: calculateUtilization(runTime, stopTime)
+                prepTime,
+                utilizationRate: calculateUtilization(runTime, stopTime, prepTime),
+                // GAP-05:以該日彙總數據重算 OEE(不是把各單的 OEE 平均掉)
+                oee: calculateOEE({ runTime, stopTime, prepTime, goodQty, defectQty, targetQty }).oee
             };
         })
         .sort((a, b) => a.date.localeCompare(b.date));
 
     // 計算月度總計
+    const totalGood = sum(dailyRows, 'goodQty');
+    const totalDefect = sum(dailyRows, 'defectQty');
+    const totalTarget = sum(dailyRows, 'targetQty');
+    const totalRunTime = sum(dailyRows, 'runTime');
+    const totalStopTime = sum(dailyRows, 'stopTime');
+    const totalPrepTime = sum(dailyRows, 'prepTime');
+
     const totals = {
         orderCount: sum(dailyRows, 'orderCount'),
         totalQty: sum(dailyRows, 'totalQty'),
-        goodQty: sum(dailyRows, 'goodQty'),
-        defectQty: sum(dailyRows, 'defectQty'),
-        yieldRate: calculateYieldRate(sum(dailyRows, 'goodQty'), sum(dailyRows, 'defectQty')),
+        goodQty: totalGood,
+        defectQty: totalDefect,
+        targetQty: totalTarget,
+        yieldRate: calculateYieldRate(totalGood, totalDefect),
         avgSpeed: average(dailyRows, 'avgSpeed'),
-        runTime: sum(dailyRows, 'runTime'),
-        stopTime: sum(dailyRows, 'stopTime'),
-        utilizationRate: calculateUtilization(sum(dailyRows, 'runTime'), sum(dailyRows, 'stopTime'))
+        runTime: totalRunTime,
+        stopTime: totalStopTime,
+        prepTime: totalPrepTime,
+        utilizationRate: calculateUtilization(totalRunTime, totalStopTime, totalPrepTime),
+        // GAP-05:整月彙總數據重算 OEE
+        oee: calculateOEE({
+            runTime: totalRunTime,
+            stopTime: totalStopTime,
+            prepTime: totalPrepTime,
+            goodQty: totalGood,
+            defectQty: totalDefect,
+            targetQty: totalTarget
+        }).oee
     };
 
     return { dailyRows, totals };

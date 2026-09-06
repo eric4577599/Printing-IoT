@@ -1,93 +1,63 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PrintingIoT.Core.Entities;
+using PrintingIoT.Core.Constants;
+using PrintingIoT.Core.DTOs;
+using PrintingIoT.Core.Interfaces;
 using PrintingIoT.Infrastructure.Data;
 
 namespace PrintingIoT.API.Controllers;
 
+// S7:改掛 ErpPush policy —— 同時接受 X-Api-Key(ERP 程式呼叫)與 ADMIN 的 JWT(人工補推)。
+// S5 原本的裸 [Authorize] 只認 Bearer,等於把 ERP 鎖在門外、推單完全停擺。
+[Authorize(Policy = AppRoles.Policies.ErpPush)]
 [ApiController]
 [Route("api/[controller]")]
 public class ErpController : ControllerBase
 {
-    private readonly PrintingContext _context;
+    private readonly IOrderService _orderService;
     private readonly ILogger<ErpController> _logger;
+    private readonly IConfiguration _configuration;
 
-    public ErpController(PrintingContext context, ILogger<ErpController> logger)
+    // S1 / SEC-05:批次筆數上限預設值(設定鍵 Erp:MaxPushBatchSize 取不到或無效時採用)
+    private const int DefaultMaxPushBatchSize = 1000;
+
+    public ErpController(IOrderService orderService, ILogger<ErpController> logger, IConfiguration configuration)
     {
-        _context = context;
+        _orderService = orderService;
         _logger = logger;
+        _configuration = configuration;
     }
 
-    // Endpoint for ERP to push scheduled orders
+    /// <summary>
+    /// S1 / SEC-05 + ERP-10:ERP 推單端點。
+    /// 輸入:ERP 訂單陣列;輸出:整批結果(逐列成敗、失敗原因、後端 OrderId)。
+    /// 邏輯:本體為 null 或超過批次上限 → 400 且不寫入任何一筆;其餘一律 200,
+    ///       部分成功也回 200,呼叫端解析 results 判斷成敗。
+    /// </summary>
     [HttpPost("push-orders")]
-    public async Task<IActionResult> PushOrders([FromBody] List<OrderDto> orderDtos)
+    public async Task<IActionResult> PushOrders([FromBody] List<OrderDto>? orderDtos)
     {
-        if (orderDtos == null || !orderDtos.Any())
-            return BadRequest("No orders provided.");
+        if (orderDtos == null)
+            return BadRequest(new { success = false, error = "請求本體不可為空" });
 
-        var existingProducts = await _context.Products.ToDictionaryAsync(p => p.ProductCode);
-        
-        foreach (var dto in orderDtos)
+        var maxBatchSize = _configuration.GetValue<int?>("Erp:MaxPushBatchSize") ?? DefaultMaxPushBatchSize;
+        if (maxBatchSize <= 0) maxBatchSize = DefaultMaxPushBatchSize;
+
+        if (orderDtos.Count > maxBatchSize)
         {
-            // Map DTO to Entity
-            var order = new Order
+            _logger.LogWarning("ERP 推單遭拒:批次 {Received} 筆超過上限 {MaxBatchSize}", orderDtos.Count, maxBatchSize);
+            return BadRequest(new
             {
-                OrderNumber = dto.OrderNumber,
-                CustomerName = dto.CustomerName,
-                TargetLength = dto.TargetLength,
-                BoxType = dto.BoxType ?? "",
-                PaperSpec = dto.PaperSpec ?? "",
-                Quantity = dto.Quantity,
-                ProductCode = dto.ProductCode ?? "",
-                Sequence = 0, // Default to pool
-                Status = OrderStatus.Pending
-            };
-
-            // Optimization Logic
-            if (!string.IsNullOrEmpty(order.ProductCode))
-            {
-                if (existingProducts.TryGetValue(order.ProductCode, out var product))
-                {
-                    // Found: Auto-fill optimization data (Best Known Settings)
-                    order.OptPhase = product.OptimizationPhase;
-                    order.OptGap = product.OptimizationGap;
-                    _logger.LogInformation($"Optimization data applied for Order {order.OrderNumber} (Product {order.ProductCode})");
-                }
-                else
-                {
-                    // Not Found: Create new Product (Auto-learn mode)
-                    // We initialize with 0 or default values. 
-                    // Future: Maybe ERP sends the initial phase/gap? For now, we assume learning.
-                    var newProduct = new Product
-                    {
-                        ProductCode = order.ProductCode,
-                        Name = $"Auto-created for {dto.OrderNumber}",
-                        OptimizationPhase = 0,
-                        OptimizationGap = 0
-                    };
-                    
-                    _context.Products.Add(newProduct);
-                    existingProducts[newProduct.ProductCode] = newProduct; // Add to local cache for subsequent orders in same batch
-                    _logger.LogInformation($"New Product created: {order.ProductCode}");
-                }
-            }
-
-            _context.Orders.Add(order);
+                success = false,
+                error = "批次筆數超過上限",
+                maxBatchSize,
+                received = orderDtos.Count
+            });
         }
 
-        await _context.SaveChangesAsync();
-        return Ok(new { success = true, count = orderDtos.Count });
+        var result = await _orderService.PushOrdersAsync(orderDtos);
+        return Ok(result);
     }
-}
-
-// Simple DTO for incoming ERP payload
-public class OrderDto
-{
-    public string OrderNumber { get; set; }
-    public string CustomerName { get; set; }
-    public decimal TargetLength { get; set; }
-    public string ProductCode { get; set; }
-    public string BoxType { get; set; }
-    public string PaperSpec { get; set; }
-    public int Quantity { get; set; }
 }

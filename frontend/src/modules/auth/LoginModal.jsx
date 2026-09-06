@@ -2,22 +2,47 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './LoginModal.module.css';
 import { useAuth } from './AuthContext';
+import { useLanguage } from '../language/LanguageContext';
+
+/**
+ * 名冊白名單重建(S5,S6 修正 username 遞補來源)。
+ * 輸入:localStorage 讀出的名冊陣列(舊資料可能含 password 欄位,或缺 username);
+ * 輸出:只含 id / name / username / shift / role 的新陣列;
+ * 邏輯:剝除 password 等任何非白名單欄位,避免舊資料把密碼留在使用者機器上(E14);
+ *       username 必須是**後端帳號(代碼)**,舊列缺 username 時以 id 遞補而非顯示名稱 ——
+ *       顯示名稱(例如「王小明」)不是帳號,拿去登入必然 401。
+ */
+const sanitizeRoster = (list) => (Array.isArray(list) ? list : []).map(u => ({
+    id: u?.id ?? '',
+    name: u?.name ?? '',
+    username: u?.username ?? u?.id ?? u?.name ?? '',
+    shift: u?.shift ?? '',
+    role: u?.role ?? 'OPERATOR',
+}));
 
 const LoginModal = ({ isOpen, onClose }) => {
-    const { login, loginDirect } = useAuth();
+    const { login, setSessionShift } = useAuth();
+    const { t } = useLanguage(); // 取得翻譯函式,依當前語系回傳對應字串
     const navigate = useNavigate();
 
     // -- State --
+    // 名冊只是「觸控便利清單」:點一列僅填入帳號,仍必須輸入密碼才能登入。
+    // 名冊為空時照常顯示,操作員手動輸入帳號即可,不得因此無法登入。
     const [users, setUsers] = useState(() => {
         const saved = localStorage.getItem('appUsers');
-        return saved ? JSON.parse(saved) : [
-            { id: '001', name: 'OP1', username: 'OP1', password: '123', role: 'OPERATOR', shift: 'A' },
-            { id: '002', name: 'OP2', username: 'OP2', password: '123', role: 'OPERATOR', shift: 'B' },
-            { id: '003', name: 'OP3', username: 'OP3', password: '123', role: 'OPERATOR', shift: 'C' },
-            { id: '004', name: 'OP4', username: 'OP4', password: '123', role: 'OPERATOR', shift: 'A' },
-            { id: '005', name: 'OP5', username: 'OP5', password: '123', role: 'OPERATOR', shift: 'B' }
-        ];
+        if (!saved) return [];
+        try {
+            const cleaned = sanitizeRoster(JSON.parse(saved));
+            localStorage.setItem('appUsers', JSON.stringify(cleaned)); // 回寫瘦身後的名冊
+            return cleaned;
+        } catch {
+            return [];
+        }
     });
+
+    // 登入表單(主流程與管理者子視窗共用同一組欄位語意)
+    const [loginUsername, setLoginUsername] = useState('');
+    const [loginPassword, setLoginPassword] = useState('');
 
     // -- Shift Defaults (Updated per req) --
     // Day: 08:00~18:00, Night: 20:00~04:00
@@ -75,31 +100,53 @@ const LoginModal = ({ isOpen, onClose }) => {
 
     // -- Handlers --
 
+    /**
+     * 點選名冊一列。
+     * 輸入:名冊列;輸出:無;
+     * 邏輯:僅把帳號填進登入欄與編輯欄,**不**代表已登入 —— 密碼仍必須手動輸入。
+     */
     const handleUserRowClick = (u) => {
         setSelectedUserId(u.id);
         setNewUserCode(u.id);
         setNewUserName(u.name);
         setNewUserShift(u.shift || '');
+        setLoginUsername(u.username || u.name || '');
     };
 
-    const handleLogin = () => {
-        if (!selectedUserId) {
-            alert('請選擇操作員 (Please select an operator)');
+    /**
+     * 決定要寫入輪廓的班別代碼。
+     * 輸入:無(取名冊選取狀態與班別下拉);
+     * 輸出:班別代碼字串(可能為空字串);
+     * 邏輯:名冊列自帶班別(A / B / C)時以該值為準 —— 這是改版前狀態列顯示的值;
+     *       手動輸入帳號(名冊未選)時退回目前班別的 id(DAY / NIGHT / CUSTOM)。
+     */
+    const resolveShiftCode = () => {
+        const rosterRow = users.find(u => u.id === selectedUserId);
+        const rosterShift = (rosterRow?.shift || '').trim();
+        if (rosterShift) return rosterShift;
+        return (currentSessionShift?.id || currentSessionShift?.name || '').trim();
+    };
+
+    /**
+     * 送出登入(主流程與管理者子視窗共用的唯一登入路徑)。
+     * 輸入:無(取表單 state);輸出:無;
+     * 邏輯:帳號與密碼皆有值才呼叫後端 login();成功後寫入班別、關閉視窗並導回首頁,
+     *       失敗一律只提示「帳號或密碼錯誤」,不區分帳號不存在與密碼錯誤。
+     */
+    const handleLogin = async () => {
+        if (!loginUsername || !loginPassword) {
+            alert(t('login.alert.invalidCredentials'));
             return;
         }
-        const user = users.find(u => u.id === selectedUserId);
-
-        if (user) {
-            // Merge Session Shift
-            const sessionUser = {
-                ...user,
-                sessionShift: currentSessionShift.name
-            };
-            const success = loginDirect(sessionUser);
-            if (success) {
-                onClose();
-                navigate('/');
-            }
+        const result = await login(loginUsername, loginPassword);
+        if (result?.ok) {
+            const shiftCode = resolveShiftCode();
+            if (shiftCode) setSessionShift(shiftCode);
+            setLoginPassword('');
+            onClose();
+            navigate('/');
+        } else {
+            alert(t('login.alert.invalidCredentials'));
         }
     };
 
@@ -109,8 +156,10 @@ const LoginModal = ({ isOpen, onClose }) => {
     // I will replace only the top section and handleLogin.
 
     const handleAddUser = () => {
-        if (!newUserCode || !newUserName) return alert("請輸入代碼與名稱");
-        const newUser = { id: newUserCode, name: newUserName, username: newUserName, password: '123', role: 'OPERATOR', shift: newUserShift.toUpperCase() };
+        if (!newUserCode || !newUserName) return alert(t('login.alert.enterCodeName'));
+        // S5:名冊物件不得含 password 欄位(帳號密碼由後端建立,見 spec §5.4)
+        // S6:username 是後端帳號(代碼,例如 OP1),不是顯示名稱 —— 兩者混用會讓點名冊登入必然失敗
+        const newUser = { id: newUserCode, name: newUserName, username: newUserCode, role: 'OPERATOR', shift: newUserShift.toUpperCase() };
 
         // Upsert
         const idx = users.findIndex(u => u.id === newUserCode);
@@ -125,7 +174,7 @@ const LoginModal = ({ isOpen, onClose }) => {
 
     const handleDeleteUser = () => {
         if (!selectedUserId) return;
-        if (!confirm('確定刪除?')) return;
+        if (!confirm(t('login.confirm.delete'))) return;
         const newUsers = users.filter(u => u.id !== selectedUserId);
         setUsers(newUsers);
         localStorage.setItem('appUsers', JSON.stringify(newUsers));
@@ -153,24 +202,8 @@ const LoginModal = ({ isOpen, onClose }) => {
         setSelectedShiftIdx(null);
     };
 
-    // Admin Login State
+    // Admin Login State —— 只是同一條登入路徑的另一個入口,不再有第二套驗證邏輯
     const [showAdminLogin, setShowAdminLogin] = useState(false);
-    const [adminUser, setAdminUser] = useState('');
-    const [adminPass, setAdminPass] = useState('');
-
-    const handleAdminLogin = () => {
-        if (login(adminUser, adminPass)) {
-            // Inject Session Shift for Admin too if needed, or default
-            // login() in AuthContext might need update to accept sessionShift?
-            // Current login() just calls loginDirect inside.
-            // I should update login() to return user obj or handle it manually.
-            // Simplified: Admin just gets logged in.
-            onClose();
-            navigate('/');
-        } else {
-            alert('帳號或密碼錯誤 (Invalid Credentials)');
-        }
-    };
 
     if (!isOpen) return null;
 
@@ -179,9 +212,9 @@ const LoginModal = ({ isOpen, onClose }) => {
             <div className={styles.windowContainer} style={{ position: 'relative' }}>
                 {/* Part 1: Top Buttons */}
                 <div className={styles.topBar}>
-                    <button className={styles.largeBtn} onClick={() => setShowAdminLogin(true)} style={{ marginRight: 'auto' }}>管理者 (Admin)</button>
-                    <button className={styles.largeBtn} onClick={handleLogin}>選取 (Select)</button>
-                    <button className={styles.largeBtn} onClick={onClose}>離開 (Exit)</button>
+                    <button className={styles.largeBtn} onClick={() => setShowAdminLogin(true)} style={{ marginRight: 'auto' }}>{t('login.btn.admin')}</button>
+                    <button className={styles.largeBtn} onClick={handleLogin}>{t('login.btn.select')}</button>
+                    <button className={styles.largeBtn} onClick={onClose}>{t('login.btn.exit')}</button>
                 </div>
 
                 {/* ... (Existing InfoBar, Tables, Footer logic remains same) ... */}
@@ -190,7 +223,7 @@ const LoginModal = ({ isOpen, onClose }) => {
                 <div className={styles.infoBar}>
                     {/* NEW: Shift Selection Dropdown */}
                     <div className={styles.infoField} style={{ flex: 1.5 }}>
-                        <label style={{ color: 'var(--primary-blue)', fontWeight: 'bold' }}>當前班別 (Current Shift)</label>
+                        <label style={{ color: 'var(--primary-blue)', fontWeight: 'bold' }}>{t('login.label.currentShift')}</label>
                         <select
                             value={currentSessionShift?.name}
                             onChange={(e) => {
@@ -205,18 +238,38 @@ const LoginModal = ({ isOpen, onClose }) => {
                         </select>
                     </div>
 
+                    {/* S5:真登入欄位 —— 點名冊只會填入帳號,密碼一律要手動輸入 */}
                     <div className={styles.infoField}>
-                        <label>操作員</label>
+                        <label>{t('login.placeholder.username')}</label>
+                        <input
+                            aria-label={t('login.placeholder.username')}
+                            value={loginUsername}
+                            onChange={e => setLoginUsername(e.target.value)}
+                        />
+                    </div>
+                    <div className={styles.infoField}>
+                        <label>{t('login.placeholder.password')}</label>
+                        <input
+                            type="password"
+                            aria-label={t('login.placeholder.password')}
+                            value={loginPassword}
+                            onChange={e => setLoginPassword(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') handleLogin(); }}
+                        />
+                    </div>
+
+                    <div className={styles.infoField}>
+                        <label>{t('login.label.operator')}</label>
                         <input value={newUserName} onChange={e => setNewUserName(e.target.value)} />
                     </div>
                     {/*
                     <div className={styles.infoField}>
-                        <label>工作時段</label>
-                        <input disabled placeholder="自動" style={{ background: '#eee' }} />
+                        <label>{t('login.label.workPeriod')}</label>
+                        <input disabled placeholder={t('login.placeholder.auto')} style={{ background: '#eee' }} />
                     </div>
                     */}
                     <div className={styles.infoField}>
-                        <label>代碼</label>
+                        <label>{t('login.label.code')}</label>
                         <input value={newUserCode} onChange={e => setNewUserCode(e.target.value)} style={{ width: '80px' }} />
                     </div>
                     <div className={styles.infoField}>
@@ -231,9 +284,9 @@ const LoginModal = ({ isOpen, onClose }) => {
                         <table className={styles.table}>
                             <thead className={styles.thead}>
                                 <tr>
-                                    <th className={styles.th}>代碼</th>
-                                    <th className={styles.th}>班別</th>
-                                    <th className={styles.th}>操作員</th>
+                                    <th className={styles.th}>{t('login.col.code')}</th>
+                                    <th className={styles.th}>{t('login.col.shift')}</th>
+                                    <th className={styles.th}>{t('login.col.operator')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -253,8 +306,8 @@ const LoginModal = ({ isOpen, onClose }) => {
                         </table>
                     </div>
                     <div className={styles.sideButtons}>
-                        <button className={styles.sideBtn} onClick={handleAddUser}>新增</button>
-                        <button className={styles.sideBtn} onClick={handleDeleteUser}>刪除</button>
+                        <button className={styles.sideBtn} onClick={handleAddUser}>{t('login.btn.add')}</button>
+                        <button className={styles.sideBtn} onClick={handleDeleteUser}>{t('login.btn.delete')}</button>
                     </div>
                 </div>
 
@@ -264,9 +317,9 @@ const LoginModal = ({ isOpen, onClose }) => {
                         <table className={styles.table}>
                             <thead className={styles.thead}>
                                 <tr>
-                                    <th className={styles.th}>開始時間</th>
-                                    <th className={styles.th}>結束時間</th>
-                                    <th className={styles.th}>人數</th>
+                                    <th className={styles.th}>{t('login.col.startTime')}</th>
+                                    <th className={styles.th}>{t('login.col.endTime')}</th>
+                                    <th className={styles.th}>{t('login.col.people')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -286,7 +339,7 @@ const LoginModal = ({ isOpen, onClose }) => {
                         </table>
                     </div>
                     <div className={styles.sideButtons}>
-                        <button className={styles.sideBtn} onClick={handleDeleteShift}>刪除</button>
+                        <button className={styles.sideBtn} onClick={handleDeleteShift}>{t('login.btn.delete')}</button>
                     </div>
                 </div>
 
@@ -300,36 +353,36 @@ const LoginModal = ({ isOpen, onClose }) => {
                     <span>:</span>
                     <select value={endMin} onChange={e => setEndMin(e.target.value)}>{Array.from({ length: 60 }, (_, i) => <option key={i} value={String(i).padStart(2, '0')}>{String(i).padStart(2, '0')}</option>)}</select>
 
-                    <span style={{ marginLeft: '10px' }}>人數:</span>
+                    <span style={{ marginLeft: '10px' }}>{t('login.label.people')}</span>
                     <input type="number" min="1" value={shiftPeople} onChange={e => setShiftPeople(e.target.value)} style={{ width: '50px' }} />
 
-                    <button className={styles.largeBtn} onClick={handleAddShift} style={{ marginLeft: 'auto', fontSize: '0.9rem', padding: '2px 10px' }}>新增時段</button>
-                    <button className={styles.largeBtn} style={{ marginLeft: '5px', fontSize: '0.9rem', padding: '2px 10px' }}>自訂時段</button>
+                    <button className={styles.largeBtn} onClick={handleAddShift} style={{ marginLeft: 'auto', fontSize: '0.9rem', padding: '2px 10px' }}>{t('login.btn.addPeriod')}</button>
+                    <button className={styles.largeBtn} style={{ marginLeft: '5px', fontSize: '0.9rem', padding: '2px 10px' }}>{t('login.btn.customPeriod')}</button>
                 </div>
 
                 {/* Admin Modal Overlay */}
                 {showAdminLogin && (
                     <div className={styles.adminOverlay}>
                         <div className={styles.adminModal}>
-                            <h3>管理者登入 (Admin Login)</h3>
+                            <h3>{t('login.admin.title')}</h3>
                             <input
                                 type="text"
-                                placeholder="帳號 (Username)"
+                                placeholder={t('login.placeholder.username')}
                                 className={styles.adminInput}
-                                value={adminUser}
-                                onChange={e => setAdminUser(e.target.value)}
+                                value={loginUsername}
+                                onChange={e => setLoginUsername(e.target.value)}
                                 autoFocus
                             />
                             <input
                                 type="password"
-                                placeholder="密碼 (Password)"
+                                placeholder={t('login.placeholder.password')}
                                 className={styles.adminInput}
-                                value={adminPass}
-                                onChange={e => setAdminPass(e.target.value)}
+                                value={loginPassword}
+                                onChange={e => setLoginPassword(e.target.value)}
                             />
                             <div className={styles.adminButtons}>
-                                <button className={`${styles.adminBtn} ${styles.adminBtnCancel}`} onClick={() => setShowAdminLogin(false)}>取消</button>
-                                <button className={styles.adminBtn} onClick={handleAdminLogin}>登入</button>
+                                <button className={`${styles.adminBtn} ${styles.adminBtnCancel}`} onClick={() => setShowAdminLogin(false)}>{t('login.btn.cancel')}</button>
+                                <button className={styles.adminBtn} onClick={handleLogin}>{t('login.btn.login')}</button>
                             </div>
                         </div>
                     </div>

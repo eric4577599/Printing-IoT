@@ -3,9 +3,11 @@ import { useOutletContext } from 'react-router-dom';
 import BoxDiagram from '../../components/common/BoxDiagram';
 import ProductFormModal from '../../components/modals/ProductFormModal';
 import AddScheduleModal from './AddScheduleModal';
+import { useLanguage } from '../language/LanguageContext';
 import styles from './MaintenancePage.module.css';
 
 const MaintenancePage = () => {
+    const { t } = useLanguage();
     const {
         orders,
         products,       // Shared
@@ -51,7 +53,7 @@ const MaintenancePage = () => {
         const idx = orders.findIndex(o => o.id === selectedScheduleId);
 
         if (idx === 0) {
-            alert('無法移動正在生產中的工單 (Cannot move Running Order)!');
+            alert(t('modalExt.ordersAlert.cannotMoveRunning'));
             return;
         }
 
@@ -74,7 +76,7 @@ const MaintenancePage = () => {
      */
     const handleDeleteSchedule = () => {
         if (!selectedScheduleId) {
-            alert('請先選擇要刪除的排程 (Please select an order first)');
+            alert(t('orders.alerts.selectOrder'));
             return;
         }
 
@@ -89,24 +91,24 @@ const MaintenancePage = () => {
             const remainingQty = orderQty - currentQty;
 
             if (lineSpeed > 0) {
-                alert(`❌ 無法刪除：車速不為 0\n當前車速: ${Math.floor(lineSpeed)} m/min\n\n請先停止生產後再試。`);
+                alert(t('modalExt.ordersAlert.cannotDeleteSpeedNotZero').replace('{speed}', Math.floor(lineSpeed)));
                 return;
             }
 
             if (remainingQty > 0) {
-                alert(`❌ 無法刪除：未生產量不為 0\n剩餘數量: ${remainingQty} 張\n\n請完成生產後再試。`);
+                alert(t('modalExt.ordersAlert.cannotDeleteQtyRemaining').replace('{qty}', remainingQty));
                 return;
             }
 
             // 車速為 0 且未生產量為 0，可以刪除
-            if (confirm(`✅ 車速為 0，未生產量為 0\n確認刪除生產中工單 ${order.orderNo}?`)) {
+            if (confirm(`${t('orders.alerts.confirmDeleteRunning')} ${order.orderNo}?`)) {
                 deleteOrder(selectedScheduleId);
                 setSelectedScheduleId(null);
                 addLog(`Deleted Running Order: ${order.orderNo}`);
             }
         } else {
             // 其他工單：直接確認刪除
-            if (confirm(`確認刪除排程 ${order.orderNo}?`)) {
+            if (confirm(`${t('orders.alerts.confirmDelete')} ${order.orderNo}?`)) {
                 deleteOrder(selectedScheduleId);
                 setSelectedScheduleId(null);
                 addLog(`Deleted Order: ${order.orderNo}`);
@@ -115,7 +117,7 @@ const MaintenancePage = () => {
     };
 
     const handleReorderSchedule = () => {
-        if (confirm('是否重新整理序號? (Renumber 10, 20, 30...)')) {
+        if (confirm(t('orders.alerts.confirmReorder'))) {
             reorderOrders();
         }
     };
@@ -129,7 +131,7 @@ const MaintenancePage = () => {
 
     const handleEditProduct = () => {
         if (selectedProductIndex === null) {
-            alert('請先選擇產品 (Select a product to edit)');
+            alert(t('orders.alerts.selectOrder'));
             return;
         }
         setModalMode('edit_product');
@@ -139,7 +141,7 @@ const MaintenancePage = () => {
 
     const handleDeleteProduct = () => {
         if (selectedProductIndex === null) return;
-        if (confirm('確認刪除此產品資料? (Delete from Library)')) {
+        if (confirm(t('modalExt.ordersAlert.confirmDeleteProduct'))) {
             deleteProduct(selectedProductIndex);
             setSelectedProductIndex(null);
         }
@@ -156,7 +158,7 @@ const MaintenancePage = () => {
      */
     const handleAddToSchedule = () => {
         if (selectedProductIndex === null) {
-            alert('請先選擇右側產品 (Select a product from the right)');
+            alert(t('orders.alerts.selectOrder'));
             return;
         }
         const product = products[selectedProductIndex];
@@ -193,9 +195,9 @@ const MaintenancePage = () => {
             <div className={styles.leftColumn}>
                 {/* Top: Buttons */}
                 <div className={styles.toolbar}>
-                    <button onClick={() => handleMoveOrder('up')}>上移</button>
-                    <button onClick={() => handleMoveOrder('down')}>下移</button>
-                    <button onClick={handleReorderSchedule}>順序重整</button>
+                    <button onClick={() => handleMoveOrder('up')}>{t('orders.schedule.moveUp')}</button>
+                    <button onClick={() => handleMoveOrder('down')}>{t('orders.schedule.moveDown')}</button>
+                    <button onClick={handleReorderSchedule}>{t('orders.schedule.reorder')}</button>
                 </div>
 
                 {/* Middle: Schedule Table */}
@@ -203,13 +205,13 @@ const MaintenancePage = () => {
                     <table className={styles.scheduleTable}>
                         <thead>
                             <tr>
-                                <th style={{ width: '50px' }}>序號</th>
-                                <th>客戶名稱</th>
-                                <th>訂單號碼</th>
-                                <th>紙箱編號</th>
-                                <th style={{ width: '60px' }}>數量</th>
-                                <th>品名</th>
-                                <th style={{ width: '80px' }}>盒型</th>
+                                <th style={{ width: '50px' }}>{t('dashboard.schedule.seqNo')}</th>
+                                <th>{t('dashboard.schedule.customer')}</th>
+                                <th>{t('dashboard.schedule.orderNo')}</th>
+                                <th>{t('dashboard.schedule.boxNo')}</th>
+                                <th style={{ width: '60px' }}>{t('dashboard.schedule.qty')}</th>
+                                <th>{t('dashboard.schedule.productName')}</th>
+                                <th style={{ width: '80px' }}>{t('dashboard.schedule.boxType')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -248,8 +250,7 @@ const MaintenancePage = () => {
                     ) : (
                         <div style={{ color: '#1976d2', fontSize: '1rem', fontWeight: 'bold', textAlign: 'center' }}>
                             <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📦</div>
-                            <div>請選取左側排程以顯示紙箱展開圖</div>
-                            <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px' }}>Select an order from the left to display box diagram</div>
+                            <div>{t('modalExt.ordersAlert.selectToShowDiagram')}</div>
                         </div>
                     )}
                 </div>
@@ -262,8 +263,8 @@ const MaintenancePage = () => {
                 <div className={styles.toolbarRight} style={{ flexDirection: 'row', alignItems: 'stretch' }}>
                     {/* Col 1: Schedule Ops */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', width: '120px', marginRight: '5px' }}>
-                        <button onClick={handleAddToSchedule} className={styles.brightGreenBtn} style={{ flex: 1, width: '100%', borderRadius: '4px' }}>新增排程</button>
-                        <button onClick={handleDeleteSchedule} className={styles.redBtn} style={{ flex: 1, width: '100%', borderRadius: '4px', border: '1px solid #c62828' }}>刪除排程</button>
+                        <button onClick={handleAddToSchedule} className={styles.brightGreenBtn} style={{ flex: 1, width: '100%', borderRadius: '4px' }}>{t('orders.schedule.addToSchedule')}</button>
+                        <button onClick={handleDeleteSchedule} className={styles.redBtn} style={{ flex: 1, width: '100%', borderRadius: '4px', border: '1px solid #c62828' }}>{t('orders.schedule.delete')}</button>
                     </div>
 
                     {/* Col 2: Product Ops */}
@@ -273,10 +274,10 @@ const MaintenancePage = () => {
                             {/* Radios */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#fff', fontSize: '0.9rem', marginRight: '5px' }}>
                                 <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                    <input type="radio" name="searchType" defaultChecked style={{ marginRight: '4px' }} /> 紙箱編號
+                                    <input type="radio" name="searchType" defaultChecked style={{ marginRight: '4px' }} /> {t('dashboard.schedule.boxNo')}
                                 </label>
                                 <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                    <input type="radio" name="searchType" style={{ marginRight: '4px' }} /> 客戶名稱
+                                    <input type="radio" name="searchType" style={{ marginRight: '4px' }} /> {t('dashboard.schedule.customer')}
                                 </label>
                             </div>
 
@@ -287,14 +288,14 @@ const MaintenancePage = () => {
                             <div style={{ flex: 1 }}></div>
 
                             {/* Product Buttons */}
-                            <button onClick={handleEditProduct} className={styles.darkGreenBtn} style={{ minWidth: '70px' }}>修改</button>
-                            <button onClick={handleAddProduct} className={styles.darkGreenBtn} style={{ minWidth: '70px' }}>新增</button>
+                            <button onClick={handleEditProduct} className={styles.darkGreenBtn} style={{ minWidth: '70px' }}>{t('orders.products.edit')}</button>
+                            <button onClick={handleAddProduct} className={styles.darkGreenBtn} style={{ minWidth: '70px' }}>{t('ui.buttons.add')}</button>
                         </div>
 
                         {/* Row 2: Search & Delete */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                             <input className={styles.searchInput} placeholder="" style={{ flex: 1, height: '30px' }} />
-                            <button onClick={handleDeleteProduct} className={styles.redBtn} style={{ minWidth: '70px', height: '30px' }}>刪除</button>
+                            <button onClick={handleDeleteProduct} className={styles.redBtn} style={{ minWidth: '70px', height: '30px' }}>{t('ui.buttons.delete')}</button>
                         </div>
                     </div>
                 </div>
@@ -304,14 +305,14 @@ const MaintenancePage = () => {
                     <table className={styles.productTable}>
                         <thead>
                             <tr>
-                                <th>紙箱編號</th>
-                                <th>客戶名稱</th>
-                                <th>品名</th>
-                                <th>盒型</th>
-                                <th style={{ width: '30px' }}>楞</th>
-                                <th style={{ width: '40px' }}>厚度</th>
-                                <th style={{ width: '40px' }}>張摺數</th>
-                                <th>備註</th>
+                                <th>{t('dashboard.schedule.boxNo')}</th>
+                                <th>{t('dashboard.schedule.customer')}</th>
+                                <th>{t('dashboard.schedule.productName')}</th>
+                                <th>{t('dashboard.schedule.boxType')}</th>
+                                <th style={{ width: '30px' }}>{t('settings.unit.flute_single')}</th>
+                                <th style={{ width: '40px' }}>{t('settings.unit.thickness')}</th>
+                                <th style={{ width: '40px' }}>{t('dashboard.schedule.sheets')}</th>
+                                <th>{t('dashboard.schedule.notes')}</th>
                             </tr>
                         </thead>
                         <tbody>

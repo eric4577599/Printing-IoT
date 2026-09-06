@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLanguage } from '../../modules/language/LanguageContext';
 import styles from './HelpModal.module.css';
 
 /**
@@ -10,14 +11,14 @@ import styles from './HelpModal.module.css';
  * @returns {JSX.Element|null} - 模態框元件或 null
  */
 const HelpModal = ({ isOpen, onClose }) => {
+    const { t } = useLanguage();
     // 說明項目定義：包含 ID、顯示名稱及對應的 HTML 檔案路徑
     const helpItems = [
-        { id: 'monitor', label: '1. 即時監控', src: '/help/monitor.html' },
-        { id: 'schedule', label: '2. 生產排程', src: '/help/schedule.html' },
-        { id: 'reports', label: '3. 生產報表', src: '/help/reports.html' },
-        { id: 'analysis', label: '4. 生產分析', src: '/help/analysis.html' },
-        { id: 'maintenance', label: '5. 保養維修', src: '/help/maintenance.html' },
-        { id: 'settings', label: '6. 系統設定', src: '/help/settings.html' },
+        { id: 'monitor', label: t('modalExt.help.items.monitor'), src: '/help/monitor.html' },
+        { id: 'schedule', label: t('modalExt.help.items.schedule'), src: '/help/schedule.html' },
+        { id: 'reports', label: t('modalExt.help.items.reports'), src: '/help/reports.html' },
+        { id: 'analysis', label: t('modalExt.help.items.analysis'), src: '/help/analysis.html' },
+        { id: 'settings', label: t('modalExt.help.items.settings'), src: '/help/settings.html' },
     ];
 
     // 當前選中的說明項目索引
@@ -31,7 +32,7 @@ const HelpModal = ({ isOpen, onClose }) => {
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
                 {/* 標題列 */}
                 <div className={styles.header}>
-                    <h2 className={styles.title}>📖 操作說明</h2>
+                    <h2 className={styles.title}>📖 {t('modalExt.help.title')}</h2>
                     <button className={styles.closeBtn} onClick={onClose}>✕</button>
                 </div>
 

@@ -11,6 +11,7 @@ services:
       - /app/node_modules
     environment:
       - VITE_API_URL=http://localhost:5200
+    restart: always
     depends_on:
       - backend-api
 
@@ -23,8 +24,10 @@ services:
       - "5200:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=FlexoDB;Username=postgres;Password=password
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=FlexoDB;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-password}
       - Redis__ConnectionString=redis:6379
+      - Jwt__Secret=${JWT_SECRET:?JWT_SECRET is required}
+    restart: always
     depends_on:
       - postgres
       - redis
@@ -36,10 +39,11 @@ services:
       dockerfile: PrintingIoT.Worker/Dockerfile
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=postgres;Database=FlexoDB;Username=postgres;Password=password
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=FlexoDB;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-password}
       - Mqtt__BrokerAddress=mqtt-broker
       - Mqtt__Port=1883
       - Redis__ConnectionString=redis:6379
+    restart: always
     depends_on:
       - mqtt-broker
       - postgres
@@ -50,9 +54,10 @@ services:
     image: postgres:15-alpine
     restart: always
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=FlexoDB
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_DB=${POSTGRES_DB:-FlexoDB}
+      # Phase 3.9: 舊拆分資料庫已移除 — 所有資料表現整併於 FlexoDB
     ports:
       - "5433:5432"
     volumes:
@@ -81,10 +86,28 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: always
-    command: tunnel --no-autoupdate run --token eyJhIjoiMWE4YjczNmQwYzk5NTAwMTBlM2NiOTBlOTZlOTkyZDYiLCJ0IjoiNjBiOGQ1MWItN2Y1ZS00YTIxLTk5OTQtYzA4MzNmMWFlNjJmIiwicyI6Ik0yUXdObVF6TXpZdFptRXlOUzAwTURZeUxXSXlaR0l0Wm1WaU1EVTBZalJqTkRNeCJ9
+    # --protocol http2:改走 TCP,避開本地網路 QUIC(UDP)不穩造成的反覆斷線(2026-06-11)
+    command: tunnel --no-autoupdate --protocol http2 run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     depends_on:
       - frontend
       - backend-api
 
+  # ======================================================================
+  # DEPRECATED / EXTRACTED 歷史紀錄
+  #
+  # EXTRACTED: 保養維修模組已移出主系統(2026-06-06)
+  # mms-backend → 獨立程式,位於 /Volumes/G70Pro/cusor pool/MM/(客戶需要時外掛部署)
+  # MaintenanceSchedules/SpareParts/MaintenanceRecords 資料表已由
+  # migration RemoveMaintenanceModule 自 FlexoDB 移除
+  #
+  # EXTRACTED: 零件(Smart Parts)模組已隨 C′ 遷移移入 MM(2026-07)
+  # 原 port 5100 前端服務與對應前端目錄已刪除
+  # Parts/Suppliers/SupplierParts 三表已由 2026-07-06 的移除 migration
+  # 自 FlexoDB 移除;資料與功能改由 MM 承接:
+  #   /Volumes/G70Pro/cusor pool/MM/(mms.ericchh.work,/api/v1/parts)
+  # 舊 Smart Parts 子網域已停用並轉址至 mms.ericchh.work
+  # ======================================================================
+
 volumes:
   postgres_data:
+

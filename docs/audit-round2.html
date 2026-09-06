@@ -1,0 +1,296 @@
+<title>UI 對抗性稽核 · 第二輪 · 14 筆確認缺陷</title>
+<style>
+:root{
+  --bg:#eaecf0; --surface:#ffffff; --surface-2:#f5f6f9; --surface-3:#eef0f4;
+  --border:#d7dbe2; --border-strong:#c2c8d2;
+  --text:#1a1e27; --text-dim:#586274; --text-faint:#8b94a4;
+  --accent:#2563af;
+  --sev-critical:#d92d20; --sev-high:#e8590c; --sev-medium:#b5820a; --sev-low:#64748b;
+  --sev-critical-bg:#fbeae8; --sev-high-bg:#fceee3; --sev-medium-bg:#f8f1dd; --sev-low-bg:#eef1f5;
+  --glow:.55;
+  --font-mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+  --font-sans:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0c0f15; --surface:#141922; --surface-2:#1a212c; --surface-3:#20293580;
+    --border:#28303c; --border-strong:#38414f;
+    --text:#e7eaf0; --text-dim:#9aa4b3; --text-faint:#616c7d;
+    --accent:#5aa2e8;
+    --sev-critical:#ff5c4d; --sev-high:#ff8f43; --sev-medium:#eab308; --sev-low:#93a0b3;
+    --sev-critical-bg:#2a1512; --sev-high-bg:#2a1a0f; --sev-medium-bg:#241f10; --sev-low-bg:#1a2029;
+    --glow:.7;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#eaecf0; --surface:#ffffff; --surface-2:#f5f6f9; --surface-3:#eef0f4;
+  --border:#d7dbe2; --border-strong:#c2c8d2;
+  --text:#1a1e27; --text-dim:#586274; --text-faint:#8b94a4; --accent:#2563af;
+  --sev-critical:#d92d20; --sev-high:#e8590c; --sev-medium:#b5820a; --sev-low:#64748b;
+  --sev-critical-bg:#fbeae8; --sev-high-bg:#fceee3; --sev-medium-bg:#f8f1dd; --sev-low-bg:#eef1f5;
+  --glow:.55;
+}
+:root[data-theme="dark"]{
+  --bg:#0c0f15; --surface:#141922; --surface-2:#1a212c; --surface-3:#20293580;
+  --border:#28303c; --border-strong:#38414f;
+  --text:#e7eaf0; --text-dim:#9aa4b3; --text-faint:#616c7d; --accent:#5aa2e8;
+  --sev-critical:#ff5c4d; --sev-high:#ff8f43; --sev-medium:#eab308; --sev-low:#93a0b3;
+  --sev-critical-bg:#2a1512; --sev-high-bg:#2a1a0f; --sev-medium-bg:#241f10; --sev-low-bg:#1a2029;
+  --glow:.7;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-sans);
+  line-height:1.6;-webkit-font-smoothing:antialiased;font-size:15px}
+.wrap{max-width:1000px;margin:0 auto;padding:0 20px 80px}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+a{color:var(--accent)}
+
+/* ---- Header ---- */
+header{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--border);margin-bottom:26px}
+.head-inner{max-width:1000px;margin:0 auto;padding:20px 20px 14px}
+.eyebrow{font-family:var(--font-mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--text-faint);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.eyebrow .run{color:var(--accent)}
+h1{font-family:var(--font-mono);font-weight:600;font-size:clamp(22px,4vw,30px);letter-spacing:-.01em;
+  margin:8px 0 4px;text-wrap:balance}
+.sub{color:var(--text-dim);font-size:13.5px;max-width:64ch}
+.sub b{color:var(--text);font-weight:600}
+
+/* ---- Summary strip ---- */
+.summary{display:flex;gap:22px;align-items:flex-end;flex-wrap:wrap;margin-top:16px}
+.stat{display:flex;flex-direction:column;gap:1px}
+.stat .num{font-family:var(--font-mono);font-size:26px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.stat .lbl{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint)}
+.stat.confirmed .num{color:var(--text)}
+.stat.rej .num{color:var(--text-faint)}
+.distbar{flex:1;min-width:220px;height:34px;border-radius:6px;overflow:hidden;display:flex;
+  border:1px solid var(--border);background:var(--surface-2)}
+.distbar .seg{display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);
+  font-size:12px;font-weight:600;color:#fff;transition:flex-grow .3s ease}
+.distbar .seg.low{color:var(--text)}
+
+/* ---- Filter legend ---- */
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;align-items:center}
+.filters .grp-label{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text-faint);margin-right:2px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 11px;border-radius:20px;border:1px solid var(--border-strong);
+  background:var(--surface);color:var(--text-dim);cursor:pointer;display:inline-flex;align-items:center;gap:7px;
+  transition:background .15s,color .15s,border-color .15s;user-select:none}
+.chip:hover{border-color:var(--accent)}
+.chip[aria-pressed="false"]{opacity:.4;text-decoration:line-through}
+.chip .led{width:8px;height:8px;border-radius:50%;flex:none}
+.chip .c{font-variant-numeric:tabular-nums;color:var(--text-faint)}
+.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.shown{font-family:var(--font-mono);font-size:12px;color:var(--text-faint);margin-left:auto}
+
+/* ---- Cluster banner ---- */
+.cluster{display:flex;gap:12px;align-items:flex-start;margin:22px 0 4px;padding:12px 15px;
+  border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:8px;background:var(--surface-2)}
+.cluster .tag{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);white-space:nowrap;padding-top:1px}
+.cluster .txt{font-size:13px;color:var(--text-dim)}
+.cluster .txt b{color:var(--text);font-family:var(--font-mono);font-weight:600}
+
+/* ---- Cards ---- */
+.list{display:flex;flex-direction:column;gap:12px;margin-top:20px}
+.card{border:1px solid var(--border);border-radius:10px;background:var(--surface);overflow:hidden;
+  border-left:4px solid var(--sev);position:relative}
+.card[data-sev="critical"]{--sev:var(--sev-critical);--sevbg:var(--sev-critical-bg)}
+.card[data-sev="high"]{--sev:var(--sev-high);--sevbg:var(--sev-high-bg)}
+.card[data-sev="medium"]{--sev:var(--sev-medium);--sevbg:var(--sev-medium-bg)}
+.card[data-sev="low"]{--sev:var(--sev-low);--sevbg:var(--sev-low-bg)}
+.card.hidden{display:none}
+.crow{display:flex;align-items:center;gap:12px;padding:13px 16px 11px}
+.led{width:11px;height:11px;border-radius:50%;flex:none;background:var(--sev);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--sev) 18%,transparent),0 0 10px color-mix(in srgb,var(--sev) var(--glow),transparent)}
+.idx{font-family:var(--font-mono);font-size:13px;color:var(--text-faint);font-variant-numeric:tabular-nums;min-width:22px}
+.sev-tag{font-family:var(--font-mono);font-size:10.5px;font-weight:600;letter-spacing:.08em;
+  padding:3px 8px;border-radius:5px;color:var(--sev);background:var(--sevbg);text-transform:uppercase}
+.meta-chip{font-family:var(--font-mono);font-size:11px;padding:3px 8px;border-radius:5px;
+  background:var(--surface-3);color:var(--text-dim);border:1px solid var(--border)}
+.spacer{flex:1}
+.loc{font-family:var(--font-mono);font-size:11.5px;color:var(--text-dim);max-width:100%;overflow-x:auto;white-space:nowrap;
+  padding:2px 0}
+.loc .ln{color:var(--sev);font-weight:600}
+.votes{font-family:var(--font-mono);font-size:11px;color:var(--text-faint);white-space:nowrap;font-variant-numeric:tabular-nums}
+.votes .ok{color:#2f9e44}
+.title{padding:0 16px 12px;margin:0;font-size:16px;font-weight:600;line-height:1.4;color:var(--text);text-wrap:pretty}
+.impact{padding:0 16px 13px;display:flex;gap:9px;font-size:13.5px;color:var(--text-dim)}
+.impact .k{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--sev);
+  padding-top:3px;white-space:nowrap;flex:none}
+details{border-top:1px dashed var(--border)}
+summary{list-style:none;cursor:pointer;padding:10px 16px;font-family:var(--font-mono);font-size:11.5px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);display:flex;align-items:center;gap:8px}
+summary::-webkit-details-marker{display:none}
+summary:hover{color:var(--accent)}
+summary .arrow{transition:transform .2s ease;display:inline-block}
+details[open] summary .arrow{transform:rotate(90deg)}
+.detail-body{padding:2px 16px 16px;display:grid;gap:13px}
+.field{display:grid;grid-template-columns:64px 1fr;gap:12px;align-items:start}
+.field .k{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--text-faint);padding-top:2px}
+.field .v{font-size:13.5px;color:var(--text-dim);line-height:1.62;overflow-wrap:anywhere}
+.field .v code,.field .v .code{font-family:var(--font-mono);font-size:12.5px;background:var(--surface-3);
+  padding:1px 5px;border-radius:4px;color:var(--text)}
+
+/* ---- Rejected ---- */
+.rej-sec{margin-top:34px;border-top:1px solid var(--border);padding-top:22px}
+.rej-sec h2{font-family:var(--font-mono);font-size:13px;font-weight:600;letter-spacing:.04em;color:var(--text-dim);
+  text-transform:uppercase;margin:0 0 4px;display:flex;align-items:center;gap:10px}
+.rej-sec .note{font-size:12.5px;color:var(--text-faint);margin:0 0 14px}
+.rej-list{display:flex;flex-direction:column;gap:8px}
+.rej-item{display:flex;align-items:center;gap:11px;padding:10px 14px;border:1px dashed var(--border);border-radius:8px;
+  background:var(--surface-2);opacity:.82}
+.rej-item .x{font-family:var(--font-mono);font-size:11px;color:var(--text-faint);white-space:nowrap;font-variant-numeric:tabular-nums}
+.rej-item .rt{font-size:13px;color:var(--text-dim);flex:1}
+.rej-item .rl{font-family:var(--font-mono);font-size:11px;color:var(--text-faint);white-space:nowrap}
+.strike{text-decoration:line-through;text-decoration-color:var(--text-faint)}
+
+footer{margin-top:40px;text-align:center;font-family:var(--font-mono);font-size:11px;color:var(--text-faint);
+  letter-spacing:.04em;line-height:1.9}
+
+@media (max-width:560px){
+  .field{grid-template-columns:1fr;gap:4px}
+  .summary{gap:16px}
+  .stat .num{font-size:22px}
+  .loc{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<header>
+  <div class="head-inner">
+    <div class="eyebrow">
+      <span>印刷 IoT · UI 對抗性稽核</span><span>·</span><span>第二輪</span><span>·</span>
+      <span class="run">RUN wf_e544d9cf-a8e</span><span>·</span><span>2026-07-24</span>
+    </div>
+    <h1>四區重跑:14 筆確認缺陷</h1>
+    <p class="sub">獵手掃描 <b>analysis / settings / shell / api-contract</b> 四區,每筆發現交由三個獨立視角(重現性 · 正確性 · 影響)<b>對抗性反駁投票</b>,預設懷疑、<b>≥2 票確認</b>才存活。55 agents · 0 error。</p>
+    <div class="summary" id="summary"></div>
+    <div class="filters" id="filters"></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="cluster-slot"></div>
+  <div class="list" id="list"></div>
+
+  <section class="rej-sec">
+    <h2>反駁淘汰 · <span class="mono" id="rejn"></span></h2>
+    <p class="note">以下候選未達 2 票確認(0–1 票),判定為誤報或無實質影響,不列入修復。</p>
+    <div class="rej-list" id="rejlist"></div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+const DATA = {"confirmed": [{"severity": "critical", "area": "analysis", "category": "i18n-missing", "title": "Analysis 區塊絕大多數 i18n 鍵在所有語系皆不存在,畫面直接顯示原始 key 字串", "file": "frontend/src/modules/language/LanguageContext.jsx", "base": "LanguageContext.jsx", "line": 222, "description": "translations 物件裡每個語系(tw/cn/en/vn/th)的 analysis 節點只有 title / charts / metrics / filters 四個子鍵(見 LanguageContext.jsx:222-245 tw、553 cn、884 en)。但 Analysis 元件大量呼叫下列不存在的鍵,且多數呼叫點沒有 `||` 後備字串:\n- AnalysisPage.jsx:32-43 availableCategoryFields → t('analysis.fields.customer'/'product'/'boxNo'/'boxType'/'orderNo'/'qty'/'operator'/'shift'/'stopReason'/'prepTime'/'date')\n- AnalysisPage.jsx:46-55 availableDisplayFields → t('analysis.fields.qty'/'prepTime'/'runTime'/'stopTime'/'avgSpeed'/'stopCount'/'defectQty'/'oee')\n- AnalysisPage.jsx:57-63 chartOptions → t('analysis.chartTypes.pie'/'doughnut'/'line'/'bar'/'radar')\n- AnalysisPage.jsx:65-71 timeScaleOptions → t('analysis.timeScales.minute'/'hour'/'day'/'week'/'month')\n- AnalysisTable.jsx:27-39 表頭 → t('analysis.fields.date'/'orderNo'/'customer'/'product'/'shift'/'operator'/'goodQty'/'defectQty'/'prepTime'/'runTime'/'stopTime'/'avgSpeed'/'oee')\n- AnalysisSidebar.jsx:70 t('analysis.dateRange')、:78 t(`analysis.quickDate.${type}`)、:86 t('analysis.category.title')、:105 t('analysis.display.title')、:150 與 AnalysisTable.jsx:16 t('analysis.actions.clearFilters')\nLanguageContext 的 t()(:1073-1081)在找不到鍵時回傳 `value || key`,因此上述位置全部渲染成字面 key,例如表頭顯示「analysis.fields.date」、下拉選項顯示「analysis.chartTypes.pie」。預設語系為 tw(:1071),連預設中文也壞。", "repro": "開啟生產分析頁 → 側邊「分類條件/顯示欄位」下拉、圖形類型/時間刻度選項、快速日期按鈕、以及切到表格視圖後的所有表頭,全部顯示 'analysis.fields.xxx' / 'analysis.chartTypes.xxx' 之類的原始鍵字串而非中文。", "impact": "整個分析頁幾乎所有標籤、下拉選項、表頭、按鈕文字都變成無意義的英文 key,使用者完全無法辨識欄位與選項,功能形同不可用。", "confirms": 3, "refutes": 0, "idx": 1}, {"severity": "high", "area": "analysis", "category": "logic-error", "title": "時間刻度(分/時/週/月)聚合為 no-op,選任何刻度圖表都只按「日」分組", "file": "frontend/src/pages/analysis/AnalysisPage.jsx", "base": "AnalysisPage.jsx", "line": 137, "description": "chartData 的 aggregate 內:`const key = timeScale === 'day' ? r.date : r.date; // 簡化處理`(AnalysisPage.jsx:137)。三元運算子兩邊都是 r.date,無論 timeScale 是 minute/hour/week/month 都用日期字串當 key。timeKeys 也是 `Array.from(new Set(productionHistory.map(r => r.date)))`(:144),同樣只依日期。側邊的時間刻度 radio(AnalysisSidebar.jsx:137-142,setTimeScale)因此對圖表毫無作用。", "repro": "在分析頁選「時間刻度=月」或「週」,圖表 X 軸與資料分組完全不變,仍是逐日的資料點;切換 minute/hour/week/month 圖表輸出一模一樣。", "impact": "時間刻度切換功能完全失效,使用者無法依週/月/時/分彙總檢視趨勢,是明確的功能缺陷。", "confirms": 3, "refutes": 0, "idx": 2}, {"severity": "high", "area": "analysis", "category": "state-bug", "title": "groupedData(分類分組結果)計算後從未被使用,整個「分類條件」側欄不影響任何輸出", "file": "frontend/src/pages/analysis/AnalysisPage.jsx", "base": "AnalysisPage.jsx", "line": 22, "description": "useAnalysisData 依 selectedCategories 計算 groupedData(useAnalysisData.js:38-50),AnalysisPage 於第 22 行解構取得 groupedData,但整個 render(:177-216)完全沒有使用它:圖表資料 chartData(:125-158)直接對未分組的 productionHistory 聚合,AnalysisTable(:196)也直接吃 productionHistory。因此側邊「分類條件」區(AnalysisSidebar.jsx:84-101,handleAddCategory / handleCategoryChange / setSelectedCategories)新增、切換、移除分類後,圖表與表格毫無變化。此外 pie/doughnut/radar 這類分佈圖(isDistributionChart)理應呈現分類分佈,但 chartData 仍是逐日時間序列,等同分佈圖也沒有依分類繪製。", "repro": "在分析頁「分類條件」新增『客戶』或『班別』並切換,圖表與表格輸出完全不變;切到圓餅圖,切片仍是逐日良品數而非各客戶/班別分佈。", "impact": "分類/分群這一整組核心分析功能是死的,使用者以為在依維度分析,實際上永遠只看到全體未分組資料,產生誤導。", "confirms": 3, "refutes": 0, "idx": 3}, {"severity": "high", "area": "api-contract", "category": "api-mismatch", "title": "handleMoveSection 以 (id, 部分物件) 呼叫 updateMachineSection,但該 API 只吃單一 section 物件 → 送到 /machine-sections/undefined,部位排序永遠失敗", "file": "frontend/src/components/settings/MachineTab.jsx", "base": "MachineTab.jsx", "line": 187, "description": "handleMoveSection 呼叫 `apiUpdateSection(currentSection.id, { displayOrder: newCurrentOrder })` 與 `apiUpdateSection(targetSection.id, { displayOrder: newTargetOrder })`,傳入兩個引數 (guid 字串, 部分 payload)。但 services/api.js 的 `updateMachineSection = async (section) => api.put(`/settings/machine-sections/${section.id}`, section)` 只接受單一物件並讀 `section.id`。此處第一個引數是 guid 字串,`\"guid字串\".id` 為 undefined,因此請求打到 `/api/settings/machine-sections/undefined`,body 也變成整串 guid 字串而非 MachineSection。後端 `UpdateMachineSection(Guid id, MachineSection section)` 無法把 \"undefined\" 綁成 Guid → 400。第二個引數(真正想更新的 displayOrder)完全被忽略。對照同檔 line 238 正確用法 `apiUpdateSection(section)` 傳整個物件即可證明此處簽章用錯。連帶即使 URL 正確,只送 `{displayOrder}` 也會讓後端把 [Required] 的 Name 等欄位清空而驗證失敗。", "repro": "設定頁→機台設定,選一個部位,點▲或▼移動順序 → 後端回 400/404,前端 catch 跳出 alert「順序更新失敗 (Failed to update order)」,DB 的 displayOrder 從未更新,重新整理後順序復原。", "impact": "機台部位「上移/下移」排序功能完全無法儲存,每次操作都彈錯誤視窗;部位顯示順序無法持久化。", "confirms": 3, "refutes": 0, "idx": 4}, {"severity": "high", "area": "api-contract", "category": "api-mismatch", "title": "handleAddSection 用 s.order(實際欄位為 displayOrder)算 maxOrder → NaN;且 payload 用 order/is_active 與後端 DisplayOrder/IsActive 不符,新部位排序永遠為 0", "file": "frontend/src/components/settings/MachineTab.jsx", "base": "MachineTab.jsx", "line": 98, "description": "line 98 `Math.max(...machineSettings.sections.map(s => s.order))`,但 MachineSection 實體與整個檔案其他地方用的是 `displayOrder`(見 line 173-181、247、344,及 backend Entities/MachineSection.cs 的 `public int DisplayOrder`)。`s.order` 對每個 section 都是 undefined → `Math.max(undefined, ...)` = NaN → `maxOrder + 1` = NaN。接著 line 101-105 送出的 payload 為 `{ name, order: maxOrder + 1, is_active: true }`,欄位名 `order`/`is_active` 為 snake_case,與後端 System.Text.Json 期望的 `displayOrder`/`isActive` 對不上(JSON.stringify(NaN) 亦會變成 null)。因此後端忽略這些欄位,新部位一律以 DisplayOrder 預設值 0 建立。對照同檔 line 46/211 的種子建立用的是正確的 `displayOrder`(來自 DEFAULT_SECTIONS)與 `isActive`,更凸顯手動新增這條路徑欄位名用錯。", "repro": "設定頁→機台設定,在既有部位清單下輸入名稱按「新增」數次 → 每個新部位的 displayOrder 都是 0(而非遞增),多筆新增後排序錯亂、堆在最前面,無法穩定排在末尾。", "impact": "手動新增的機台部位無法取得正確順序值,清單排序錯亂;displayOrder 全為 0 導致後續上下移動與顯示序號不可靠。", "confirms": 3, "refutes": 0, "idx": 5}, {"severity": "high", "area": "settings", "category": "api-mismatch", "title": "MachineTab 部位排序 API 呼叫參數簽章錯誤,▲▼移動順序永遠寫入失敗", "file": "frontend/src/components/settings/MachineTab.jsx", "base": "MachineTab.jsx", "line": 187, "description": "services/api.js 的 updateMachineSection 簽章為 `(section) => api.put(`/settings/machine-sections/${section.id}`, section)`,只吃「單一物件」並讀 section.id。但 handleMoveSection 以兩個參數呼叫:`apiUpdateSection(currentSection.id, { displayOrder: newCurrentOrder })`(line 187-188)。於是 section = currentSection.id(字串),section.id = undefined,實際送出 `PUT /api/settings/machine-sections/undefined`,request body 變成那串 id 字串而非 payload。後端路由 {id} 為 Guid,'undefined' 解析失敗回 400/404。對照 handleUpdateSectionField(line 238)是正確地以單一物件 `apiUpdateSection(section)` 呼叫,證明 move 這處用錯。", "repro": "設定→機台設定→選一個部位→按▲或▼。畫面樂觀更新看似有動,但兩個 PUT 都打到 /machine-sections/undefined 失敗(console 出現 'Failed to update section order' 或後端 404)。重新整理頁面後順序回復原狀,順序調整從未真正持久化。", "impact": "機台部位排序功能完全無法儲存;使用者調整的顯示順序在重載後全部遺失。", "confirms": 3, "refutes": 0, "idx": 6}, {"severity": "high", "area": "settings", "category": "api-mismatch", "title": "MachineTab 新增部位送出欄位名 order/is_active 與後端 displayOrder/isActive 不符且 maxOrder 為 NaN", "file": "frontend/src/components/settings/MachineTab.jsx", "base": "MachineTab.jsx", "line": 103, "description": "handleAddSection 計算 `maxOrder = Math.max(...machineSettings.sections.map(s => s.order))`(line 97-99),但 section 物件用的是 displayOrder(見 DEFAULT_SECTIONS 與後端 MachineSection.DisplayOrder),沒有 order 欄位,map 全為 undefined → Math.max(undefined...) = NaN。送出的 payload 為 `{ name, order: maxOrder + 1(=NaN), is_active: true }`(line 101-105)。後端 MachineSection 實體(backend/PrintingIoT.Core/Entities/MachineSection.cs)欄位是 DisplayOrder / IsActive,System.Text.Json 對 'order' 與 'is_active' 皆比對不到(is_active 底線與 isActive 不符),故新部位 DisplayOrder 一律落為 0。其餘程式(排序、handleMoveSection、種子資料)全用 displayOrder,唯此處用 order,前後不一致。", "repro": "設定→機台設定→輸入部位名稱→按「新增」。新增出的部位 DisplayOrder=0,依 `sort((a,b)=>(a.displayOrder||0)-(b.displayOrder||0))` 會排到清單最前面而非最後;連續新增多個部位彼此順序不穩(都是 0)。", "impact": "手動新增的機台部位排序錯亂(全部擠到最前、順序不定),與『新增後應排在末位』的預期不符。", "confirms": 3, "refutes": 0, "idx": 7}, {"severity": "high", "area": "shell", "category": "broken-handler", "title": "點擊底部 F5+/F6+(良品/不良)按鈕派發非法鍵 'F5+'/'F6+',Dashboard 永不匹配 → 按鈕無作用", "file": "frontend/src/components/layout/MainLayout.jsx", "base": "MainLayout.jsx", "line": 509, "description": "footer F 鍵按鈕 onClick 透過 window.dispatchEvent(new KeyboardEvent('keydown', { key: k.code || k.key })) 模擬鍵盤事件。fKeys 陣列中 F5+/F6+ 兩筆只有 key:'F5+' / key:'F6+',沒有 code 欄位(見 MainLayout.jsx:283-284),因此派發出去的 e.key 是字串 'F5+' / 'F6+'。Dashboard 的 handleKeyDown 用 let key = e.key; switch(key) 比對,case 只有 'F5'(Dashboard.jsx:526)與 'F6'(Dashboard.jsx:530),'F5+'/'F6+' 一律落空,switch 不執行任何分支。對比 M/N 那筆有 code:'F8' 所以正常。結果:即時監控畫面上點擊『良品(F5+)』『不良(F6+)』按鈕完全沒反應,resetOffset(良品-1 / 不良+1)不會被調整。實體鍵盤按 F5/F6 因 e.key='F5' 仍正常,只有畫面按鈕壞掉,容易被誤判為偶發。", "repro": "登入進即時監控(/)頁 → 用滑鼠點擊底部功能列的『F5+ 良品』或『F6+ 不良』按鈕 → 良品/不良計數(resetOffset)無變化、只寫了一條 log;預期應如按實體 F5/F6 一樣調整數量。", "impact": "現場操作員以觸控/滑鼠點畫面上良品、不良按鈕時完全無效,無法計良品/不良數,屬核心計數功能失效。", "confirms": 3, "refutes": 0, "idx": 8}, {"severity": "medium", "area": "api-contract", "category": "logic-error", "title": "handleMoveSection 以 a.order - b.order 排序(欄位不存在→NaN 不排序),但畫面清單依 displayOrder 排序 → 上/下移交換到錯誤的相鄰部位", "file": "frontend/src/components/settings/MachineTab.jsx", "base": "MachineTab.jsx", "line": 159, "description": "line 159 `const sections = [...machineSettings.sections].sort((a, b) => a.order - b.order);` 使用不存在的 `order` 欄位(正確為 displayOrder),`undefined - undefined = NaN`,比較器回傳 NaN 時 Array.sort 視為相等、維持原陣列(抓取)順序,等同沒排序。但實際渲染的清單(line 247/309 sortedSections)是依 `displayOrder` 排序顯示的。因此 handleMoveSection 用 idx±1 找到的「相鄰項」是未依 displayOrder 排序陣列中的鄰居,與使用者在畫面上看到的相鄰項可能不同,導致上/下移交換到非視覺相鄰的部位。", "repro": "當 machineSettings.sections 陣列順序與 displayOrder 排序不一致時(例如經過新增/刪除後),選中清單中某部位按▲,實際被交換順序的是陣列鄰居而非畫面上方那一列。", "impact": "部位排序上/下移的目標錯亂,使用者會看到非預期的部位被互換位置。", "confirms": 3, "refutes": 0, "idx": 9}, {"severity": "medium", "area": "settings", "category": "state-bug", "title": "CommunicationTab 監控更新頻率(monitor_interval)永不持久化", "file": "frontend/src/components/settings/CommunicationTab.jsx", "base": "CommunicationTab.jsx", "line": 206, "description": "監控更新頻率的 range/number 綁定 `commSettings.plc.monitor_interval` 並透過 handleCommChange('plc','monitor_interval',...) 更新(line 201-218)。但 handleCommChange 組出的 API payload(line 99-121)只列出 plc_* 固定欄位,完全沒有 monitor_interval;且 mount 時的 fetchSettings(line 44-79)也未從 data 讀回 monitor_interval。因此該值只存在於當下的 React state 與 localStorage 的巢狀結構中,從未送到後端,也不會在重載後被還原(初值 fallback 1.0)。", "repro": "設定→通訊設定→PLC 選 Wise/MQTT 模式→把『監控更新頻率』拉到 2.0 秒→重新整理頁面。滑桿回到預設 1.0 秒,後端未收到 monitor_interval。", "impact": "使用者設定的 MQTT 監控輪詢頻率無法儲存,每次重載都被重置為 1.0 秒。", "confirms": 2, "refutes": 1, "idx": 10}, {"severity": "medium", "area": "settings", "category": "api-mismatch", "title": "CommunicationTab 測試連線傳入的 host/port 參數被 api.testMqttConnection 全部丟棄", "file": "frontend/src/components/settings/CommunicationTab.jsx", "base": "CommunicationTab.jsx", "line": 258, "description": "按鈕呼叫 `testMqttConnection({ host, port, device_type, mac_id })`(line 258-263),精心組出使用者輸入的 broker/IP 與 port。但 services/api.js 的 `testMqttConnection = async () => api.post('/simulation/test-mqtt')`(api.js line 93-96)不接受任何參數、也不帶 body,傳入的物件被完全忽略,且打的是固定的 /simulation/test-mqtt 模擬端點。", "repro": "設定→通訊設定→在 MQTT Broker URL 填入任意主機→按『📡 Test Connection (Backend)』。前端組的 host/port/device_type 全遭丟棄,測試結果與使用者輸入的位址無關(永遠測固定後端)。", "impact": "測試連線功能無法針對使用者輸入的 MQTT/PLC 位址進行驗證,回報的成功/失敗具誤導性。", "confirms": 3, "refutes": 0, "idx": 11}, {"severity": "medium", "area": "settings", "category": "i18n-missing", "title": "i18n 缺鍵:越南文/泰文缺 settings.unit/formula/report,切語系後單位/公式/報表分頁顯示原始 key", "file": "frontend/src/modules/language/LanguageContext.jsx", "base": "LanguageContext.jsx", "line": 1031, "description": "實際生效的翻譯來源是 LanguageContext.jsx 內的 translations 物件(locales/index.js 與 locales/tw.js 無任何檔案 import,為未接線的死碼)。translations.vn(line 1000-1033)與 translations.th(line 1034-1067)的 settings 只有 tabs / comm / machine,缺少 unit、formula、report 三組。t() 實作為 `return value || key`(line 1073-1081),缺鍵時直接回傳 key 字串。UnitTab/FormulaTab/ReportTab 大量使用 t('settings.unit.*')、t('settings.formula.*')、t('settings.report.*'),且 LanguageSwitcher 的 availableLanguages 有列出 vn/th 供切換。", "repro": "右上語系切換至 Tiếng Việt 或 ภาษาไทย→進入設定→單位設定/計算公式/報表設定分頁。標題與欄位直接顯示 'settings.unit.title'、'settings.formula.coreEff'、'settings.report.timeBoundary' 等原始 key,而非翻譯文字。", "impact": "越南文與泰文使用者在單位、公式、報表三個設定分頁看到未翻譯的程式 key,介面破圖無法閱讀。", "confirms": 3, "refutes": 0, "idx": 12}, {"severity": "low", "area": "settings", "category": "logic-error", "title": "GeneralTab 修改使用者時若變更代碼(ID)會新增重複使用者而非更新", "file": "frontend/src/components/settings/GeneralTab.jsx", "base": "GeneralTab.jsx", "line": 87, "description": "handleUserClick 進入編輯狀態時把 newUserCode 設為該列 u.id(line 119)。handleAddUser 以 `existingIdx = users.findIndex(u => u.id === newUserCode)`(line 87)判斷更新或新增。若使用者在編輯過程中改動了『代碼 (ID)』欄位,findIndex 找不到舊 id(existingIdx = -1),就走新增分支 append 一筆新使用者,舊使用者仍保留 → 產生重複資料,但按鈕文字仍是『修改 (Update)』。另 handleUserClick 也未將 username 帶回,更新後 username 會被 handleAddUser 以 newUserName 覆寫。", "repro": "設定→一般設定→使用者設定→點一列 OP1(代碼 001)→把代碼欄改成 099→按『修改』。結果多出一筆 id=099 的新使用者,原 001 未被移除,清單出現兩筆。", "impact": "編輯使用者代碼時造成資料重複,而非預期的原地更新。", "confirms": 3, "refutes": 0, "idx": 13}, {"severity": "low", "area": "shell", "category": "logic-error", "title": "速度滑桿左端標籤標為 '0',但滑桿最小值 -1 代表『停止』、0 在中央代表『標準』,標籤誤導", "file": "frontend/src/components/layout/MainLayout.jsx", "base": "MainLayout.jsx", "line": 373, "description": "速度調整滑桿 input type=range min='-1' max='1'(MainLayout.jsx:375-378),依右側數值顯示邏輯(line 403)speedFactor === -1 顯示『停』、=== 0 顯示『標準』、=== 1 顯示『極速』。但滑桿左端固定文字標籤寫 <span>0<\/span>(line 373),右端寫『極速』(line 396)。滑桿最左端對應的是 min=-1(停止)而非 0;0(標準)實際落在滑桿正中央。左端標『0』與該端實際語意(停止/-1)不符,會讓操作員誤以為往左拉是回到標準(0)而非停止。", "repro": "開啟模擬生產(Admin + plcSimulateEnabled)→ 觀察速度滑桿:左端標籤顯示 '0',但把滑桿拉到最左端時右側數值顯示變為『停』(speedFactor=-1),兩者語意矛盾。", "impact": "速度滑桿端點標示與實際值不一致,操作員可能誤判滑桿刻度,將『停止』誤認為『標準(0)』。", "confirms": 2, "refutes": 1, "idx": 14}], "rejected": [{"severity": "medium", "area": "analysis", "title": "分類欄位 qty / stopReason 對應的紀錄欄位不存在,分組永遠得到 '-'", "base": "AnalysisPage.jsx", "line": 37, "confirms": 1, "refutes": 2}, {"severity": "low", "area": "settings", "title": "FormulaTab 多個數值輸入以字串儲存,與其他欄位 Number() 不一致", "base": "FormulaTab.jsx", "line": 64, "confirms": 0, "refutes": 3}, {"severity": "medium", "area": "shell", "title": "user 為 null 但 showLoginModal 為 true 時繞過守衛,直接存取 user.role/user.name 造成 TypeError 白畫面", "base": "MainLayout.jsx", "line": 292, "confirms": 0, "refutes": 3}], "counts": {"critical": 1, "high": 7, "medium": 4, "low": 2}, "totalCandidates": 17, "confirmedCount": 14, "rejectedCount": 3, "clusterFiles": {"MachineTab.jsx": 5}};
+const SEVS=[["critical","CRITICAL"],["high","HIGH"],["medium","MEDIUM"],["low","LOW"]];
+const AREAS=["analysis","settings","shell","api-contract"];
+const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const sevColor=s=>cssv("--sev-"+s);
+
+const active={sev:new Set(SEVS.map(s=>s[0])),area:new Set(AREAS)};
+
+/* summary */
+(function(){
+  const s=document.getElementById("summary");
+  const mk=(num,lbl,cls)=>`<div class="stat ${cls||''}"><span class="num">${num}</span><span class="lbl">${lbl}</span></div>`;
+  let bar='<div class="distbar" role="img" aria-label="嚴重度分佈">';
+  SEVS.forEach(([k,lb])=>{const c=DATA.counts[k];if(c>0)bar+=`<div class="seg ${k}" style="flex-grow:${c};background:${sevColor(k)}" title="${lb} ${c}">${c}</div>`;});
+  bar+='</div>';
+  s.innerHTML=mk(DATA.totalCandidates,"候選")+mk(DATA.confirmedCount,"確認存活","confirmed")+mk(DATA.rejectedCount,"反駁淘汰","rej")+bar;
+})();
+
+/* filters */
+(function(){
+  const f=document.getElementById("filters");
+  let h='<span class="grp-label">嚴重度</span>';
+  SEVS.forEach(([k,lb])=>{h+=`<button class="chip" data-t="sev" data-v="${k}" aria-pressed="true"><span class="led" style="background:${sevColor(k)}"></span>${lb}<span class="c">${DATA.counts[k]}</span></button>`;});
+  h+='<span class="grp-label" style="margin-left:6px">區塊</span>';
+  AREAS.forEach(a=>{const c=DATA.confirmed.filter(x=>x.area===a).length;h+=`<button class="chip" data-t="area" data-v="${a}" aria-pressed="true">${a}<span class="c">${c}</span></button>`;});
+  h+='<span class="shown" id="shown"></span>';
+  f.innerHTML=h;
+  f.querySelectorAll(".chip").forEach(btn=>btn.addEventListener("click",()=>{
+    const t=btn.dataset.t,v=btn.dataset.v,set=active[t];
+    if(set.has(v)){set.delete(v);btn.setAttribute("aria-pressed","false");}
+    else{set.add(v);btn.setAttribute("aria-pressed","true");}
+    apply();
+  }));
+})();
+
+/* cluster banner */
+(function(){
+  const ent=Object.entries(DATA.clusterFiles||{});
+  if(!ent.length)return;
+  const [file,n]=ent.sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById("cluster-slot").innerHTML=
+    `<div class="cluster"><span class="tag">叢集</span><div class="txt"><b>${n}</b> 筆缺陷集中於 <b>${file}</b> — 排序 / 新增部位的 API 契約與欄位名(order↔displayOrder、呼叫簽章)同源問題,建議一次修復。</div></div>`;
+})();
+
+/* cards */
+const setText=(el,t)=>{el.textContent=t;return el;};
+function card(f){
+  const c=document.createElement("article");
+  c.className="card";c.dataset.sev=f.severity;c.dataset.area=f.area;
+  const row=document.createElement("div");row.className="crow";
+  row.innerHTML=`<span class="led" aria-hidden="true"></span>`
+    +`<span class="idx">${String(f.idx).padStart(2,"0")}</span>`
+    +`<span class="sev-tag">${f.severity}</span>`
+    +`<span class="meta-chip">${f.area}</span>`
+    +`<span class="meta-chip">${f.category}</span>`
+    +`<span class="spacer"></span>`
+    +`<span class="loc">${f.base}<span class="ln">:${f.line}</span></span>`
+    +`<span class="votes"><span class="ok">${f.confirms}✓</span> / ${f.refutes}✗</span>`;
+  c.appendChild(row);
+  const t=document.createElement("h3");t.className="title";setText(t,f.title);c.appendChild(t);
+  const im=document.createElement("div");im.className="impact";
+  const ik=document.createElement("span");ik.className="k";ik.textContent="影響";
+  const iv=document.createElement("span");setText(iv,f.impact);
+  im.append(ik,iv);c.appendChild(im);
+  const det=document.createElement("details");
+  const sm=document.createElement("summary");sm.innerHTML='<span class="arrow">›</span> 說明 · 重現路徑';
+  det.appendChild(sm);
+  const body=document.createElement("div");body.className="detail-body";
+  [["位置",f.file+":"+f.line,true],["根因",f.description,false],["重現",f.repro,false]].forEach(([k,v,mono])=>{
+    const fd=document.createElement("div");fd.className="field";
+    const kk=document.createElement("div");kk.className="k";kk.textContent=k;
+    const vv=document.createElement("div");vv.className="v";
+    if(mono){const cd=document.createElement("span");cd.className="code";cd.textContent=v;vv.appendChild(cd);}
+    else setText(vv,v);
+    fd.append(kk,vv);body.appendChild(fd);
+  });
+  det.appendChild(body);c.appendChild(det);
+  return c;
+}
+const list=document.getElementById("list");
+DATA.confirmed.forEach(f=>list.appendChild(card(f)));
+
+/* rejected */
+(function(){
+  document.getElementById("rejn").textContent=DATA.rejectedCount+" / "+DATA.totalCandidates;
+  const rl=document.getElementById("rejlist");
+  DATA.rejected.forEach(r=>{
+    const el=document.createElement("div");el.className="rej-item";
+    const x=document.createElement("span");x.className="x";x.textContent=r.confirms+"✓/"+r.refutes+"✗";
+    const rt=document.createElement("span");rt.className="rt strike";rt.textContent=r.title;
+    const rl2=document.createElement("span");rl2.className="rl";rl2.textContent=r.area+" · "+r.base+":"+r.line;
+    el.append(x,rt,rl2);rl.appendChild(el);
+  });
+})();
+
+/* filter apply */
+function apply(){
+  let shown=0;
+  document.querySelectorAll(".card").forEach(c=>{
+    const ok=active.sev.has(c.dataset.sev)&&active.area.has(c.dataset.area);
+    c.classList.toggle("hidden",!ok);if(ok)shown++;
+  });
+  document.getElementById("shown").textContent="顯示 "+shown+" / "+DATA.confirmedCount;
+}
+apply();
+document.getElementById("foot").innerHTML=
+  "對抗性稽核 · 7 獵手 × 三視角反駁驗證 · 印刷 IoT feat/extract-maintenance<br>報告全文:docs/report20260724-2.md";
+</script>
