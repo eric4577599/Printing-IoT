@@ -33,3 +33,8 @@ obj/
 
 # Mosquitto runtime persistence
 backend/mosquitto/data/*.db
+
+# 上線初始帳號明文 —— 絕不進版控(全域規則 §0 紅線 4)
+.credentials-*.txt
+# 資料庫備份 —— 含正式資料,不進版控
+backup-*.sql

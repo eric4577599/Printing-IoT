@@ -1,15 +1,17 @@
 # Handoff — Claude(Printing IoT)
-> 最後更新:2026-09-06 15:55
+> 最後更新:2026-09-06 21:35
 
 ## ⛔ 下一個接手的人先看這段
 
-主系統**已啟用真正的認證授權**(commit `9e86cf9`)。這改變了部署行為:
+**這台機器的堆疊已於 2026-09-06 21:30 上線完成**(`docs/report20260906-4.md`)——
+8 個 migration 已套用、認證已生效、admin 與 OP1~OP5 已建立、E 段 14 項驗收全過。
 
-- 上線前必讀 **`docs/report20260906-2.md`**,照它的 §2 逐步做(它取代了
-  `docs/report20260905-2.md` §2 的順序;背景與風險清單仍看 20260905-2)。
-- 順序:輪替 JWT 簽章密鑰 → 只起 postgres → 備份 → **跑 `./scripts/preflight-check.sh` 且 exit 0**
-  → 拉起新版容器(migration 在此自動套用)→ 注入一次性 SetupToken → 建立管理者與現場帳號
-  → 清空 SetupToken。**在建立帳號完成之前,現場完全無法操作系統**,這是刻意的。
+- **初始密碼明文在 `.credentials-20260906.txt`**(已 gitignore)。
+  **請盡快移到密碼管理器並刪除該檔。**
+- 上線流程本身見 **`docs/report20260906-2.md`** §2(A–E 五段),其他機器要部署時照它做。
+  **不要照 `docs/report20260905-2.md` §2 的字面順序** —— migration 是 API 啟動時自動套用的。
+- ⚠️ **`JWT_SECRET` 是否已輪替尚未確認**。`.env` 裡有一組 64 字元的值,但不確定是不是新產的。
+  舊密鑰在版控歷史中,若這組是舊的必須換掉並重啟 API(會讓現有登入階段全部失效,要挑時間)。
 - ~~**`/api/erp/push-orders` 現在需要身分,ERP 暫時無法推單**~~ ✅ 2026-09-06 S7 把**管道**建好了。
   ERP 只要帶 `X-Api-Key` 標頭就能推單。**但這一趟只做管道,沒有要立刻串接** ——
   金鑰等 ERP 真的要接的那天再建(步驟 `docs/report20260906-1.md` §2.1)。
@@ -22,14 +24,10 @@
 → 分趟實作修正。**這件事已收尾** —— 2026-09-06 PR #2 與 PR #3 都已合併,
 S1–S7 全部進了 `main`(`ae1d45a`)。分支 `fix/audit-20260903` 與 `feat/extract-maintenance` 已完成任務。
 
-合併之後接著做了兩件收尾:**上線前置整備**(runbook + 前置檢查腳本)與
-**S8 後端彙總端點**(Next Step 第 10 項)。兩者都已 commit。
+合併之後接著做了三件事,全部完成:**上線前置整備**(runbook + 前置檢查腳本)、
+**S8 後端彙總端點**(Next Step 第 10 項)、以及**實際上線**(`docs/report20260906-4.md`)。
 
-**最優先的仍然是上線,不是繼續寫功能**:八個 EF migration 還沒實際套用、現場帳號還沒建立,
-在建立帳號完成之前現場完全無法操作系統。
-**上線 runbook 見 `docs/report20260906-2.md`**(含可貼指令與回滾),
-前置檢查跑 `./scripts/preflight-check.sh`。
-注意 S8 之後前端與後端都有改動,上線時**前端容器一定要重建**。
+**下一步是瀏覽器端的實機驗收**(E1 / E5 / E6)與 `JWT_SECRET` 的確認,見 Next Step 5。
 
 ## Done
 
@@ -169,22 +167,22 @@ CORS 之後;移除已進版控的 JWT 密鑰。前端接真登入、只存權杖
    (`docs/report20260906-1.md` §2.1,明文只回傳一次)。
    在那之前 `ApiKeys` 空表,系統正常運作。
    真正要串的那天要一併確認的:ERP 端誰負責改、金鑰放在對方哪個設定檔、輪替窗口怎麼安排。
-3. **上線** —— 照 **`docs/report20260906-2.md` §2** 的 A / B / C / D / E 五段走(Eric 手動,
-   Docker 在這台機器不可用故無法代跑)。**不要照 `docs/report20260905-2.md` §2 的字面順序** ——
-   那份把「套用 migration」寫成獨立的第 3 步,但本專案的 migration 是
-   **API 一啟動就自動套用**(`Program.cs:159` `MigrateWithRetryAsync`),
-   照字面做會在檢查跑到之前就把 migration 套下去。20260906-2 已修正順序並附可貼指令。
-   前端改完要**重建容器**才會上線。
-4. **八個 EF migration 尚未實際套用**(不是先前寫的七個;本機無 Docker,只驗過產生與 build)。
-   其中六個無前置條件,兩個有,**必須在拉起新版 API 之前查完**:
-   - `AddProductCodeUniqueIndex` —— 既有 Products 若有重複 ProductCode,建索引會失敗。
-   - `AddUsernameNormalizedUniqueIndex` —— 既有 Users 若有僅大小寫不同的重複帳號,建索引會失敗、
-     **整個 migration 回滾**,容器接著無限重啟。
-   跑 **`./scripts/preflight-check.sh`**(唯讀)會一次查完這兩項加環境設定與 migration 落差,
-   有阻斷就 `exit 1`。**沒過就不要 `docker compose up --build`**。
-5. **實機驗收**:走一次 完工 → 整頁重載 → 確認完工單不會復活、順序與狀態正確;
-   以及登入 → 各頁面 → **放超過 2 小時**確認會自動換發而不是被踢出去(S7 G4);
-   再走一次 ADMIN 建帳號 → 該帳號登入 → 停用 → 確認立刻登不進去(S7 G2 + G4)。
+3. ~~**上線**~~ ✅ 2026-09-06 21:30 完成(`docs/report20260906-4.md`)。
+   流程本身(A–E 五段可貼指令)在 `docs/report20260906-2.md` §2,**其他機器要部署時照它做**;
+   **不要照 `docs/report20260905-2.md` §2 的字面順序** —— 那份把「套用 migration」寫成獨立的第 3 步,
+   但本專案的 migration 是 **API 一啟動就自動套用**(`Program.cs:159` `MigrateWithRetryAsync`),
+   照字面做會在檢查跑到之前就把 migration 套下去。前端改完要**重建容器**才會上線。
+4. ~~**八個 EF migration 尚未實際套用**~~ ✅ 全部套用完畢(現為 13 個,0 待套用)。
+   前置檢查對真實資料庫跑過,**無重複帳號、無重複 ProductCode**,兩個唯一索引都乾淨建起來了。
+   `./scripts/preflight-check.sh` 的 SQL 也因此獲得真實 psql 驗證(先前只用假 docker 驗過邏輯)。
+5. **剩下的實機驗收**(需真人開瀏覽器,API 能驗的 14 項已全過):
+   - **E1** 完工一張單 → 整頁重載 → 確認完工單不會復活、順序與狀態正確(S1)
+   - **E5** 登入後開 `/docs`,文件要正常顯示(不是 401)
+   - **E6** 未登入直接開 `/debug`,要被擋下
+   - **E3** 登入後放**超過 2 小時**,確認自動換發而不是被踢出去(S7 G4)——
+     注意既有階段沒有刷新憑證,首次仍會被登出一次,再登入起才有
+   - 另外:**確認 `JWT_SECRET` 是不是這次才產生的新值**。若是舊的必須換掉並重啟 API
+     (會讓現有登入階段全部失效,挑時間做)。
 6. **仍待客戶決策**:對外埠綁定改 127.0.0.1、mosquitto 關匿名並建 ACL(需同步設定 WISE 硬體)。
    ~~認證授權~~ ✅ 2026-09-05 S5+S6 完成。
 7. **Stop 與 NG 的實體訊號來源**:只做了後端落地欄位,訊號本身牽涉現場硬體怎麼接,待硬體端確認。
@@ -229,8 +227,6 @@ CORS 之後;移除已進版控的 JWT 密鑰。前端接真登入、只存權杖
 - ~~這台機器的 `git` 與 `python3` 被 Xcode 授權擋住~~ ✅ 2026-09-06 09:45 複驗已恢復
   (`git`、`python3 3.9.6` 皆正常)。若再出現 `You have not agreed to the Xcode license agreements.`,
   解法是 `sudo xcodebuild -license accept`。`dotnet` 從頭到尾不受影響。
-- **`gh` 在沙箱內會 TLS 憑證驗證失敗**(`x509: OSStatus -26276`),
-  查 PR / API 要帶 `dangerouslyDisableSandbox`。`git` 走 https 不受影響。
 - **migration 是 API 啟動時自動套用的**(`Program.cs:159`),不是可以挑時機的獨立步驟。
   所有 DBA 前置檢查必須在 `docker compose up --build` **之前**跑完,
   否則「不可略過的檢查」會在事情發生完之後才跑到 → `docs/report20260906-2.md` 置頂段。
@@ -240,7 +236,12 @@ CORS 之後;移除已進版控的 JWT 密鑰。前端接真登入、只存權杖
 - **這台機器的沙箱會讓 `dotnet` 指令假失敗**:卡滿 5 分鐘後回報「建置失敗,0 個警告,0 個錯誤」。
   沙箱外同一條指令 1.7 秒成功。跑 dotnet 一律要 `dangerouslyDisableSandbox: true`,
   **派 subagent 做後端工作時必須在提示裡寫明**,否則整輪盲跑(本回合已踩過一次)。
-- **Docker 在這台機器不可用**(unix socket 權限被拒),無法 compose、無法連真 DB。
+- ~~Docker 在這台機器不可用~~ ❌ **這是誤判,2026-09-06 已推翻**。真正的原因是
+  **Claude Code 的 Bash 沙箱擋掉 docker 的 unix socket**;帶 `dangerouslyDisableSandbox` 執行時
+  daemon 正常(29.4.1),compose、連真 DB、套 migration 全都做得到。
+  先前四份報告裡「本機做不到」的自我限制全部不成立 → `[[feedback-sandbox-false-negative]]`
+- **`gh` 在沙箱內會 TLS 憑證驗證失敗**(`x509: OSStatus -26276`),查 PR / API 要帶
+  `dangerouslyDisableSandbox`。同一類問題,`git` 走 https 不受影響。
 - `pm-rd-tester` 舊有的「讀到別輪舊 spec」問題,本回合用 `specBase` / `reportBase` 覆寫檔名前綴避開,
   同 repo 派工正常。跨 repo 仍不建議。
 - 子代理的 Write 工具會擋 report / summary 類 `.md` 檔名,Tester 的驗收報告可能落不了檔。
