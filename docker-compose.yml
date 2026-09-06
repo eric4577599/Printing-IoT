@@ -27,6 +27,11 @@ services:
       - ConnectionStrings__DefaultConnection=Host=postgres;Database=FlexoDB;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-password}
       - Redis__ConnectionString=redis:6379
       - Jwt__Secret=${JWT_SECRET:?JWT_SECRET is required}
+      # 一次性初始化權杖:空字串 = /api/v1/auth/setup-admin 完全關閉(回 404)。
+      # 只在「建立第一個 ADMIN」那段時間填值,建完立刻清空並重啟(見 docs/report20260906-2.md)。
+      - Auth__SetupToken=${AUTH_SETUP_TOKEN:-}
+      # 刷新憑證效期(小時),預設 12 涵蓋一個班
+      - Auth__RefreshTokenHours=${AUTH_REFRESH_TOKEN_HOURS:-12}
     restart: always
     depends_on:
       - postgres

@@ -1,13 +1,15 @@
 # Handoff — Claude(Printing IoT)
-> 最後更新:2026-09-06 09:45
+> 最後更新:2026-09-06 12:05
 
 ## ⛔ 下一個接手的人先看這段
 
 主系統**已啟用真正的認證授權**(commit `9e86cf9`)。這改變了部署行為:
 
-- 上線前必讀 **`docs/report20260905-2.md`**,照它的 §2 逐步做。
-- 順序:輪替 JWT 簽章密鑰 → 注入一次性 SetupToken → **先跑重複帳號檢查 SQL** → 套用 migration
-  → 建立管理者與現場帳號。**在建立帳號完成之前,現場完全無法操作系統**,這是刻意的。
+- 上線前必讀 **`docs/report20260906-2.md`**,照它的 §2 逐步做(它取代了
+  `docs/report20260905-2.md` §2 的順序;背景與風險清單仍看 20260905-2)。
+- 順序:輪替 JWT 簽章密鑰 → 只起 postgres → 備份 → **跑 `./scripts/preflight-check.sh` 且 exit 0**
+  → 拉起新版容器(migration 在此自動套用)→ 注入一次性 SetupToken → 建立管理者與現場帳號
+  → 清空 SetupToken。**在建立帳號完成之前,現場完全無法操作系統**,這是刻意的。
 - ~~**`/api/erp/push-orders` 現在需要身分,ERP 暫時無法推單**~~ ✅ 2026-09-06 S7 把**管道**建好了。
   ERP 只要帶 `X-Api-Key` 標頭就能推單。**但這一趟只做管道,沒有要立刻串接** ——
   金鑰等 ERP 真的要接的那天再建(步驟 `docs/report20260906-1.md` §2.1)。
@@ -20,12 +22,29 @@
 → 分趟實作修正。**這件事已收尾** —— 2026-09-06 PR #2 與 PR #3 都已合併,
 S1–S7 全部進了 `main`(`ae1d45a`)。分支 `fix/audit-20260903` 與 `feat/extract-maintenance` 已完成任務。
 
-**下一步不是寫功能,是上線**:七個 EF migration 還沒實際套用、現場帳號還沒建立,
-在建立帳號完成之前現場完全無法操作系統(見置頂段落與 Next Step 1)。
+**下一步不是寫功能,是上線**:八個 EF migration 還沒實際套用、現場帳號還沒建立,
+在建立帳號完成之前現場完全無法操作系統。
+**上線 runbook 見 `docs/report20260906-2.md`**(2026-09-06 新增,含可貼指令與回滾),
+前置檢查跑 `./scripts/preflight-check.sh`。
 
 ## Done
 
 ### 本回合(2026-09-06)
+
+**上線前置整備**(`docs/report20260906-2.md`)—— PR 合併後接著做的收尾:
+
+- **抓到照文件做會出事的地方**:migration 是 API 啟動時自動套用的(`Program.cs:159`),
+  但 `report20260905-2.md` §2 把它寫成獨立的第 3 步,排在「重啟 API」之後 ——
+  照字面做的話,那段「不可略過」的重複帳號檢查會在事情發生完之後才跑到。
+  真撞上時 `MigrateWithRetryAsync` 還會把必然失敗的 migration 重試 10 次,
+  加上 `restart: always` 變成無限重啟,現場看到的只會是「API 一直起不來」。
+- **`Auth__SetupToken` 根本沒接進 docker-compose**,§2 第 2 步做不到。已補上該變數與
+  `Auth__RefreshTokenHours`,`.env.example` 同步。
+- 新增唯讀前置檢查 **`scripts/preflight-check.sh`**:環境設定、migration 落差、
+  兩個唯一索引的重複資料、帳號現況;有阻斷就 `exit 1`。
+  以假 `docker` 跑過 healthy / fresh / dupes 三種情境,退出碼正確;
+  **但沒對真實 PostgreSQL 跑過**,SQL 只經人工核對。
+- 順帶更正:待套用 migration 是 **8 個**不是 7 個;另記下限流分區走 Tunnel 時會全體共用一個桶。
 
 **S7 · ERP 機器對機器憑證 + 三項認證 backlog**(`docs/report20260906-1.md`、`docs/spec20260906-s7-v1.md`)
 
@@ -124,14 +143,19 @@ CORS 之後;移除已進版控的 JWT 密鑰。前端接真登入、只存權杖
    (`docs/report20260906-1.md` §2.1,明文只回傳一次)。
    在那之前 `ApiKeys` 空表,系統正常運作。
    真正要串的那天要一併確認的:ERP 端誰負責改、金鑰放在對方哪個設定檔、輪替窗口怎麼安排。
-3. **依 `docs/report20260905-2.md` §2 完成上線步驟**(Eric 手動,Docker 在這台機器不可用故無法代跑)。
-   見本檔開頭的置頂段落。前端改完要**重建容器**才會上線。
-4. **七個 EF migration 尚未實際套用**(本機無 Docker,只驗過 migration 產生與 build)。
-   S7 新增的 `AddApiKeys` 與 `AddRefreshTokens` 是純新增資料表,**沒有** DBA 前置條件。
-   另外兩個有前置條件,套用前必須先查:
+3. **上線** —— 照 **`docs/report20260906-2.md` §2** 的 A / B / C / D / E 五段走(Eric 手動,
+   Docker 在這台機器不可用故無法代跑)。**不要照 `docs/report20260905-2.md` §2 的字面順序** ——
+   那份把「套用 migration」寫成獨立的第 3 步,但本專案的 migration 是
+   **API 一啟動就自動套用**(`Program.cs:159` `MigrateWithRetryAsync`),
+   照字面做會在檢查跑到之前就把 migration 套下去。20260906-2 已修正順序並附可貼指令。
+   前端改完要**重建容器**才會上線。
+4. **八個 EF migration 尚未實際套用**(不是先前寫的七個;本機無 Docker,只驗過產生與 build)。
+   其中六個無前置條件,兩個有,**必須在拉起新版 API 之前查完**:
    - `AddProductCodeUniqueIndex` —— 既有 Products 若有重複 ProductCode,建索引會失敗。
    - `AddUsernameNormalizedUniqueIndex` —— 既有 Users 若有僅大小寫不同的重複帳號,建索引會失敗、
-     **整個 migration 回滾**。檢查 SQL 在 `docs/report20260905-2.md` §2 第 3 步,不可略過。
+     **整個 migration 回滾**,容器接著無限重啟。
+   跑 **`./scripts/preflight-check.sh`**(唯讀)會一次查完這兩項加環境設定與 migration 落差,
+   有阻斷就 `exit 1`。**沒過就不要 `docker compose up --build`**。
 5. **實機驗收**:走一次 完工 → 整頁重載 → 確認完工單不會復活、順序與狀態正確;
    以及登入 → 各頁面 → **放超過 2 小時**確認會自動換發而不是被踢出去(S7 G4);
    再走一次 ADMIN 建帳號 → 該帳號登入 → 停用 → 確認立刻登不進去(S7 G2 + G4)。
@@ -177,6 +201,11 @@ CORS 之後;移除已進版控的 JWT 密鑰。前端接真登入、只存權杖
   解法是 `sudo xcodebuild -license accept`。`dotnet` 從頭到尾不受影響。
 - **`gh` 在沙箱內會 TLS 憑證驗證失敗**(`x509: OSStatus -26276`),
   查 PR / API 要帶 `dangerouslyDisableSandbox`。`git` 走 https 不受影響。
+- **migration 是 API 啟動時自動套用的**(`Program.cs:159`),不是可以挑時機的獨立步驟。
+  所有 DBA 前置檢查必須在 `docker compose up --build` **之前**跑完,
+  否則「不可略過的檢查」會在事情發生完之後才跑到 → `docs/report20260906-2.md` 置頂段。
+- **限流分區走 Cloudflare Tunnel 時會全體共用一個桶**(`ForwardLimit=1` 取到的是 cloudflared 的容器 IP)。
+  廠內直連不受影響。上線後看遠端存取有沒有撞 429 再決定處理 → `docs/report20260906-2.md` §1.3。
 - **`git push` 是全域紅線**,一律需 Eric 明確同意。
 - **這台機器的沙箱會讓 `dotnet` 指令假失敗**:卡滿 5 分鐘後回報「建置失敗,0 個警告,0 個錯誤」。
   沙箱外同一條指令 1.7 秒成功。跑 dotnet 一律要 `dangerouslyDisableSandbox: true`,
