@@ -1,5 +1,5 @@
 # Handoff — Claude(Printing IoT)
-> 最後更新:2026-09-06 21:35
+> 最後更新:2026-09-07 09:40
 
 ## ⛔ 下一個接手的人先看這段
 
@@ -31,7 +31,34 @@ S1–S7 全部進了 `main`(`ae1d45a`)。分支 `fix/audit-20260903` 與 `feat/e
 
 ## Done
 
-### 本回合(2026-09-06)
+### 本回合(2026-09-07)
+
+**S9 · 設計規劃書對抗性重整**(`docs/spec20260907-s9-v1.md`;交付頁面見下)
+
+稽核對象 `doc/整合設計與重新拆分規劃_20260617.md`(3 個月前)。以對抗性立場逐條證偽,
+不採信任何文件自述,一律回到程式碼與**執行中的系統**取證。
+
+**核心發現:那份文件請 Eric 在拆分方案 A/B/C 之間拍板,但現實已經自己決定了一半。**
+Smart Parts 於 2026-07-06 隨 migration `RemoveSmartPartsModule` 整塊移出,零件與保養都外掛化了,
+現況是「方案 C 走了一半」,那個分岔口不存在。
+
+30 條逐條證偽,其中最要緊的:
+- **§3.1 點名的八張資料表,實查 FlexoDB 一張都不在**(Machines/Alarms/Parts/Suppliers/SupplierParts/Inventory…)
+- **「認證:JWT + BCrypt + Role-based」當時為假** —— 元件都在但沒有預設拒絕,無權杖照樣打得進去。
+  判準因此定為「**預設是否成立**」而不是「元件是否存在」。
+- 順帶查出 **`ProductionLogs` / `ProductionCompletions` / `Products` 皆 0 列** ——
+  S2→S3→S4→S8 整條報表鏈在正式庫上還沒跑過一筆真資料,只有測試背書。
+
+重寫後的開放問題 14 條,新抓到兩條結構性的:**O-05 對外入口(Cloudflare Tunnel)不在版控裡**,
+repo 內沒有任何真相來源;**O-06 `doc/` 由 DocsController 對外提供,產品 UI 裡的說明文件
+正在描述一個不存在的系統**。
+
+**工作流的兩件事(依 `[[pm-rd-tester-doc-deliverable-blind-spot]]` 預期處理)**:
+Tester 的驗收報告一如既往沒落檔,改由主流程親自抽驗 —— 九項資料庫實查數字與規格完全一致、
+`Program.cs:84` / `OeeCalculator.cs` 132 行 / `reportUtils.js:165` 等引用行號全部屬實、
+六張 mermaid 以真正的解析器驗過**全部渲染成功**。
+另外 PM 階段覆寫了既有的 `docs/spec-v2.md`,但**覆寫前已先另存**為
+`docs/spec-cmigration-v2-20260708.md`(逐位元組相同,已驗)。
 
 **S8 · 後端彙總端點 + OEE 黃金向量**(`docs/report20260906-3.md`、`docs/spec20260906-s8-v1.md`)
 
@@ -232,6 +259,9 @@ CORS 之後;移除已進版控的 JWT 密鑰。前端接真登入、只存權杖
   否則「不可略過的檢查」會在事情發生完之後才跑到 → `docs/report20260906-2.md` 置頂段。
 - **限流分區走 Cloudflare Tunnel 時會全體共用一個桶**(`ForwardLimit=1` 取到的是 cloudflared 的容器 IP)。
   廠內直連不受影響。上線後看遠端存取有沒有撞 429 再決定處理 → `docs/report20260906-2.md` §1.3。
+- **`docs/spec-v1.md` / `spec-v3.md` 仍是通用檔名**,pm-rd-tester 的 PM 階段固定寫
+  `docs/spec-v{n}.md`,下次跑到 v1 或 v3 就會覆寫它們。`spec-v2.md` 已於 2026-09-07 改名避開,
+  另兩個要不要一併改名待 Eric 決定(改名有引用面的影響)。
 - **`git push` 是全域紅線**,一律需 Eric 明確同意。
 - **這台機器的沙箱會讓 `dotnet` 指令假失敗**:卡滿 5 分鐘後回報「建置失敗,0 個警告,0 個錯誤」。
   沙箱外同一條指令 1.7 秒成功。跑 dotnet 一律要 `dangerouslyDisableSandbox: true`,
