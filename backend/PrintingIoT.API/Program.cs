@@ -99,8 +99,50 @@ builder.Services.AddAuthorization(options =>
 });
 
 // Phase 4.5: Rate Limiting
+//
+// ── 額度依「現場設備數」推導,不是拍一個固定值 ────────────────────────────
+//
+// 為什麼要改:分區鍵是 RemoteIpAddress,原本的固定 100/分是照「每個來源 IP 一個桶」
+// 設計的。但實測(2026-09-07)顯示 Docker Desktop 的埠轉發會把 localhost、
+// LAN 終端(192.168.x.x)與 Tunnel 進來的流量**全部 NAT 成同一個位址**,
+// 所以實際上是**所有客戶端共用一個桶**。而一台看板每秒輪詢一次
+// (frontend/src/hooks/useRealtimeData.js)就吃掉 60/分 —— 兩台就超過 100。
+//
+// 因此額度改由 RateLimit:MaxDevices(現場會連線的設備數)乘上每台預算推導,
+// 現場加機台時只要改一個數字,而且「每台多少」這個意圖在設定檔裡看得懂。
+//
+// **誠實標註**:這個參數表達的是「整廠預算 = 台數 × 每台預算」,
+// **不是**真的每台一個桶 —— 在 NAT 之後我們分不出裝置,單一台跑掉仍可能吃光全部配額。
+// 要真正做到每台一桶,需要不可偽造的客戶端識別,那是另一件事(見 O-12)。
+// 推導只有這一份實作,限流設定與啟動記錄都呼叫它 —— 兩處各算一次就會漂移。
+// 輸入:設定來源。輸出:實際生效的額度與視窗,以及推導所用的參數(供記錄使用)。
+static RateLimitBudget ResolveRateLimitBudget(IConfiguration cfg)
+{
+    // 設備數與每台預算都夾到 1 以上:0 或負數會讓額度變成 0,
+    // 那等於第一次請求就 429,現場直接停擺 —— 一個打錯的設定值不該有這種威力。
+    var maxDevices = Math.Max(1, cfg.GetValue<int?>("RateLimit:MaxDevices") ?? 5);
+    var perDevice = Math.Max(1, cfg.GetValue<int?>("RateLimit:PerDevice:PermitLimit") ?? 120);
+    var authPerDevice = Math.Max(1, cfg.GetValue<int?>("RateLimit:Auth:PerDevicePermitLimit") ?? 5);
+
+    return new RateLimitBudget(
+        MaxDevices: maxDevices,
+        PerDevice: perDevice,
+        AuthPerDevice: authPerDevice,
+        // 絕對覆寫優先於推導值:測試要用極小的絕對上限才驗得動,正式環境走推導。
+        Global: cfg.GetValue<int?>("RateLimit:Global:PermitLimit") ?? maxDevices * perDevice,
+        Auth: cfg.GetValue<int?>("RateLimit:Auth:PermitLimit") ?? maxDevices * authPerDevice,
+        WindowMinutes: cfg.GetValue<double?>("RateLimit:PerDevice:WindowMinutes") ?? 1,
+        AuthWindowMinutes: cfg.GetValue<double?>("RateLimit:Auth:WindowMinutes") ?? 1);
+}
+
 builder.Services.AddRateLimiter(options =>
 {
+    // **設定必須在這個 lambda 裡讀**,不可以搬到外面提前讀:
+    // 這個 lambda 在 DI 建構時才執行,那時所有設定來源都已就緒;
+    // 而外層的 top-level 程式碼執行得更早,WebApplicationFactory 用
+    // ConfigureAppConfiguration 疊上去的測試設定那時還沒加進來,會讀到舊值。
+    var budget = ResolveRateLimitBudget(builder.Configuration);
+
     // 分區鍵沿用 RemoteIpAddress:UseForwardedHeaders 會在管線更前面改寫該值,
     // 因此不需改動此 lambda,順序修好即依「轉發後的真實來源」分區。
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
@@ -109,23 +151,21 @@ builder.Services.AddRateLimiter(options =>
             factory: partition => new FixedWindowRateLimiterOptions
             {
                 AutoReplenishment = true,
-                PermitLimit = 100,
+                PermitLimit = budget.Global,
                 QueueLimit = 0,
-                Window = TimeSpan.FromMinutes(1)
+                Window = TimeSpan.FromMinutes(budget.WindowMinutes)
             }));
 
     // S5:登入 / 初始化端點的專屬限流,阻擋暴力嘗試
-    var authPermitLimit = builder.Configuration.GetValue<int?>("RateLimit:Auth:PermitLimit") ?? 10;
-    var authWindowMinutes = builder.Configuration.GetValue<double?>("RateLimit:Auth:WindowMinutes") ?? 1;
     options.AddPolicy("auth", httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             factory: partition => new FixedWindowRateLimiterOptions
             {
                 AutoReplenishment = true,
-                PermitLimit = authPermitLimit,
+                PermitLimit = budget.Auth,
                 QueueLimit = 0,
-                Window = TimeSpan.FromMinutes(authWindowMinutes)
+                Window = TimeSpan.FromMinutes(budget.AuthWindowMinutes)
             }));
 
     options.RejectionStatusCode = 429;
@@ -158,6 +198,17 @@ if (!app.Environment.IsEnvironment("Testing"))
     using var scope = app.Services.CreateScope();
     await scope.ServiceProvider.MigrateWithRetryAsync<PrintingContext>();
 }
+
+// 限流額度是推導出來的,不印出來就沒人知道現在實際生效的是多少。
+// 現場抱怨 429 時,這一行是第一個要看的東西。
+var rateLimitBudget = ResolveRateLimitBudget(app.Configuration);
+app.Logger.LogInformation(
+    "限流額度:設備數 {MaxDevices} × 每台 {PerDevice} = 全域 {Global}/{Window} 分;" +
+    "登入每台 {AuthPerDevice} = {Auth}/{AuthWindow} 分。" +
+    "註:NAT 之後所有來源共用同一個桶,這是整廠預算而非每台一桶。",
+    rateLimitBudget.MaxDevices, rateLimitBudget.PerDevice, rateLimitBudget.Global,
+    rateLimitBudget.WindowMinutes, rateLimitBudget.AuthPerDevice,
+    rateLimitBudget.Auth, rateLimitBudget.AuthWindowMinutes);
 
 // ── HTTP 管線(順序不可調換,見 spec20260905-s5-v1 §3.1)──────────────────
 
@@ -193,3 +244,12 @@ app.MapControllers();
 app.Run();
 
 public partial class Program { }
+
+/// <summary>
+/// 限流額度的推導結果。Global / Auth 是實際生效的上限,
+/// MaxDevices / PerDevice / AuthPerDevice 保留下來只為了讓啟動記錄說得出「這個數字怎麼來的」。
+/// </summary>
+internal record RateLimitBudget(
+    int MaxDevices, int PerDevice, int AuthPerDevice,
+    int Global, int Auth,
+    double WindowMinutes, double AuthWindowMinutes);
