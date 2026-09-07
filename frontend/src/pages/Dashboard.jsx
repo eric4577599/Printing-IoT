@@ -14,6 +14,7 @@ import {
 import { finishHeadOrder, promoteSelectedToHead, returnCurrentToQueue } from '../utils/orderQueue';
 import { isGuid } from '../utils/orderMapper';
 import { calculateOEE, durationToMinutes } from '../utils/reportUtils';
+import { sendCompletionWithRetry } from '../utils/completionRetry';
 import { resolveFactoryDate, DEFAULT_DAY_BOUNDARY_HOUR, DEFAULT_TIME_ZONE } from '../utils/factoryDate';
 import { useLanguage } from '../modules/language/LanguageContext';
 
@@ -434,8 +435,19 @@ const Dashboard = () => {
             })),
         };
 
-        createProductionCompletion(completionPayload)
-            .then(result => {
+        // S11:失敗不再只是 console.warn —— 依 completionRetry 的判準退避重試。
+        // 重送安全的前提是後端以 clientRecordId 冪等去重,重試不會產生第二筆實績。
+        // 送出全程不 await:重試在背景進行,現場的換單、計時歸零一秒都不等它。
+        sendCompletionWithRetry(completionPayload, {
+            send: createProductionCompletion,
+            isCancelled: () => unmountedRef.current,
+            onAttempt: ({ phase, reason, delayMs, attempt }) => {
+                if (phase === 'retrying') {
+                    addLog(`Completion sync retry #${attempt + 1} in ${Math.round(delayMs / 1000)}s (${reason})`);
+                }
+            },
+        }).then(({ ok, result, reason, attempts }) => {
+            if (ok) {
                 // 後端算出的工廠日與四個率值覆寫回本地紀錄,避免兩份數字打架
                 patchProductionRecord(productionRecord.id, {
                     syncState: 'synced',
@@ -446,13 +458,15 @@ const Dashboard = () => {
                     performanceRate: result.performanceRate,
                     qualityRate: result.qualityRate,
                 });
-                addLog(`Completion synced to backend: ${result.id}`);
-            })
-            .catch(err => {
-                // 斷網 / 4xx / 5xx 一律不阻擋現場:不 alert、不中止換單,本地紀錄留 pending
-                console.warn('完工實績落地後端失敗,本地紀錄標記為 pending', err);
-                addLog('Completion sync FAILED (kept locally as pending)');
-            });
+                addLog(`Completion synced to backend: ${result.id}`
+                    + (attempts > 1 ? ` (after ${attempts} attempts)` : ''));
+                return;
+            }
+            // 重試用盡仍失敗:一律不阻擋現場(不 alert、不中止換單),本地紀錄留 pending,
+            // 由報表頁的「本機舊實績回填」面板(S10)事後補送。
+            console.warn(`完工實績落地後端失敗(${reason},共 ${attempts} 次),本地紀錄標記為 pending`);
+            addLog(`Completion sync FAILED after ${attempts} attempts (${reason}) — kept locally as pending`);
+        });
         // -----------------------------------------
 
         // --- Publish to MQTT for Backend Storage ---
@@ -875,6 +889,10 @@ const Dashboard = () => {
 
 
     // Ref for Timer Access (Avoid re-render loop)
+    // S11:元件卸載後不再重試(換頁 / 登出時避免背景還在打 API)
+    const unmountedRef = useRef(false);
+    useEffect(() => () => { unmountedRef.current = true; }, []);
+
     const currentDataRef = useRef(currentData);
     // eslint-disable-next-line react-hooks/immutability
     currentDataRef.current = currentData; // Update ref directly in render to satisfy strict lint if needed
