@@ -15,6 +15,7 @@ import {
 import DailyReportView from './DailyReportView';
 import MonthlyReportView from './MonthlyReportView';
 import StopReasonView from './StopReasonView';
+import BackfillPanel from './BackfillPanel';
 import { useLanguage } from '../language/LanguageContext';
 import { useProductionRecords, patchLocalProductionRecord } from '../../hooks/useProductionRecords';
 
@@ -235,6 +236,9 @@ const ReportsPage = () => {
                         {localOnlyCount} {t('reportView.state.localOnly')}
                     </div>
                 )}
+                {/* 舊實績回填:只在真的有本機殘留時出現;回填完重新載入,
+                    讓 localOnlyCount 歸零後報表自動改用後端彙總(S8 §4)。 */}
+                <BackfillPanel localOnlyCount={localOnlyCount} onCompleted={reload} />
             </div>
         );
     };
