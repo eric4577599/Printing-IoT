@@ -44,6 +44,21 @@ const LoginModal = ({ isOpen, onClose }) => {
     const [loginUsername, setLoginUsername] = useState('');
     const [loginPassword, setLoginPassword] = useState('');
 
+    // S13:記住「帳號欄目前這個值是名冊填的」,用來分辨使用者自己打的值(那種不可覆寫)
+    const rosterFilledUsernameRef = React.useRef(null);
+    const [usernameKept, setUsernameKept] = useState(false);
+
+    /**
+     * 使用者自行改動帳號欄。
+     * 輸入:新值;輸出:無;
+     * 邏輯:改過之後這個值就屬於使用者,名冊列不得再覆寫它;同時收掉保留提示。
+     */
+    const handleUsernameChange = (value) => {
+        rosterFilledUsernameRef.current = null;
+        setUsernameKept(false);
+        setLoginUsername(value);
+    };
+
     // -- Shift Defaults (Updated per req) --
     // Day: 08:00~18:00, Night: 20:00~04:00
     const [shifts, setShifts] = useState(() => {
@@ -103,14 +118,35 @@ const LoginModal = ({ isOpen, onClose }) => {
     /**
      * 點選名冊一列。
      * 輸入:名冊列;輸出:無;
-     * 邏輯:僅把帳號填進登入欄與編輯欄,**不**代表已登入 —— 密碼仍必須手動輸入。
+     * 邏輯:填入名冊編輯欄;帳號欄則**只在安全時才覆寫** —— 不代表已登入,密碼仍必須手動輸入。
+     *
+     * S13:原本無條件覆寫帳號欄,實際踩到過 —— 帳號打好了、手滑點到名冊某列,
+     * 帳號就被換成該列的代碼且畫面毫無提示,送出後只說「帳號或密碼錯誤」,
+     * 現場沒有人猜得到自己登的根本不是原本那個帳號。
+     *
+     * 判準是「這個值是誰打的」而不是「有沒有值」:
+     *  - 空白 → 填入
+     *  - 目前的值就是上一次由名冊填進去的 → 填入(名冊列之間可以正常切換)
+     *  - 使用者自己打的 → **不覆寫**,並顯示一行提示,不靜默略過
      */
     const handleUserRowClick = (u) => {
         setSelectedUserId(u.id);
         setNewUserCode(u.id);
         setNewUserName(u.name);
         setNewUserShift(u.shift || '');
-        setLoginUsername(u.username || u.name || '');
+
+        const next = u.username || u.name || '';
+        const current = loginUsername.trim();
+        const typedByUser = current !== '' && current !== rosterFilledUsernameRef.current;
+
+        if (typedByUser) {
+            setUsernameKept(true);
+            return;
+        }
+
+        rosterFilledUsernameRef.current = next;
+        setLoginUsername(next);
+        setUsernameKept(false);
     };
 
     /**
@@ -244,8 +280,12 @@ const LoginModal = ({ isOpen, onClose }) => {
                         <input
                             aria-label={t('login.placeholder.username')}
                             value={loginUsername}
-                            onChange={e => setLoginUsername(e.target.value)}
+                            onChange={e => handleUsernameChange(e.target.value)}
                         />
+                        {/* S13:沒有覆寫這件事要說出來,否則使用者不知道剛才那一點沒生效 */}
+                        {usernameKept && (
+                            <span className={styles.fieldNote}>{t('login.hint.usernameKept')}</span>
+                        )}
                     </div>
                     <div className={styles.infoField}>
                         <label>{t('login.placeholder.password')}</label>
@@ -399,7 +439,7 @@ const LoginModal = ({ isOpen, onClose }) => {
                                 placeholder={t('login.placeholder.username')}
                                 className={styles.adminInput}
                                 value={loginUsername}
-                                onChange={e => setLoginUsername(e.target.value)}
+                                onChange={e => handleUsernameChange(e.target.value)}
                                 autoFocus
                             />
                             <input

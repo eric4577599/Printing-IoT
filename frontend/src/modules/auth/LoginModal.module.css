@@ -120,6 +120,14 @@
     color: var(--text-primary);
 }
 
+.fieldNote {
+    margin-top: 4px;
+    font-size: 0.72rem;
+    line-height: 1.35;
+    color: var(--primary-blue);
+    max-width: 160px;
+}
+
 .infoField input:disabled {
     background-color: #f9f9f9;
     color: #999;

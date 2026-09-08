@@ -194,3 +194,84 @@ describe('S12 名冊的新增與刪除', () => {
         expect(screen.getByText(/不會建立或停用後端帳號/)).toBeTruthy();
     });
 });
+
+describe('S13 點名冊列不得靜默覆寫已輸入的帳號', () => {
+    beforeEach(() => {
+        localStorage.setItem('appUsers', JSON.stringify([
+            { id: 'OP1', name: '王五', username: 'OP1', shift: 'A', role: 'OPERATOR' },
+            { id: 'OP2', name: '陳六', username: 'OP2', shift: 'B', role: 'OPERATOR' },
+        ]));
+        loginApi.mockReset();
+        vi.spyOn(window, 'alert').mockImplementation(() => { });
+        vi.spyOn(window, 'confirm').mockImplementation(() => true);
+    });
+
+    afterEach(() => {
+        localStorage.clear();
+        vi.restoreAllMocks();
+    });
+
+    it('帳號欄是空的 → 點列會填入該列的帳號', () => {
+        renderLogin();
+        fireEvent.click(screen.getByText('王五'));
+        expect(fieldInput('帳號 (Username)').value).toBe('OP1');
+    });
+
+    it('使用者自己打了帳號 → 點列不覆寫,並明說有保留', () => {
+        renderLogin();
+        const username = fieldInput('帳號 (Username)');
+
+        fireEvent.change(username, { target: { value: 'admin' } });
+        fireEvent.click(screen.getByText('王五'));
+
+        expect(username.value).toBe('admin');
+        expect(screen.getByText(/已保留你輸入的帳號/)).toBeTruthy();
+    });
+
+    it('名冊列之間仍可正常切換 —— 判準是「誰打的」不是「有沒有值」', () => {
+        renderLogin();
+        const username = fieldInput('帳號 (Username)');
+
+        fireEvent.click(screen.getByText('王五'));
+        expect(username.value).toBe('OP1');
+
+        fireEvent.click(screen.getByText('陳六'));
+        expect(username.value).toBe('OP2');
+        expect(screen.queryByText(/已保留你輸入的帳號/)).toBeNull();
+    });
+
+    it('清空帳號欄之後,點列又能填入了', () => {
+        renderLogin();
+        const username = fieldInput('帳號 (Username)');
+
+        fireEvent.change(username, { target: { value: 'admin' } });
+        fireEvent.click(screen.getByText('王五'));
+        expect(username.value).toBe('admin');
+
+        fireEvent.change(username, { target: { value: '' } });
+        fireEvent.click(screen.getByText('王五'));
+        expect(username.value).toBe('OP1');
+    });
+
+    it('改動帳號欄會收掉保留提示', () => {
+        renderLogin();
+        const username = fieldInput('帳號 (Username)');
+
+        fireEvent.change(username, { target: { value: 'admin' } });
+        fireEvent.click(screen.getByText('王五'));
+        expect(screen.getByText(/已保留你輸入的帳號/)).toBeTruthy();
+
+        fireEvent.change(username, { target: { value: 'admin2' } });
+        expect(screen.queryByText(/已保留你輸入的帳號/)).toBeNull();
+    });
+
+    it('被擋下覆寫時,名冊編輯欄仍然照常填入(選取本身有生效)', () => {
+        renderLogin();
+        fireEvent.change(fieldInput('帳號 (Username)'), { target: { value: 'admin' } });
+        fireEvent.click(screen.getByText('王五'));
+
+        expect(fieldInput('代碼').value).toBe('OP1');
+        expect(fieldInput('操作員').value).toBe('王五');
+        expect(rosterButtons().remove.disabled).toBe(false);
+    });
+});
