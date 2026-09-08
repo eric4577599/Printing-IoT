@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import useProductionStore from '../stores/productionStore';
 import { useLanguage } from '../modules/language/LanguageContext';
-import { getDocument } from '../services/api';
+import { useAuth } from '../modules/auth/AuthContext';
+import { listDocs, loadDoc } from '../modules/docs/docRegistry';
 
 /**
  * DocsPortal — 內建文件入口
@@ -21,59 +22,36 @@ const DocsPortal = () => {
   const [activeTab, setActiveTab] = useState('docs'); // 'docs' | 'logs'
   const logs = useProductionStore((s) => s.logs);
 
-  /**
-   * 文件索引 — 分類與清單顯示名稱走 i18n,path 為資料不翻譯
-   * 輸入:t(語系翻譯函式);輸出:分類/檔案陣列供側欄渲染
-   */
-  const DOC_INDEX = [
-    { category: `📋 ${t('docs.category.workflow')}`, files: [
-      { name: t('docs.file.manual'), path: '操作說明書.md' },
-      { name: 'Operator Manual', path: 'Operator Manual.md' },
-      { name: 'Supervisor Manual', path: 'Supervisor_Manual.md' },
-    ]},
-    { category: `🏗️ ${t('docs.category.design')}`, files: [
-      { name: t('docs.file.sasd'), path: 'SASD說明書.md' },
-      { name: t('docs.file.dev'), path: '開發說明書.md' },
-      { name: t('docs.file.mqtt'), path: 'MQTT訊息處理流程.md' },
-      { name: t('docs.file.maintenance'), path: '維護保養開發設計書.md' },
-    ]},
-    { category: `🚀 ${t('docs.category.deploy')}`, files: [
-      { name: 'Deployment Guide v1', path: 'DEPLOYMENT_GUIDE_v1.md' },
-      { name: 'Flexo HQ Integration', path: 'FLEXO_HQ_INTEGRATION.md' },
-      { name: t('docs.file.handover'), path: 'HANDOVER.md' },
-      { name: t('docs.file.projectStatus'), path: 'PROJECT_STATUS.md' },
-    ]},
-    { category: `🔄 ${t('docs.category.refactor')}`, files: [
-      { name: t('docs.file.refactorLog'), path: 'REFACTORING_LOG.md' },
-    ]},
-    { category: `🧪 ${t('docs.category.testing')}`, files: [
-      { name: t('docs.file.testCases'), path: 'TEST_CASES.md' },
-      { name: t('docs.file.stressTest'), path: 'STRESS_TEST_REPORT.md' },
-      { name: `${t('docs.file.review')} 2026/01/16`, path: 'PROJECT_REVIEW_2026_01_16.md' },
-    ]},
-    { category: `📅 ${t('docs.category.meeting')}`, files: [
-      { name: `2026/01/22 ${t('docs.file.meeting1')}`, path: '20260122_維修管理系統分離_團隊會議議程.md' },
-      // 2026/01/22 Smart Parts 第一階段會議議程:模組已隨 C′ 遷移移入 MM,索引項移除;原始檔仍保留於 doc/
-      { name: `2026/01/22 ${t('docs.file.meeting2')}`, path: '20260122正隆苗栗保養計劃討論.md' },
-    ]},
-  ];
+  const { hasRole } = useAuth();
 
   /**
-   * 讀取一份設計文件並填入內容區。
-   * 輸入:檔名(DOC_INDEX 內的 path);輸出:無(改寫 content / error / loading 狀態);
-   * 邏輯:一律走 services/api.js 的 getDocument(),讓請求攔截器帶上 Authorization ——
-   *       S5 起 /api/docs 需要登入,原本的瀏覽器原生 fetch 不經攔截器會固定回 401。
-   *       axios 失敗時錯誤訊息取 HTTP 狀態碼(無 response 則為網路錯誤訊息)。
+   * 文件索引 —— 由 docRegistry 依「建置時實際收到的檔案」+「當前角色」產生。
+   * 輸入:hasRole / t;輸出:分類與檔案陣列供側欄渲染;
+   * 邏輯:不再手寫清單 —— 手寫的會列出不存在的檔(原本的 開發說明書.md、
+   *       維護保養開發設計書.md 就是),點下去必然 404。
    */
-  const fetchDocument = async (filePath) => {
+  const docIndex = useMemo(() => listDocs({ hasRole, t }), [hasRole, t]);
+
+  /**
+   * 讀取一份文件並填入內容區。
+   * 輸入:檔名;輸出:無(改寫 content / error / loading 狀態);
+   * 邏輯:S14 起**不發任何網路請求** —— 內容在建置時就收進前端,
+   *       點選時載入對應的 chunk。因此不會再有 401 / 404 / 斷線問題。
+   *       仍保留錯誤處理:角色無權(FORBIDDEN)或檔案不存在(NOT_FOUND)要說清楚是哪一種。
+   */
+  const openDocument = async (filePath) => {
     setLoading(true);
     setError(null);
     try {
-      const text = await getDocument(filePath);
+      const text = await loadDoc(filePath, hasRole);
       setContent(text);
     } catch (err) {
-      const detail = err?.response?.status ? `HTTP ${err.response.status}` : err.message;
-      setError(`${t('docs.error.loadFail')}: ${detail}`);
+      const reason = err?.code === 'FORBIDDEN'
+        ? t('docs.error.forbidden')
+        : err?.code === 'NOT_FOUND'
+          ? t('docs.error.notFound')
+          : err.message;
+      setError(`${t('docs.error.loadFail')}: ${reason}`);
       setContent('');
     } finally {
       setLoading(false);
@@ -83,7 +61,7 @@ const DocsPortal = () => {
   const handleSelect = (file) => {
     setSelectedFile(file);
     setActiveTab('docs');
-    fetchDocument(file.path);
+    openDocument(file.path);
   };
 
   return (
@@ -135,7 +113,7 @@ const DocsPortal = () => {
           🔴 {t('docs.tab.liveLog')} ({logs.length})
         </button>
 
-        {DOC_INDEX.map((cat) => (
+        {docIndex.map((cat) => (
           <div key={cat.category} style={{ marginBottom: '12px' }}>
             <div style={{
               padding: '6px 16px',
@@ -267,9 +245,6 @@ const DocsPortal = () => {
             color: '#d32f2f',
           }}>
             <strong>⚠️ {t('docs.error.label')}</strong> {error}
-            <p style={{ fontSize: '0.85rem', marginTop: '8px', color: '#666' }}>
-              {t('docs.error.hint')} <code>/api/docs/:filename</code>
-            </p>
           </div>
         )}
 

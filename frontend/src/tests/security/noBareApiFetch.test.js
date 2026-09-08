@@ -38,11 +38,26 @@ describe('前端不得繞過 api.js 直接 fetch 後端(S5 補強)', () => {
         ).toEqual([]);
     });
 
-    it('DocsPortal 取文件走 services/api.js 的 getDocument()', () => {
+    /*
+     * S14:原本這裡釘的是「DocsPortal 必須 import getDocument」。
+     * 那條判準是 S5 當下的正確代理 —— 它要防的是裸 fetch 不帶權杖而固定回 401。
+     * 但 S14 之後 DocsPortal **完全不發網路請求**(文件在建置時就收進前端),
+     * 判準的前提消失了。不放寬斷言,換成對準真實不變量的兩條:
+     * 不得有任何網路呼叫,而且內容只能從 docRegistry 這個唯一入口取得。
+     */
+    it('DocsPortal 完全不發網路請求(S14 起文件不經 API)', () => {
         const found = sources.find(([f]) => f.endsWith('pages/DocsPortal.jsx'));
         expect(found, 'DocsPortal.jsx 不存在').toBeDefined();
         const code = found[1];
-        expect(code).toContain("from '../services/api'");
-        expect(code).toContain('getDocument(');
+        expect(code).not.toMatch(/(?<![.\w])fetch\s*\(/);
+        expect(code).not.toContain('XMLHttpRequest');
+        expect(code).not.toContain("from '../services/api'");
+    });
+
+    it('DocsPortal 只從 docRegistry 取內容 —— 權限在那裡收斂', () => {
+        const found = sources.find(([f]) => f.endsWith('pages/DocsPortal.jsx'));
+        const code = found[1];
+        expect(code).toContain("from '../modules/docs/docRegistry'");
+        expect(code).toContain('loadDoc(');
     });
 });

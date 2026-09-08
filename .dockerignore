@@ -2,3 +2,15 @@
 # macOS exfat metadata(eric-secretary 加,2026-05-05)
 ._*
 **/._*
+
+# S14:前端建置脈絡改為專案根之後,把與建置無關的東西擋在外面
+.git
+node_modules
+**/node_modules
+frontend/dist
+backend/**/bin
+backend/**/obj
+docs
+tests
+.credentials-*.txt
+.env

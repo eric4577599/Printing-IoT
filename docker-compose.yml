@@ -2,8 +2,10 @@ services:
   # Frontend Application (Vite/React)
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      # S14:脈絡是**專案根**不是 ./frontend —— 文件 doc/ 在專案根,
+      # 用 ./frontend 當脈絡時 Docker 根本看不到它(後端就是這樣讓 /api/docs 全部 404 的)。
+      context: .
+      dockerfile: frontend/Dockerfile
     ports:
       - "5600:80" # Map container port 80 to host port 5600 (as per user preference in docs)
     volumes:
