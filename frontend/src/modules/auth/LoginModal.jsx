@@ -258,27 +258,44 @@ const LoginModal = ({ isOpen, onClose }) => {
                         />
                     </div>
 
-                    <div className={styles.infoField}>
-                        <label>{t('login.label.operator')}</label>
-                        <input value={newUserName} onChange={e => setNewUserName(e.target.value)} />
-                    </div>
-                    {/*
-                    <div className={styles.infoField}>
-                        <label>{t('login.label.workPeriod')}</label>
-                        <input disabled placeholder={t('login.placeholder.auto')} style={{ background: '#eee' }} />
-                    </div>
-                    */}
-                    <div className={styles.infoField}>
-                        <label>{t('login.label.code')}</label>
-                        <input value={newUserCode} onChange={e => setNewUserCode(e.target.value)} style={{ width: '80px' }} />
-                    </div>
-                    <div className={styles.infoField}>
-                        <label>Default</label>
-                        <input value={newUserShift} onChange={e => setNewUserShift(e.target.value)} placeholder="A/B" style={{ width: '50px' }} />
-                    </div>
                 </div>
 
                 {/* Part 3: User Table */}
+                {/*
+                  S12:代碼 / 班別 / 操作員 是**下面這張名冊表的編輯欄**,不是登入憑證,
+                  原本卻和帳號 / 密碼混在同一條 infoBar 裡。除了語意不清,六個欄位也塞不進
+                  640px 的卡片 —— infoBar 沒有 flex-wrap,最後兩欄直接溢位到卡片外面,
+                  使用者點不到,連帶讓「新增」永遠缺代碼而無法使用。
+                  改為獨立一列、依表頭順序(代碼 / 班別 / 操作員)擺在表格正上方。
+                */}
+                <div className={styles.rosterEditor}>
+                    <div className={styles.infoField}>
+                        <label>{t('login.label.code')}</label>
+                        <input
+                            aria-label={t('login.label.code')}
+                            value={newUserCode}
+                            onChange={e => setNewUserCode(e.target.value)}
+                        />
+                    </div>
+                    <div className={styles.infoField}>
+                        <label>{t('login.col.shift')}</label>
+                        <input
+                            aria-label={t('login.col.shift')}
+                            value={newUserShift}
+                            onChange={e => setNewUserShift(e.target.value)}
+                            placeholder="A/B"
+                        />
+                    </div>
+                    <div className={styles.infoField}>
+                        <label>{t('login.label.operator')}</label>
+                        <input
+                            aria-label={t('login.label.operator')}
+                            value={newUserName}
+                            onChange={e => setNewUserName(e.target.value)}
+                        />
+                    </div>
+                </div>
+
                 <div className={styles.tableSection}>
                     <div className={styles.tableWrapper}>
                         <table className={styles.table}>
@@ -306,10 +323,22 @@ const LoginModal = ({ isOpen, onClose }) => {
                         </table>
                     </div>
                     <div className={styles.sideButtons}>
-                        <button className={styles.sideBtn} onClick={handleAddUser}>{t('login.btn.add')}</button>
-                        <button className={styles.sideBtn} onClick={handleDeleteUser}>{t('login.btn.delete')}</button>
+                        {/* S12:停用狀態讓「為什麼按了沒反應」變成看得見的 —— 原本只有按下去才跳 alert */}
+                        <button
+                            className={styles.sideBtn}
+                            onClick={handleAddUser}
+                            disabled={!newUserCode.trim() || !newUserName.trim()}
+                        >{t('login.btn.add')}</button>
+                        <button
+                            className={styles.sideBtn}
+                            onClick={handleDeleteUser}
+                            disabled={!selectedUserId}
+                        >{t('login.btn.delete')}</button>
                     </div>
                 </div>
+
+                {/* S12:名冊只是這台機器的觸控快捷清單,新增不等於建立帳號 —— 現場最容易誤會的一點 */}
+                <p className={styles.rosterHint}>{t('login.hint.rosterLocal')}</p>
 
                 {/* Part 4: Shift Table */}
                 <div className={styles.tableSection}>

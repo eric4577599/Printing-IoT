@@ -53,9 +53,15 @@
     border-color: var(--primary-blue);
 }
 
-/* Part 2: Info Bar */
+/* Part 2: Info Bar —— S12 起只放登入相關(當前班別 / 帳號 / 密碼) */
 .infoBar {
     display: flex;
+    /*
+      S12:原本沒有 flex-wrap。windowContainer 是固定 640px,欄位一多就會溢位到
+      卡片外面(灰底上),使用者點不到也看不出那是同一個視窗的東西。
+      即使現在只剩三欄放得下,仍保留 wrap —— 日後再加一欄要換行而不是再溢位一次。
+    */
+    flex-wrap: wrap;
     gap: 20px;
     align-items: center;
     background: var(--bg-secondary);
@@ -67,6 +73,34 @@
 .infoField {
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    /* 不得因內容而撐破容器 */
+}
+
+/*
+  Part 3 前置:名冊編輯列。
+  三欄依表頭順序(代碼 / 班別 / 操作員)等寬排開,右側留出 sideButtons 的
+  80px + 12px gap,讓欄位與下方表格的欄位對得上。
+*/
+.rosterEditor {
+    display: flex;
+    gap: 12px;
+    padding-right: 92px;
+}
+
+.rosterEditor .infoField {
+    flex: 1;
+}
+
+.rosterEditor .infoField input {
+    width: 100%;
+}
+
+.rosterHint {
+    margin: -8px 0 0;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
 }
 
 .infoField label {
@@ -162,10 +196,18 @@
     transition: all 0.2s;
 }
 
-.sideBtn:hover {
+.sideBtn:hover:not(:disabled) {
     background: var(--bg-block);
     color: var(--primary-blue);
     border-color: var(--primary-blue);
+}
+
+/* S12:條件不足時直接看得出來,不必按下去才跳 alert */
+.sideBtn:disabled {
+    background: #f5f5f5;
+    color: #aaa;
+    border-color: var(--border-color);
+    cursor: not-allowed;
 }
 
 /* Footer Bar */
