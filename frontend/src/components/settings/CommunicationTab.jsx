@@ -7,6 +7,13 @@ import {
     updateCommunicationSettings,
     testMqttConnection
 } from '../../services/api';
+import {
+    DATA_LOG_INTERVAL_MIN,
+    DATA_LOG_INTERVAL_MAX,
+    DATA_LOG_INTERVAL_DEFAULT,
+    parseLogInterval,
+    describeSeconds,
+} from '../../utils/dataLogInterval';
 
 const CommunicationTab = () => {
     const { t } = useLanguage();
@@ -34,6 +41,15 @@ const CommunicationTab = () => {
         dataLogInterval: 300, // 定時寫入間隔（秒），預設5分鐘
         machineId: 'MACHINE_01' // 機台識別碼
     });
+
+    /*
+      S15:間隔改以「秒」輸入(原本是分鐘,`Math.floor(秒/60)` 讓 6 秒顯示成 0 分鐘,
+      而且低於一分鐘的值根本打不進去)。
+      改秒之後典型值變成三位數,若沿用「每次按鍵就送出」,打「300」的過程會先把
+      **3 秒**送到後端與 Worker —— 所以改成草稿狀態,離開欄位或按 Enter 才送出。
+    */
+    const [logIntervalDraft, setLogIntervalDraft] = useState(String(DATA_LOG_INTERVAL_DEFAULT));
+    const isLogIntervalInRange = parseLogInterval(logIntervalDraft).ok;
 
     // MQTT Test State
     const [mqttTestStatus, setMqttTestStatus] = useState('idle'); // idle, testing, success, error
@@ -67,9 +83,11 @@ const CommunicationTab = () => {
                             inputDir: data.erp_input_dir,
                             outputDir: data.erp_output_dir
                         },
-                        dataLogInterval: data.data_log_interval || 300,
+                        dataLogInterval: data.data_log_interval || DATA_LOG_INTERVAL_DEFAULT,
                         machineId: data.machine_id || 'MACHINE_01'
                     });
+                    // S15:草稿要跟著後端的值走,否則畫面顯示的是預設值而非實際生效值
+                    setLogIntervalDraft(String(data.data_log_interval || DATA_LOG_INTERVAL_DEFAULT));
                 }
             } catch (error) {
                 console.error("Failed to load settings from API, using defaults.", error);
@@ -77,6 +95,45 @@ const CommunicationTab = () => {
         };
         fetchSettings();
     }, []);
+
+    /**
+     * 送出定時寫入間隔(離開欄位或按 Enter 時)。
+     * 輸入:無(取 logIntervalDraft);輸出:無;
+     * 邏輯:超出 1~3600 或非整數一律**不送出**,並把草稿還原成目前生效值 ——
+     *       送出去只會被後端靜默換成 300,那比擋下來更糟(使用者會以為設好了)。
+     */
+    const commitLogInterval = () => {
+        const { ok, seconds } = parseLogInterval(logIntervalDraft);
+        if (!ok) {
+            setLogIntervalDraft(String(commSettings.dataLogInterval));
+            return;
+        }
+        if (seconds === commSettings.dataLogInterval) return; // 沒變就不打 API
+
+        const newSettings = { ...commSettings, dataLogInterval: seconds };
+        setCommSettings(newSettings);
+        localStorage.setItem('communicationSettings', JSON.stringify(newSettings));
+        window.dispatchEvent(new Event('comm-settings-changed'));
+
+        updateCommunicationSettings({
+            plc_enabled: newSettings.plc.enabled,
+            plc_simulate: newSettings.plc.simulate,
+            plc_device_type: newSettings.plc.deviceType,
+            plc_ip: newSettings.plc.ip,
+            plc_port: newSettings.plc.port,
+            plc_motor_signal: newSettings.plc.motorSignal,
+            plc_count_signal: newSettings.plc.countSignal,
+            plc_monitor_interval: newSettings.plc.monitor_interval, // 修正 #9:保留監控頻率
+            erp_enabled: newSettings.erp.enabled,
+            erp_protocol: newSettings.erp.protocol,
+            erp_connection_type: newSettings.erp.connectionType,
+            erp_host: newSettings.erp.host,
+            erp_port: newSettings.erp.port,
+            erp_input_dir: newSettings.erp.inputDir,
+            erp_output_dir: newSettings.erp.outputDir,
+            data_log_interval: seconds,
+        }).catch(err => console.error('API update failed:', err));
+    };
 
     // Get global context for simulation
     const { isPlcConnected, togglePlcConnection, simulatePlcCount } = useOutletContext() || {};
@@ -429,48 +486,38 @@ const CommunicationTab = () => {
                     <label>{t('settingsExt.comm.logInterval')}:</label>
                     <input
                         type="number"
-                        value={Math.floor(commSettings.dataLogInterval / 60)}
-                        onChange={e => {
-                            const minutes = Number(e.target.value);
-                            const seconds = minutes * 60;
-                            const newSettings = { ...commSettings, dataLogInterval: seconds };
-                            setCommSettings(newSettings);
-                            localStorage.setItem('communicationSettings', JSON.stringify(newSettings));
-                            window.dispatchEvent(new Event('comm-settings-changed'));
-
-                            const payload = {
-                                plc_enabled: newSettings.plc.enabled,
-                                plc_simulate: newSettings.plc.simulate,
-                                plc_device_type: newSettings.plc.deviceType,
-                                plc_ip: newSettings.plc.ip,
-                                plc_port: newSettings.plc.port,
-                                plc_motor_signal: newSettings.plc.motorSignal,
-                                plc_count_signal: newSettings.plc.countSignal,
-                                plc_monitor_interval: newSettings.plc.monitor_interval, // 修正 #9:保留監控頻率
-                                erp_enabled: newSettings.erp.enabled,
-                                erp_protocol: newSettings.erp.protocol,
-                                erp_connection_type: newSettings.erp.connectionType,
-                                erp_host: newSettings.erp.host,
-                                erp_port: newSettings.erp.port,
-                                erp_input_dir: newSettings.erp.inputDir,
-                                erp_output_dir: newSettings.erp.outputDir,
-                                data_log_interval: seconds
-                            };
-                            updateCommunicationSettings(payload).catch(err => console.error('API update failed:', err));
-                        }}
-                        style={{ width: '80px' }}
+                        min={DATA_LOG_INTERVAL_MIN}
+                        max={DATA_LOG_INTERVAL_MAX}
+                        step="1"
+                        value={logIntervalDraft}
+                        onChange={e => setLogIntervalDraft(e.target.value)}
+                        onBlur={commitLogInterval}
+                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                        style={{ width: '90px' }}
                     />
-                    <span>{t('settingsExt.comm.minutes')}</span>
+                    <span>{t('settingsExt.comm.seconds')}</span>
                     <span style={{ marginLeft: '10px', fontSize: '0.85rem', color: '#666' }}>
-                        {t('settingsExt.comm.current')}: {Math.floor(commSettings.dataLogInterval / 60)} {t('settingsExt.comm.minutes')} ({commSettings.dataLogInterval} {t('settingsExt.comm.seconds')})
+                        {t('settingsExt.comm.current')}: {commSettings.dataLogInterval} {t('settingsExt.comm.seconds')}
+                        {commSettings.dataLogInterval >= 60 && ` (${describeSeconds(commSettings.dataLogInterval)})`}
                     </span>
                 </div>
+                {/*
+                  S15:後端把 <=0 或 >3600 的值**靜默換成預設 300 秒**
+                  (SignalMappingProvider.cs:162)。不說出來的話,現場會以為自己設的值生效了,
+                  實際跑的是另一個數字 —— 這種落差在畫面上看不出來,只能在這裡講明。
+                */}
+                {!isLogIntervalInRange && (
+                    <div style={{ marginTop: '6px', fontSize: '0.85rem', color: '#c62828' }}>
+                        ⚠️ {t('settingsExt.comm.intervalOutOfRange')}
+                    </div>
+                )}
                 <div style={{ marginTop: '10px', padding: '10px', background: '#fff', borderRadius: '4px', fontSize: '0.85rem' }}>
                     <strong>{t('settingsExt.comm.note')}：</strong>
                     <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
                         <li>{t('settingsExt.comm.noteItem1')}</li>
                         <li>{t('settingsExt.comm.noteItem2')}</li>
                         <li>{t('settingsExt.comm.noteItem3')}</li>
+                        <li>{t('settingsExt.comm.noteItem4')}</li>
                     </ul>
                 </div>
 
