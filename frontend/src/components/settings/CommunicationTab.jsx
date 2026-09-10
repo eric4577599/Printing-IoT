@@ -7,6 +7,7 @@ import {
     updateCommunicationSettings,
     testMqttConnection
 } from '../../services/api';
+import { buildCommPayload } from '../../utils/commPayload';
 import {
     DATA_LOG_INTERVAL_MIN,
     DATA_LOG_INTERVAL_MAX,
@@ -39,7 +40,8 @@ const CommunicationTab = () => {
             outputDir: ''
         },
         dataLogInterval: 300, // 定時寫入間隔（秒），預設5分鐘
-        machineId: 'MACHINE_01' // 機台識別碼
+        machineId: 'MACHINE_01', // 機台識別碼
+        mmBaseUrl: '' // P1:MM 維護模組網址,空字串代表未設定(導覽列不顯示入口)
     });
 
     /*
@@ -84,7 +86,8 @@ const CommunicationTab = () => {
                             outputDir: data.erp_output_dir
                         },
                         dataLogInterval: data.data_log_interval || DATA_LOG_INTERVAL_DEFAULT,
-                        machineId: data.machine_id || 'MACHINE_01'
+                        machineId: data.machine_id || 'MACHINE_01',
+                        mmBaseUrl: data.mm_base_url || ''
                     });
                     // S15:草稿要跟著後端的值走,否則畫面顯示的是預設值而非實際生效值
                     setLogIntervalDraft(String(data.data_log_interval || DATA_LOG_INTERVAL_DEFAULT));
@@ -115,24 +118,8 @@ const CommunicationTab = () => {
         localStorage.setItem('communicationSettings', JSON.stringify(newSettings));
         window.dispatchEvent(new Event('comm-settings-changed'));
 
-        updateCommunicationSettings({
-            plc_enabled: newSettings.plc.enabled,
-            plc_simulate: newSettings.plc.simulate,
-            plc_device_type: newSettings.plc.deviceType,
-            plc_ip: newSettings.plc.ip,
-            plc_port: newSettings.plc.port,
-            plc_motor_signal: newSettings.plc.motorSignal,
-            plc_count_signal: newSettings.plc.countSignal,
-            plc_monitor_interval: newSettings.plc.monitor_interval, // 修正 #9:保留監控頻率
-            erp_enabled: newSettings.erp.enabled,
-            erp_protocol: newSettings.erp.protocol,
-            erp_connection_type: newSettings.erp.connectionType,
-            erp_host: newSettings.erp.host,
-            erp_port: newSettings.erp.port,
-            erp_input_dir: newSettings.erp.inputDir,
-            erp_output_dir: newSettings.erp.outputDir,
-            data_log_interval: seconds,
-        }).catch(err => console.error('API update failed:', err));
+        updateCommunicationSettings(buildCommPayload(newSettings))
+            .catch(err => console.error('API update failed:', err));
     };
 
     // Get global context for simulation
@@ -153,30 +140,7 @@ const CommunicationTab = () => {
         window.dispatchEvent(new Event('comm-settings-changed'));
 
         // 3. Prepare payload for API (Flatten structure)
-        const payload = {
-            plc_enabled: newSettings.plc.enabled,
-            plc_simulate: newSettings.plc.simulate,
-            plc_device_type: newSettings.plc.deviceType,
-            plc_ip: newSettings.plc.ip,
-            plc_port: newSettings.plc.port,
-            plc_motor_signal: newSettings.plc.motorSignal,
-            plc_count_signal: newSettings.plc.countSignal,
-            plc_monitor_interval: newSettings.plc.monitor_interval, // 修正 #9:原 payload 遺漏,監控頻率永不送到後端
-
-            mqtt_broker_url: newSettings.plc.mqttBroker,
-            mqtt_topic: newSettings.plc.mqttTopic,
-
-            erp_enabled: newSettings.erp.enabled,
-            erp_protocol: newSettings.erp.protocol,
-            erp_connection_type: newSettings.erp.connectionType,
-            erp_host: newSettings.erp.host,
-            erp_port: newSettings.erp.port,
-            erp_input_dir: newSettings.erp.inputDir,
-            erp_output_dir: newSettings.erp.outputDir,
-
-            data_log_interval: newSettings.dataLogInterval,
-            machine_id: newSettings.machineId
-        };
+        const payload = buildCommPayload(newSettings);
 
         // 4. Call API
         try {
@@ -533,25 +497,7 @@ const CommunicationTab = () => {
                                 setCommSettings(newSettings);
                                 localStorage.setItem('communicationSettings', JSON.stringify(newSettings));
 
-                                const payload = {
-                                    plc_enabled: newSettings.plc.enabled,
-                                    plc_simulate: newSettings.plc.simulate,
-                                    plc_device_type: newSettings.plc.deviceType,
-                                    plc_ip: newSettings.plc.ip,
-                                    plc_port: newSettings.plc.port,
-                                    plc_motor_signal: newSettings.plc.motorSignal,
-                                    plc_count_signal: newSettings.plc.countSignal,
-                                    plc_monitor_interval: newSettings.plc.monitor_interval, // 修正 #9:保留監控頻率
-                                    erp_enabled: newSettings.erp.enabled,
-                                    erp_protocol: newSettings.erp.protocol,
-                                    erp_connection_type: newSettings.erp.connectionType,
-                                    erp_host: newSettings.erp.host,
-                                    erp_port: newSettings.erp.port,
-                                    erp_input_dir: newSettings.erp.inputDir,
-                                    erp_output_dir: newSettings.erp.outputDir,
-                                    data_log_interval: newSettings.dataLogInterval,
-                                    machine_id: e.target.value
-                                };
+                                const payload = buildCommPayload(newSettings);
                                 updateCommunicationSettings(payload).catch(err => console.error('API update failed:', err));
                             }}
                             style={{ width: '200px' }}
@@ -561,30 +507,39 @@ const CommunicationTab = () => {
                             {t('settingsExt.comm.machineIdHint')}
                         </span>
                     </div>
+
+                    {/*
+                      P1:MM 維護模組入口。與機台識別碼放同一組 —— 兩者是同一件事的兩面:
+                      「這台機器是誰」以及「這台機器的保養資料在哪」。
+                      空字串時導覽列不顯示入口,不留一個必然打不開的死連結。
+                    */}
+                    <div className={styles.inputRow} style={{ marginTop: '10px' }}>
+                        <label>🔧 {t('settingsExt.comm.mmBaseUrl')}:</label>
+                        <input
+                            type="text"
+                            value={commSettings.mmBaseUrl || ''}
+                            onChange={e => {
+                                const newSettings = { ...commSettings, mmBaseUrl: e.target.value };
+                                setCommSettings(newSettings);
+                                localStorage.setItem('communicationSettings', JSON.stringify(newSettings));
+                                window.dispatchEvent(new Event('comm-settings-changed'));
+                                updateCommunicationSettings(buildCommPayload(newSettings))
+                                    .catch(err => console.error('API update failed:', err));
+                            }}
+                            style={{ width: '280px' }}
+                            placeholder="https://mms.ericchh.work"
+                        />
+                        <span style={{ marginLeft: '10px', fontSize: '0.85rem', color: '#666' }}>
+                            {t('settingsExt.comm.mmBaseUrlHint')}
+                        </span>
+                    </div>
                 </div>
             </div>
 
             <div className={styles.actionRow}>
                 <button className={styles.saveBtn} onClick={async () => {
                     try {
-                        const payload = {
-                            plc_enabled: commSettings.plc.enabled,
-                            plc_simulate: commSettings.plc.simulate,
-                            plc_device_type: commSettings.plc.deviceType,
-                            plc_ip: commSettings.plc.ip,
-                            plc_port: commSettings.plc.port,
-                            plc_motor_signal: commSettings.plc.motorSignal,
-                            plc_count_signal: commSettings.plc.countSignal,
-                            erp_enabled: commSettings.erp.enabled,
-                            erp_protocol: commSettings.erp.protocol,
-                            erp_connection_type: commSettings.erp.connectionType,
-                            erp_host: commSettings.erp.host,
-                            erp_port: commSettings.erp.port,
-                            erp_input_dir: commSettings.erp.inputDir,
-                            erp_output_dir: commSettings.erp.outputDir,
-                            data_log_interval: commSettings.dataLogInterval,
-                            machine_id: commSettings.machineId
-                        };
+                        const payload = buildCommPayload(commSettings);
                         await updateCommunicationSettings(payload);
                         localStorage.setItem('communicationSettings', JSON.stringify(commSettings));
                         alert('✅ ' + t('settingsExt.comm.saveSuccess'));

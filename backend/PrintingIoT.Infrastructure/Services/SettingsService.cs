@@ -39,7 +39,10 @@ public class SettingsService : ISettingsService
             mqtt_broker_url = "mqtt.infotech-consultant.com",
             mqtt_topic = "Advantech/+/data",
             machine_id = "MACHINE_01",
-            data_log_interval = 300
+            data_log_interval = 300,
+            // P1:MM 維護模組的對外網址。**預設空字串** —— 未設定時主系統不顯示該入口,
+            // 不留一個必然打不開的死連結。不同廠的 MM 網址不同,故不寫死。
+            mm_base_url = ""
         };
     }
 

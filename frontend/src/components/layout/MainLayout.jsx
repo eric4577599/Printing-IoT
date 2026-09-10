@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import styles from './MainLayout.module.css';
-import { updateSimulationSpeed, getOrders as apiGetOrders, syncSchedule as apiSyncSchedule, deleteOrder as apiDeleteOrder } from '../../services/api';
+import { updateSimulationSpeed, getOrders as apiGetOrders, syncSchedule as apiSyncSchedule, deleteOrder as apiDeleteOrder, getCommunicationSettings } from '../../services/api';
 import { fromBackendOrder, toBackendOrder, sortBySequence, isGuid, isSchedulableBackendOrder } from '../../utils/orderMapper';
 
 // 空排程時的等待列(純 UI,id 固定 'placeholder',不上傳後端)
@@ -26,6 +26,7 @@ import { useLanguage } from '../../modules/language/LanguageContext';
 import LanguageSwitcher from '../../modules/language/LanguageSwitcher';
 import LanguageNavMenu from '../../modules/language/LanguageNavMenu';
 import { useAuth } from '../../modules/auth/AuthContext';
+import { buildMmUrl, shouldShowMmEntry } from '../../utils/mmLink';
 import LoginModal from '../../modules/auth/LoginModal';
 import HelpModal from '../modals/HelpModal';
 import { createSeedProducts } from '../../data/seedProducts';
@@ -34,7 +35,7 @@ import { spliceMove, renumberSeq } from '../../utils/scheduleDnd';
 const MainLayout = () => {
     const location = useLocation();
     const { t } = useLanguage();
-    const { user, logout } = useAuth();
+    const { user, logout, hasRole } = useAuth();
 
     // Default Admin Debug Mode = true
     const [debugMode, setDebugMode] = React.useState(true);
@@ -70,6 +71,9 @@ const MainLayout = () => {
     // ERP Status State (Read from localStorage, synced via event)
     const [erpStatus, setErpStatus] = useState('connected');
 
+    // P1:MM 維護模組入口。網址與機台代號都來自通訊設定。
+    const [mmEntry, setMmEntry] = useState({ baseUrl: '', machineId: '' });
+
     useEffect(() => {
         const loadSettings = () => {
             try {
@@ -87,12 +91,30 @@ const MainLayout = () => {
                     if (!simEnabled) {
                         setIsSimulating(false);
                     }
+
+                    // P1:MM 入口所需的兩個值
+                    setMmEntry({ baseUrl: parsed.mmBaseUrl || '', machineId: parsed.machineId || '' });
+                    return true;
                 }
             } catch (e) { }
+            return false;
         };
 
         // Initial Load
-        loadSettings();
+        const hadLocal = loadSettings();
+
+        /*
+          P1:這台終端從沒開過設定頁時,localStorage 是空的 —— 入口就永遠不會出現。
+          所以本機沒有時向後端要一次。失敗不影響其他功能(入口不顯示而已)。
+        */
+        if (!hadLocal) {
+            getCommunicationSettings()
+                .then(data => setMmEntry({
+                    baseUrl: data?.mm_base_url || '',
+                    machineId: data?.machine_id || '',
+                }))
+                .catch(() => { /* 取不到就不顯示入口,不打擾使用者 */ });
+        }
 
         const handleCommUpdate = () => {
             loadSettings();
@@ -406,6 +428,23 @@ const MainLayout = () => {
                             {item.label}
                         </Link>
                     ))}
+                    {/*
+                      P1:MM 維護模組入口 —— 只是一個外連,主系統不因此多任何保養邏輯。
+                      未設定網址或角色不符時整個不渲染(不留死連結、不給看不到的人看見)。
+                      target="_blank" 必須配 rel="noopener noreferrer":開新分頁的頁面
+                      能透過 window.opener 反向操作來源分頁。
+                    */}
+                    {shouldShowMmEntry({ baseUrl: mmEntry.baseUrl, hasRole }) && (
+                        <a
+                            href={buildMmUrl(mmEntry.baseUrl, mmEntry.machineId)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.navItem}
+                            title={t('nav.mmHint')}
+                        >
+                            🔧 {t('nav.mm')}
+                        </a>
+                    )}
                     {/* 語言切換 nav 選單(新增):即時同步切換全站語言 */}
                     <LanguageNavMenu className={styles.navItem} />
                 </nav>
