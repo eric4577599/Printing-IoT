@@ -96,6 +96,18 @@
     width: 100%;
 }
 
+/*
+  S16:登入模式的 infoBar 只剩帳號 / 密碼兩欄,靠 flex 自然寬度會縮成兩個小格,
+  觸控機台上不好點。兩欄等寬撐滿,輸入框跟著欄寬走。
+*/
+.loginBar .infoField {
+    flex: 1;
+}
+
+.loginBar .infoField input {
+    width: 100%;
+}
+
 .rosterHint {
     margin: -8px 0 0;
     font-size: 0.78rem;

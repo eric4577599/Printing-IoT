@@ -238,8 +238,17 @@ const LoginModal = ({ isOpen, onClose }) => {
         setSelectedShiftIdx(null);
     };
 
-    // Admin Login State —— 只是同一條登入路徑的另一個入口,不再有第二套驗證邏輯
-    const [showAdminLogin, setShowAdminLogin] = useState(false);
+    /*
+      S16:管理者維護模式。
+      背景:登入一次要做四件事 —— 選「當前班別」下拉、點名冊列(順帶填進代碼 / 班別 /
+      操作員三個編輯欄)、打密碼、按選取。但名冊列本身就帶班別,resolveShiftCode() 也是
+      名冊列優先、下拉只是退路,所以下拉與編輯欄在登入當下純屬重複點選。
+      改為:登入畫面只留帳號 / 密碼 + 名冊快捷清單;班別下拉、名冊編輯欄、新增 / 刪除、
+      班別時段表與時段控制列全部收進「管理者」模式。
+      原本「管理者」開的是另一組帳號 / 密碼欄(adminOverlay),與主畫面那組同 state、
+      同 handleLogin,是純重複,一併移除。
+    */
+    const [manageMode, setManageMode] = useState(false);
 
     if (!isOpen) return null;
 
@@ -248,57 +257,70 @@ const LoginModal = ({ isOpen, onClose }) => {
             <div className={styles.windowContainer} style={{ position: 'relative' }}>
                 {/* Part 1: Top Buttons */}
                 <div className={styles.topBar}>
-                    <button className={styles.largeBtn} onClick={() => setShowAdminLogin(true)} style={{ marginRight: 'auto' }}>{t('login.btn.admin')}</button>
-                    <button className={styles.largeBtn} onClick={handleLogin}>{t('login.btn.select')}</button>
+                    {manageMode ? (
+                        <button className={styles.largeBtn} onClick={() => setManageMode(false)} style={{ marginRight: 'auto' }}>{t('login.btn.backToLogin')}</button>
+                    ) : (
+                        <button className={styles.largeBtn} onClick={() => setManageMode(true)} style={{ marginRight: 'auto' }}>{t('login.btn.admin')}</button>
+                    )}
+                    {/* 「選取」只在登入模式出現 —— 維護模式沒有要送出的憑證 */}
+                    {!manageMode && (
+                        <button className={styles.largeBtn} onClick={handleLogin}>{t('login.btn.select')}</button>
+                    )}
                     <button className={styles.largeBtn} onClick={onClose}>{t('login.btn.exit')}</button>
                 </div>
 
                 {/* ... (Existing InfoBar, Tables, Footer logic remains same) ... */}
 
-                {/* Part 2: Info Bar */}
-                <div className={styles.infoBar}>
-                    {/* NEW: Shift Selection Dropdown */}
-                    <div className={styles.infoField} style={{ flex: 1.5 }}>
-                        <label style={{ color: 'var(--primary-blue)', fontWeight: 'bold' }}>{t('login.label.currentShift')}</label>
-                        <select
-                            value={currentSessionShift?.name}
-                            onChange={(e) => {
-                                const s = shifts.find(sh => sh.name === e.target.value);
-                                if (s) setCurrentSessionShift(s);
-                            }}
-                            style={{ fontWeight: 'bold', color: 'var(--primary-blue)' }}
-                        >
-                            {shifts.map((s, i) => (
-                                <option key={i} value={s.name}>{s.name} ({s.start}~{s.end})</option>
-                            ))}
-                        </select>
+                {/* Part 2:班別下拉 —— S16 起只在維護模式出現。
+                    登入時班別以名冊列自帶的值為準(resolveShiftCode),取不到才退回
+                    掛載時自動偵測的日 / 夜班,現場不必為了登入先點一次下拉。 */}
+                {manageMode && (
+                    <div className={styles.infoBar}>
+                        <div className={styles.infoField} style={{ flex: 1.5 }}>
+                            <label style={{ color: 'var(--primary-blue)', fontWeight: 'bold' }}>{t('login.label.currentShift')}</label>
+                            <select
+                                value={currentSessionShift?.name}
+                                onChange={(e) => {
+                                    const s = shifts.find(sh => sh.name === e.target.value);
+                                    if (s) setCurrentSessionShift(s);
+                                }}
+                                style={{ fontWeight: 'bold', color: 'var(--primary-blue)' }}
+                            >
+                                {shifts.map((s, i) => (
+                                    <option key={i} value={s.name}>{s.name} ({s.start}~{s.end})</option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
+                )}
 
-                    {/* S5:真登入欄位 —— 點名冊只會填入帳號,密碼一律要手動輸入 */}
-                    <div className={styles.infoField}>
-                        <label>{t('login.placeholder.username')}</label>
-                        <input
-                            aria-label={t('login.placeholder.username')}
-                            value={loginUsername}
-                            onChange={e => handleUsernameChange(e.target.value)}
-                        />
-                        {/* S13:沒有覆寫這件事要說出來,否則使用者不知道剛才那一點沒生效 */}
-                        {usernameKept && (
-                            <span className={styles.fieldNote}>{t('login.hint.usernameKept')}</span>
-                        )}
+                {/* S5:真登入欄位 —— 點名冊只會填入帳號,密碼一律要手動輸入 */}
+                {!manageMode && (
+                    <div className={`${styles.infoBar} ${styles.loginBar}`}>
+                        <div className={styles.infoField}>
+                            <label>{t('login.placeholder.username')}</label>
+                            <input
+                                aria-label={t('login.placeholder.username')}
+                                value={loginUsername}
+                                onChange={e => handleUsernameChange(e.target.value)}
+                            />
+                            {/* S13:沒有覆寫這件事要說出來,否則使用者不知道剛才那一點沒生效 */}
+                            {usernameKept && (
+                                <span className={styles.fieldNote}>{t('login.hint.usernameKept')}</span>
+                            )}
+                        </div>
+                        <div className={styles.infoField}>
+                            <label>{t('login.placeholder.password')}</label>
+                            <input
+                                type="password"
+                                aria-label={t('login.placeholder.password')}
+                                value={loginPassword}
+                                onChange={e => setLoginPassword(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') handleLogin(); }}
+                            />
+                        </div>
                     </div>
-                    <div className={styles.infoField}>
-                        <label>{t('login.placeholder.password')}</label>
-                        <input
-                            type="password"
-                            aria-label={t('login.placeholder.password')}
-                            value={loginPassword}
-                            onChange={e => setLoginPassword(e.target.value)}
-                            onKeyDown={e => { if (e.key === 'Enter') handleLogin(); }}
-                        />
-                    </div>
-
-                </div>
+                )}
 
                 {/* Part 3: User Table */}
                 {/*
@@ -308,6 +330,7 @@ const LoginModal = ({ isOpen, onClose }) => {
                   使用者點不到,連帶讓「新增」永遠缺代碼而無法使用。
                   改為獨立一列、依表頭順序(代碼 / 班別 / 操作員)擺在表格正上方。
                 */}
+                {manageMode && (
                 <div className={styles.rosterEditor}>
                     <div className={styles.infoField}>
                         <label>{t('login.label.code')}</label>
@@ -335,6 +358,7 @@ const LoginModal = ({ isOpen, onClose }) => {
                         />
                     </div>
                 </div>
+                )}
 
                 <div className={styles.tableSection}>
                     <div className={styles.tableWrapper}>
@@ -362,6 +386,7 @@ const LoginModal = ({ isOpen, onClose }) => {
                             </tbody>
                         </table>
                     </div>
+                    {manageMode && (
                     <div className={styles.sideButtons}>
                         {/* S12:停用狀態讓「為什麼按了沒反應」變成看得見的 —— 原本只有按下去才跳 alert */}
                         <button
@@ -375,87 +400,66 @@ const LoginModal = ({ isOpen, onClose }) => {
                             disabled={!selectedUserId}
                         >{t('login.btn.delete')}</button>
                     </div>
+                    )}
                 </div>
 
-                {/* S12:名冊只是這台機器的觸控快捷清單,新增不等於建立帳號 —— 現場最容易誤會的一點 */}
-                <p className={styles.rosterHint}>{t('login.hint.rosterLocal')}</p>
+                {/* S12:名冊只是這台機器的觸控快捷清單,新增不等於建立帳號 —— 現場最容易誤會的一點。
+                    S16:登入模式沒有新增 / 刪除鈕,那半句話就成了雜訊,改用一行短提示。 */}
+                <p className={styles.rosterHint}>
+                    {manageMode ? t('login.hint.rosterLocal') : t('login.hint.rosterPick')}
+                </p>
 
-                {/* Part 4: Shift Table */}
-                <div className={styles.tableSection}>
-                    <div className={styles.tableWrapper}>
-                        <table className={styles.table}>
-                            <thead className={styles.thead}>
-                                <tr>
-                                    <th className={styles.th}>{t('login.col.startTime')}</th>
-                                    <th className={styles.th}>{t('login.col.endTime')}</th>
-                                    <th className={styles.th}>{t('login.col.people')}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {shifts.map((s, idx) => (
-                                    <tr
-                                        key={idx}
-                                        onClick={() => setSelectedShiftIdx(idx)}
-                                        className={selectedShiftIdx === idx ? styles.selectedRow : ''}
-                                        style={{ cursor: 'pointer' }}
-                                    >
-                                        <td className={styles.td} style={{ borderRight: '1px solid #ccc' }}>{s.start}</td>
-                                        <td className={styles.td} style={{ borderRight: '1px solid #ccc' }}>{s.end}</td>
-                                        <td className={styles.td}>{s.people}</td>
+                {manageMode && (<>
+                    {/* Part 4: Shift Table */}
+                    <div className={styles.tableSection}>
+                        <div className={styles.tableWrapper}>
+                            <table className={styles.table}>
+                                <thead className={styles.thead}>
+                                    <tr>
+                                        <th className={styles.th}>{t('login.col.startTime')}</th>
+                                        <th className={styles.th}>{t('login.col.endTime')}</th>
+                                        <th className={styles.th}>{t('login.col.people')}</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div className={styles.sideButtons}>
-                        <button className={styles.sideBtn} onClick={handleDeleteShift}>{t('login.btn.delete')}</button>
-                    </div>
-                </div>
-
-                {/* Footer Time Controls */}
-                <div className={styles.footerBar}>
-                    <select value={startHour} onChange={e => setStartHour(e.target.value)}>{Array.from({ length: 24 }, (_, i) => <option key={i} value={String(i).padStart(2, '0')}>{String(i).padStart(2, '0')}</option>)}</select>
-                    <span>:</span>
-                    <select value={startMin} onChange={e => setStartMin(e.target.value)}>{Array.from({ length: 60 }, (_, i) => <option key={i} value={String(i).padStart(2, '0')}>{String(i).padStart(2, '0')}</option>)}</select>
-                    <span> ~ </span>
-                    <select value={endHour} onChange={e => setEndHour(e.target.value)}>{Array.from({ length: 24 }, (_, i) => <option key={i} value={String(i).padStart(2, '0')}>{String(i).padStart(2, '0')}</option>)}</select>
-                    <span>:</span>
-                    <select value={endMin} onChange={e => setEndMin(e.target.value)}>{Array.from({ length: 60 }, (_, i) => <option key={i} value={String(i).padStart(2, '0')}>{String(i).padStart(2, '0')}</option>)}</select>
-
-                    <span style={{ marginLeft: '10px' }}>{t('login.label.people')}</span>
-                    <input type="number" min="1" value={shiftPeople} onChange={e => setShiftPeople(e.target.value)} style={{ width: '50px' }} />
-
-                    <button className={styles.largeBtn} onClick={handleAddShift} style={{ marginLeft: 'auto', fontSize: '0.9rem', padding: '2px 10px' }}>{t('login.btn.addPeriod')}</button>
-                    <button className={styles.largeBtn} style={{ marginLeft: '5px', fontSize: '0.9rem', padding: '2px 10px' }}>{t('login.btn.customPeriod')}</button>
-                </div>
-
-                {/* Admin Modal Overlay */}
-                {showAdminLogin && (
-                    <div className={styles.adminOverlay}>
-                        <div className={styles.adminModal}>
-                            <h3>{t('login.admin.title')}</h3>
-                            <input
-                                type="text"
-                                placeholder={t('login.placeholder.username')}
-                                className={styles.adminInput}
-                                value={loginUsername}
-                                onChange={e => handleUsernameChange(e.target.value)}
-                                autoFocus
-                            />
-                            <input
-                                type="password"
-                                placeholder={t('login.placeholder.password')}
-                                className={styles.adminInput}
-                                value={loginPassword}
-                                onChange={e => setLoginPassword(e.target.value)}
-                            />
-                            <div className={styles.adminButtons}>
-                                <button className={`${styles.adminBtn} ${styles.adminBtnCancel}`} onClick={() => setShowAdminLogin(false)}>{t('login.btn.cancel')}</button>
-                                <button className={styles.adminBtn} onClick={handleLogin}>{t('login.btn.login')}</button>
-                            </div>
+                                </thead>
+                                <tbody>
+                                    {shifts.map((s, idx) => (
+                                        <tr
+                                            key={idx}
+                                            onClick={() => setSelectedShiftIdx(idx)}
+                                            className={selectedShiftIdx === idx ? styles.selectedRow : ''}
+                                            style={{ cursor: 'pointer' }}
+                                        >
+                                            <td className={styles.td} style={{ borderRight: '1px solid #ccc' }}>{s.start}</td>
+                                            <td className={styles.td} style={{ borderRight: '1px solid #ccc' }}>{s.end}</td>
+                                            <td className={styles.td}>{s.people}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className={styles.sideButtons}>
+                            <button className={styles.sideBtn} onClick={handleDeleteShift}>{t('login.btn.delete')}</button>
                         </div>
                     </div>
-                )}
+
+                    {/* Footer Time Controls */}
+                    <div className={styles.footerBar}>
+                        <select value={startHour} onChange={e => setStartHour(e.target.value)}>{Array.from({ length: 24 }, (_, i) => <option key={i} value={String(i).padStart(2, '0')}>{String(i).padStart(2, '0')}</option>)}</select>
+                        <span>:</span>
+                        <select value={startMin} onChange={e => setStartMin(e.target.value)}>{Array.from({ length: 60 }, (_, i) => <option key={i} value={String(i).padStart(2, '0')}>{String(i).padStart(2, '0')}</option>)}</select>
+                        <span> ~ </span>
+                        <select value={endHour} onChange={e => setEndHour(e.target.value)}>{Array.from({ length: 24 }, (_, i) => <option key={i} value={String(i).padStart(2, '0')}>{String(i).padStart(2, '0')}</option>)}</select>
+                        <span>:</span>
+                        <select value={endMin} onChange={e => setEndMin(e.target.value)}>{Array.from({ length: 60 }, (_, i) => <option key={i} value={String(i).padStart(2, '0')}>{String(i).padStart(2, '0')}</option>)}</select>
+
+                        <span style={{ marginLeft: '10px' }}>{t('login.label.people')}</span>
+                        <input type="number" min="1" value={shiftPeople} onChange={e => setShiftPeople(e.target.value)} style={{ width: '50px' }} />
+
+                        <button className={styles.largeBtn} onClick={handleAddShift} style={{ marginLeft: 'auto', fontSize: '0.9rem', padding: '2px 10px' }}>{t('login.btn.addPeriod')}</button>
+                        <button className={styles.largeBtn} style={{ marginLeft: '5px', fontSize: '0.9rem', padding: '2px 10px' }}>{t('login.btn.customPeriod')}</button>
+                    </div>
+                </>)}
+
             </div>
         </div>
     );
