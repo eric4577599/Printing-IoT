@@ -41,12 +41,6 @@ const fieldInput = (labelText) => {
     return label.parentElement.querySelector('input');
 };
 
-/**
- * 切到管理者維護模式(S16)。
- * 名冊編輯欄與新增 / 刪除自 S16 起只在這個模式出現,登入畫面只留帳號 / 密碼。
- */
-const enterManage = () => fireEvent.click(screen.getByText('管理者 (Admin)'));
-
 /** 讀回目前寫入 localStorage 的名冊。 */
 const storedRoster = () => JSON.parse(localStorage.getItem('appUsers') ?? '[]');
 
@@ -65,7 +59,6 @@ describe('登入名冊的 username 來源(S6 缺口 G-1 的順帶修正)', () =>
     // AC-59:新增名冊列時,username 取代碼而非顯示名稱
     it('新增名冊列後,該列的 username 是代碼 OP1 而不是顯示名稱', () => {
         renderLogin();
-        enterManage();
 
         fireEvent.change(fieldInput('代碼'), { target: { value: 'OP1' } });
         fireEvent.change(fieldInput('操作員'), { target: { value: '王小明' } });
@@ -103,7 +96,6 @@ describe('登入名冊的 username 來源(S6 缺口 G-1 的順帶修正)', () =>
         expect(localStorage.getItem('appUsers')).not.toContain('1234');
 
         // 新增的列同樣不得帶入 password
-        enterManage();
         fireEvent.change(fieldInput('代碼'), { target: { value: 'OP4' } });
         fireEvent.change(fieldInput('操作員'), { target: { value: '林小龍' } });
         fireEvent.click(screen.getByText('新增'));

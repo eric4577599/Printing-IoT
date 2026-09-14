@@ -51,13 +51,6 @@ const fieldRow = (labelText) => {
 const storedRoster = () => JSON.parse(localStorage.getItem('appUsers') ?? '[]');
 
 /**
- * 切到管理者維護模式(S16)。
- * 名冊編輯欄、新增 / 刪除、班別時段表與班別下拉自 S16 起只在這個模式出現;
- * 登入畫面只留帳號 / 密碼 + 名冊快捷清單,現場登入一次不必再點三個地方。
- */
-const enterManage = () => fireEvent.click(screen.getByText('管理者 (Admin)'));
-
-/**
  * 取名冊表格右側的兩顆按鈕。
  * 畫面上有**兩個**「刪除」(名冊一個、班別時段一個),必須先鎖定名冊那一組,
  * 否則斷言會打到班別表的刪除鈕。以唯一的「新增」反推它所在的 sideButtons 容器。
@@ -86,7 +79,6 @@ describe('S12 名冊編輯列的位置', () => {
 
     it('代碼 / 班別 / 操作員 三欄在同一列', () => {
         renderLogin();
-        enterManage();
         const row = fieldRow('代碼');
         expect(fieldRow('班別')).toBe(row);
         expect(fieldRow('操作員')).toBe(row);
@@ -94,27 +86,19 @@ describe('S12 名冊編輯列的位置', () => {
 
     it('編輯欄不與帳號 / 密碼同層 —— 名冊編輯不是登入憑證', () => {
         renderLogin();
-        // 登入模式:只有帳號 / 密碼,沒有任何名冊編輯欄
-        expect(fieldInput('帳號 (Username)')).toBeTruthy();
-        expect(screen.queryAllByText('代碼').filter(el => el.tagName === 'LABEL')).toHaveLength(0);
-
-        // 維護模式:只有編輯欄,沒有登入憑證欄
-        enterManage();
-        expect(fieldRow('代碼')).toBeTruthy();
-        expect(screen.queryAllByText('帳號 (Username)').filter(el => el.tagName === 'LABEL')).toHaveLength(0);
-        expect(screen.queryAllByText('密碼 (Password)').filter(el => el.tagName === 'LABEL')).toHaveLength(0);
+        const editorRow = fieldRow('代碼');
+        expect(editorRow.contains(fieldInput('帳號 (Username)'))).toBe(false);
+        expect(editorRow.contains(fieldInput('密碼 (Password)'))).toBe(false);
     });
 
     it('班別欄的標籤是「班別」,與表頭一致(原本寫死英文 Default)', () => {
         renderLogin();
-        enterManage();
         expect(fieldInput('班別')).toBeTruthy();
         expect(screen.queryByText('Default')).toBeNull();
     });
 
     it('三個編輯欄都在畫面上、都可輸入', () => {
         renderLogin();
-        enterManage();
         for (const [label, value] of [['代碼', 'OP7'], ['班別', 'A'], ['操作員', '張三']]) {
             const input = fieldInput(label);
             fireEvent.change(input, { target: { value } });
@@ -138,7 +122,6 @@ describe('S12 名冊的新增與刪除', () => {
 
     it('填齊代碼與操作員後新增,該列進入名冊與表格', () => {
         renderLogin();
-        enterManage();
 
         fireEvent.change(fieldInput('代碼'), { target: { value: 'OP7' } });
         fireEvent.change(fieldInput('班別'), { target: { value: 'a' } });
@@ -154,7 +137,6 @@ describe('S12 名冊的新增與刪除', () => {
 
     it('代碼或操作員沒填時,新增鈕是停用的', () => {
         renderLogin();
-        enterManage();
         expect(rosterButtons().add.disabled).toBe(true);
 
         fireEvent.change(fieldInput('代碼'), { target: { value: 'OP8' } });
@@ -166,7 +148,6 @@ describe('S12 名冊的新增與刪除', () => {
 
     it('只有空白字元不算填了', () => {
         renderLogin();
-        enterManage();
         fireEvent.change(fieldInput('代碼'), { target: { value: '   ' } });
         fireEvent.change(fieldInput('操作員'), { target: { value: '   ' } });
         expect(rosterButtons().add.disabled).toBe(true);
@@ -177,7 +158,6 @@ describe('S12 名冊的新增與刪除', () => {
             { id: 'OP9', name: '王五', username: 'OP9', shift: 'B', role: 'OPERATOR' },
         ]));
         renderLogin();
-        enterManage();
 
         expect(rosterButtons().remove.disabled).toBe(true);
     });
@@ -187,7 +167,6 @@ describe('S12 名冊的新增與刪除', () => {
             { id: 'OP9', name: '王五', username: 'OP9', shift: 'B', role: 'OPERATOR' },
         ]));
         renderLogin();
-        enterManage();
 
         fireEvent.click(screen.getByText('王五'));
 
@@ -212,7 +191,6 @@ describe('S12 名冊的新增與刪除', () => {
 
     it('畫面明說新增名冊不等於建立帳號 —— 現場最容易誤會的一點', () => {
         renderLogin();
-        enterManage();
         expect(screen.getByText(/不會建立或停用後端帳號/)).toBeTruthy();
     });
 });
@@ -292,8 +270,6 @@ describe('S13 點名冊列不得靜默覆寫已輸入的帳號', () => {
         fireEvent.change(fieldInput('帳號 (Username)'), { target: { value: 'admin' } });
         fireEvent.click(screen.getByText('王五'));
 
-        // S16:編輯欄搬到維護模式,選取狀態必須跨模式保留 —— 否則「選取有生效」無從證明
-        enterManage();
         expect(fieldInput('代碼').value).toBe('OP1');
         expect(fieldInput('操作員').value).toBe('王五');
         expect(rosterButtons().remove.disabled).toBe(false);
