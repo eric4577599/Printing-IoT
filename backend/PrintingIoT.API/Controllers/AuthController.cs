@@ -350,7 +350,8 @@ public class AuthController : ControllerBase
         if (shift is { Length: > 10 })
             return BadRequest("Shift must be 10 characters or fewer.");
 
-        var passwordError = ValidatePassword(request.Password);
+        // S17:密碼強度依**要建立的角色**判定,OPERATOR 放寬、其餘維持 12 碼英數
+        var passwordError = ValidatePassword(request.Password, role);
         if (passwordError != null)
             return BadRequest(passwordError);
 
@@ -421,7 +422,16 @@ public class AuthController : ControllerBase
 
         if (!string.IsNullOrEmpty(request?.Password))
         {
-            var passwordError = ValidatePassword(request.Password);
+            // S17:判準是「這次請求**之後**的角色」,不是舊角色 ——
+            // 否則「把 OPERATOR 升成 ADMIN 並同時設 4 碼密碼」會以舊角色放行,漏出一個弱密碼的管理者。
+            // 一個帳號可能掛多個角色列:只要**有任何一個不是 OPERATOR**,就照嚴格規則辦;
+            // 沒有任何角色列的帳號同樣走嚴格規則(寧可擋掉,不要放行)。
+            var currentRoles = user.UserRoles.Select(ur => AppRoles.Normalize(ur.Role.Name)).ToList();
+            var effectiveRole = newRole
+                ?? (currentRoles.Count > 0 && currentRoles.All(r => r == AppRoles.Operator)
+                    ? AppRoles.Operator
+                    : null);
+            var passwordError = ValidatePassword(request.Password, effectiveRole);
             if (passwordError != null) return BadRequest(passwordError);
         }
 
@@ -511,8 +521,18 @@ public class AuthController : ControllerBase
     /// 輸入:密碼字串;輸出:不合格時回傳中文原因字串,合格回 null;
     /// 邏輯:長度須 >= Auth:MinPasswordLength(預設 12),且至少含一個字母與一個數字。
     /// </summary>
-    private string? ValidatePassword(string? password)
+    private string? ValidatePassword(string? password, string? role = null)
     {
+        // S17:作業員走現場觸控機台,沒有實體鍵盤,12 碼英數在看板前輸入不現實。
+        // 只放寬 OPERATOR 一個角色 —— 管理者那條線是整個系統唯一的管理入口,強度不動。
+        if (AppRoles.Normalize(role) == AppRoles.Operator)
+        {
+            var operatorMinLength = _config.GetValue<int?>("Auth:OperatorMinPasswordLength") ?? 4;
+            if (string.IsNullOrEmpty(password) || password.Length < operatorMinLength)
+                return $"Password must be at least {operatorMinLength} characters long.";
+            return null; // 允許純數字(現場約定值 0000)
+        }
+
         var minLength = _config.GetValue<int?>("Auth:MinPasswordLength") ?? 12;
         if (string.IsNullOrEmpty(password) || password.Length < minLength)
             return $"Password must be at least {minLength} characters long.";
