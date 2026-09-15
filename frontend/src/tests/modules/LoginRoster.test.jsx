@@ -31,15 +31,15 @@ const renderLogin = () => render(
 );
 
 /**
- * 取得某個欄位標籤右邊的輸入框。
- * 輸入:tw 語系的標籤文字;輸出:同一個 infoField 內的 input 元素;
- * 邏輯:標籤與輸入框未以 htmlFor 綁定,故先在同名節點中挑出 LABEL,再取同層的 input。
- *       同樣的文字也會出現在表格標題(th),因此必須以 tagName 過濾。
+ * 取得名冊列上的就地編輯欄。
+ * 輸入:tw 語系的欄位標籤;輸出:該欄的 input;
+ * 邏輯:S17 起編輯欄長在表格列上(草稿列或選取中的列),以 aria-label 取用。
+ *       同時間只會有一組編輯欄,因此 getByLabelText 必然唯一。
  */
-const fieldInput = (labelText) => {
-    const label = screen.getAllByText(labelText).find(el => el.tagName === 'LABEL');
-    return label.parentElement.querySelector('input');
-};
+const cellInput = (labelText) => screen.getByLabelText(labelText);
+
+/** S17:按名冊表底部的「+」長出一列空白可編輯列。 */
+const startDraft = () => fireEvent.click(screen.getByLabelText('新增一列'));
 
 /** 讀回目前寫入 localStorage 的名冊。 */
 const storedRoster = () => JSON.parse(localStorage.getItem('appUsers') ?? '[]');
@@ -60,8 +60,9 @@ describe('登入名冊的 username 來源(S6 缺口 G-1 的順帶修正)', () =>
     it('新增名冊列後,該列的 username 是代碼 OP1 而不是顯示名稱', () => {
         renderLogin();
 
-        fireEvent.change(fieldInput('代碼'), { target: { value: 'OP1' } });
-        fireEvent.change(fieldInput('操作員'), { target: { value: '王小明' } });
+        startDraft();
+        fireEvent.change(cellInput('代碼'), { target: { value: 'OP1' } });
+        fireEvent.change(cellInput('操作員'), { target: { value: '王小明' } });
         fireEvent.click(screen.getByText('新增'));
 
         const row = storedRoster().find(u => u.id === 'OP1');
@@ -96,8 +97,9 @@ describe('登入名冊的 username 來源(S6 缺口 G-1 的順帶修正)', () =>
         expect(localStorage.getItem('appUsers')).not.toContain('1234');
 
         // 新增的列同樣不得帶入 password
-        fireEvent.change(fieldInput('代碼'), { target: { value: 'OP4' } });
-        fireEvent.change(fieldInput('操作員'), { target: { value: '林小龍' } });
+        startDraft();
+        fireEvent.change(cellInput('代碼'), { target: { value: 'OP4' } });
+        fireEvent.change(cellInput('操作員'), { target: { value: '林小龍' } });
         fireEvent.click(screen.getByText('新增'));
 
         expect(storedRoster().every(u => !('password' in u))).toBe(true);

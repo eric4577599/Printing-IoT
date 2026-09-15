@@ -43,9 +43,12 @@ const renderLogin = () => render(
     </LanguageProvider>
 );
 
-/** 以 tw 語系的實際字串取得密碼欄與「選取」鈕,並送出一次登入。 */
-const submitLogin = (password) => {
-    fireEvent.change(screen.getByLabelText('密碼 (Password)'), { target: { value: password } });
+/**
+ * 送出一次登入。
+ * 輸入:無;輸出:無;
+ * 邏輯:S17 起作業模式看不到密碼欄,密碼由前端帶約定值,按「選取」即送出。
+ */
+const submitLogin = () => {
     fireEvent.click(screen.getByText('選取 (Select)'));
 };
 
@@ -75,9 +78,9 @@ describe('登入後輪廓的 name / role / shift(S5 狀態列回歸)', () => {
 
         renderLogin();
 
-        // 點名冊列只會填入帳號,密碼仍必須手動輸入
+        // S17:點名冊列填入帳號,作業模式不必輸入密碼
         fireEvent.click(screen.getByText('王小明'));
-        submitLogin('Str0ngPassword!123');
+        submitLogin();
 
         await waitFor(() => expect(screen.getByTestId('p-name').textContent).toBe('王小明'));
         expect(screen.getByTestId('p-role').textContent).toBe('OPERATOR');
@@ -87,15 +90,15 @@ describe('登入後輪廓的 name / role / shift(S5 狀態列回歸)', () => {
         const stored = JSON.parse(localStorage.getItem('authUser'));
         expect(stored.shift).toBe('A');
         expect(stored.sessionShift).toBe('A');
-        // 白名單仍然生效:密碼不得進入儲存
-        expect(localStorage.getItem('authUser')).not.toContain('Str0ngPassword');
+        // 白名單仍然生效:密碼不得進入儲存(S17 起送出的是約定值 0000)
+        expect(localStorage.getItem('authUser')).not.toContain('0000');
     });
 
     it('手動輸入帳號(名冊未選)登入後,shift 退回目前班別代碼而非空字串', async () => {
         renderLogin();
 
         fireEvent.change(screen.getByLabelText('帳號 (Username)'), { target: { value: 'op1' } });
-        submitLogin('Str0ngPassword!123');
+        submitLogin();
 
         await waitFor(() => expect(screen.getByTestId('p-name').textContent).toBe('王小明'));
         expect(screen.getByTestId('p-role').textContent).toBe('OPERATOR');

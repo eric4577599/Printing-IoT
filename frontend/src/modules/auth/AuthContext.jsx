@@ -78,6 +78,9 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
             if (!error?.response) return { ok: false, reason: 'network' };
             if (error.response.status === 401) return { ok: false, reason: 'invalid' };
+            // S17:429 要與「帳號密碼錯誤」分開 —— 登入額度是整廠共用一個桶,
+            // 換班尖峰撞到限流時若照 invalid 顯示,現場會一直重打正確的密碼。
+            if (error.response.status === 429) return { ok: false, reason: 'rateLimited' };
             return { ok: false, reason: 'server' };
         }
     }, []);

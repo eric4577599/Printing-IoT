@@ -78,22 +78,46 @@
 }
 
 /*
-  Part 3 前置:名冊編輯列。
-  三欄依表頭順序(代碼 / 班別 / 操作員)等寬排開,右側留出 sideButtons 的
-  80px + 12px gap,讓欄位與下方表格的欄位對得上。
+  S17:名冊編輯改為就地發生在表格列上(.cellInput),原本表格上方那排 .rosterEditor 已移除。
+  欄位樣式要能同時活在白底的一般列與藍底的選取列上,所以邊框與背景都明寫。
 */
-.rosterEditor {
-    display: flex;
-    gap: 12px;
-    padding-right: 92px;
-}
-
-.rosterEditor .infoField {
-    flex: 1;
-}
-
-.rosterEditor .infoField input {
+.cellInput {
     width: 100%;
+    box-sizing: border-box;
+    padding: 4px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: #fff;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+/* 整列都是「+」的點擊區 —— 觸控機台上小圖示按不到 */
+.addRowBtn {
+    width: 100%;
+    padding: 8px 0;
+    border: 1px dashed var(--border-color);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.addRowBtn:hover {
+    background: var(--bg-block);
+    color: var(--primary-blue);
+}
+
+/* S17:登入失敗的一行訊息,取代會卡住整個分頁的 alert() */
+.loginError {
+    margin: -4px 0 0;
+    padding: 6px 10px;
+    border-radius: 4px;
+    background: #fdecea;
+    color: #b3261e;
+    font-size: 0.85rem;
+    line-height: 1.4;
 }
 
 .rosterHint {

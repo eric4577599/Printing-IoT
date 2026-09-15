@@ -4,17 +4,21 @@ import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../../modules/language/LanguageContext';
 
 /**
- * S12 回歸釘樁:名冊編輯列的位置與可用性。
+ * 名冊編輯的回歸釘樁(S12 → S13 → S17)。
  *
- * 背景:代碼 / 班別 / 操作員 是**名冊表的編輯欄**,卻和帳號 / 密碼一起塞在登入 infoBar。
- * `.windowContainer` 是固定 640px 而 `.infoBar` 沒有 flex-wrap,六欄放不下,
- * 最後兩欄(代碼、Default)溢位到卡片外的灰底上 —— 使用者點不到,
- * 於是 handleAddUser 永遠缺代碼,「新增」實質不可用。
+ * S12 背景:代碼 / 班別 / 操作員 原本和帳號 / 密碼一起塞在登入 infoBar,
+ * 六欄放不進 640px 的卡片而溢位到卡片外,使用者點不到,「新增」實質不可用。
+ * 當時的修法是拆成表格上方獨立一列。
  *
- * 本檔釘住三件事:
- *  1. 三個編輯欄集中在同一列,且**不與帳號 / 密碼同層**(語意分離)
+ * S17 再往前一步:編輯就發生在**它要改的那一列上** ——
+ * 表格上方那排欄位與表格列的對應關係只能靠猜,現場常見的誤解是
+ * 「上面填一填、下面就會多一列」。本檔因此改以列上的編輯欄斷言。
+ *
+ * 釘住的東西沒有變:
+ *  1. 編輯欄與登入憑證分離(名冊編輯不是登入)
  *  2. 新增 / 刪除真的能改動名冊
  *  3. 條件不足時按鈕是 disabled,而不是按下去才跳 alert
+ *  4. S13:點列不得靜默覆寫使用者自己打的帳號
  */
 
 const loginApi = vi.fn();
@@ -35,18 +39,21 @@ const renderLogin = () => render(
     </LanguageProvider>
 );
 
-/** 取得某個欄位標籤(LABEL,非表頭 TH)右邊的輸入框 */
+/** 名冊列上的就地編輯欄(草稿列或選取中的列),同時間只會有一組。 */
+const cellInput = (labelText) => screen.getByLabelText(labelText);
+
+/** 登入欄(帳號 / 密碼)—— 這兩個是 infoBar 的 label + input。 */
 const fieldInput = (labelText) => {
     const label = screen.getAllByText(labelText).find(el => el.tagName === 'LABEL');
     expect(label, `找不到標籤 ${labelText}`).toBeTruthy();
     return label.parentElement.querySelector('input');
 };
 
-/** 該欄位所屬的那一列容器(infoField 的父層) */
-const fieldRow = (labelText) => {
-    const label = screen.getAllByText(labelText).find(el => el.tagName === 'LABEL');
-    return label.parentElement.parentElement;
-};
+/** S17:按名冊表底部的「+」長出一列空白可編輯列。 */
+const startDraft = () => fireEvent.click(screen.getByLabelText('新增一列'));
+
+/** 進入管理者模式(密碼欄只在這個模式渲染)。 */
+const enterAdminMode = () => fireEvent.click(screen.getByText('管理者 (Admin)'));
 
 const storedRoster = () => JSON.parse(localStorage.getItem('appUsers') ?? '[]');
 
@@ -64,7 +71,7 @@ const rosterButtons = () => {
     };
 };
 
-describe('S12 名冊編輯列的位置', () => {
+describe('S17 名冊編輯就地發生在列上', () => {
     beforeEach(() => {
         localStorage.clear();
         loginApi.mockReset();
@@ -77,33 +84,55 @@ describe('S12 名冊編輯列的位置', () => {
         vi.restoreAllMocks();
     });
 
-    it('代碼 / 班別 / 操作員 三欄在同一列', () => {
+    it('預設沒有編輯欄 —— 名冊平時是唯讀的觸控清單', () => {
         renderLogin();
-        const row = fieldRow('代碼');
-        expect(fieldRow('班別')).toBe(row);
-        expect(fieldRow('操作員')).toBe(row);
+        expect(screen.queryByLabelText('代碼')).toBeNull();
+        expect(screen.queryByLabelText('操作員')).toBeNull();
+    });
+
+    it('按「+」長出一列空白可編輯列,三欄都在表格內且可輸入', () => {
+        renderLogin();
+        startDraft();
+
+        const table = document.querySelector('table');
+        for (const [label, value] of [['代碼', 'OP7'], ['班別', 'A'], ['操作員', '張三']]) {
+            const input = cellInput(label);
+            expect(table.contains(input), `${label} 不在名冊表格內`).toBe(true);
+            fireEvent.change(input, { target: { value } });
+            expect(input.value).toBe(value);
+        }
     });
 
     it('編輯欄不與帳號 / 密碼同層 —— 名冊編輯不是登入憑證', () => {
         renderLogin();
-        const editorRow = fieldRow('代碼');
-        expect(editorRow.contains(fieldInput('帳號 (Username)'))).toBe(false);
-        expect(editorRow.contains(fieldInput('密碼 (Password)'))).toBe(false);
+        enterAdminMode();
+        startDraft();
+
+        const table = document.querySelector('table');
+        expect(table.contains(fieldInput('帳號 (Username)'))).toBe(false);
+        expect(table.contains(fieldInput('密碼 (Password)'))).toBe(false);
     });
 
     it('班別欄的標籤是「班別」,與表頭一致(原本寫死英文 Default)', () => {
         renderLogin();
-        expect(fieldInput('班別')).toBeTruthy();
+        startDraft();
+        expect(cellInput('班別')).toBeTruthy();
         expect(screen.queryByText('Default')).toBeNull();
     });
 
-    it('三個編輯欄都在畫面上、都可輸入', () => {
+    it('點選既有列會就地變成可編輯,改完按新增即回寫該列', () => {
+        localStorage.setItem('appUsers', JSON.stringify([
+            { id: 'OP9', name: '王五', username: 'OP9', shift: 'B', role: 'OPERATOR' },
+        ]));
         renderLogin();
-        for (const [label, value] of [['代碼', 'OP7'], ['班別', 'A'], ['操作員', '張三']]) {
-            const input = fieldInput(label);
-            fireEvent.change(input, { target: { value } });
-            expect(input.value).toBe(value);
-        }
+
+        fireEvent.click(screen.getByText('王五'));
+        expect(cellInput('代碼').value).toBe('OP9');
+
+        fireEvent.change(cellInput('班別'), { target: { value: 'a' } });
+        fireEvent.click(rosterButtons().add);
+
+        expect(storedRoster().find(u => u.id === 'OP9').shift).toBe('A');
     });
 });
 
@@ -123,9 +152,10 @@ describe('S12 名冊的新增與刪除', () => {
     it('填齊代碼與操作員後新增,該列進入名冊與表格', () => {
         renderLogin();
 
-        fireEvent.change(fieldInput('代碼'), { target: { value: 'OP7' } });
-        fireEvent.change(fieldInput('班別'), { target: { value: 'a' } });
-        fireEvent.change(fieldInput('操作員'), { target: { value: '張三' } });
+        startDraft();
+        fireEvent.change(cellInput('代碼'), { target: { value: 'OP7' } });
+        fireEvent.change(cellInput('班別'), { target: { value: 'a' } });
+        fireEvent.change(cellInput('操作員'), { target: { value: '張三' } });
         fireEvent.click(screen.getByText('新增'));
 
         const row = storedRoster().find(u => u.id === 'OP7');
@@ -135,21 +165,35 @@ describe('S12 名冊的新增與刪除', () => {
         expect(within(table).getByText('張三')).toBeTruthy();
     });
 
+    it('儲存後草稿列收起來,不會留一列空白在表上', () => {
+        renderLogin();
+
+        startDraft();
+        fireEvent.change(cellInput('代碼'), { target: { value: 'OP7' } });
+        fireEvent.change(cellInput('操作員'), { target: { value: '張三' } });
+        fireEvent.click(screen.getByText('新增'));
+
+        expect(screen.getByLabelText('新增一列')).toBeTruthy(); // 「+」回來了
+        expect(storedRoster().filter(u => !u.id).length).toBe(0);
+    });
+
     it('代碼或操作員沒填時,新增鈕是停用的', () => {
         renderLogin();
+        startDraft();
         expect(rosterButtons().add.disabled).toBe(true);
 
-        fireEvent.change(fieldInput('代碼'), { target: { value: 'OP8' } });
+        fireEvent.change(cellInput('代碼'), { target: { value: 'OP8' } });
         expect(rosterButtons().add.disabled).toBe(true); // 只有代碼還不夠
 
-        fireEvent.change(fieldInput('操作員'), { target: { value: '李四' } });
+        fireEvent.change(cellInput('操作員'), { target: { value: '李四' } });
         expect(rosterButtons().add.disabled).toBe(false);
     });
 
     it('只有空白字元不算填了', () => {
         renderLogin();
-        fireEvent.change(fieldInput('代碼'), { target: { value: '   ' } });
-        fireEvent.change(fieldInput('操作員'), { target: { value: '   ' } });
+        startDraft();
+        fireEvent.change(cellInput('代碼'), { target: { value: '   ' } });
+        fireEvent.change(cellInput('操作員'), { target: { value: '   ' } });
         expect(rosterButtons().add.disabled).toBe(true);
     });
 
@@ -177,20 +221,14 @@ describe('S12 名冊的新增與刪除', () => {
         expect(storedRoster().find(u => u.id === 'OP9')).toBeUndefined();
     });
 
-    it('點選一列會把帳號填進登入欄,但密碼欄維持空白', () => {
-        localStorage.setItem('appUsers', JSON.stringify([
-            { id: 'OP9', name: '王五', username: 'OP9', shift: 'B', role: 'OPERATOR' },
-        ]));
-        renderLogin();
-
-        fireEvent.click(screen.getByText('王五'));
-
-        expect(fieldInput('帳號 (Username)').value).toBe('OP9');
-        expect(fieldInput('密碼 (Password)').value).toBe('');
-    });
-
     it('畫面明說新增名冊不等於建立帳號 —— 現場最容易誤會的一點', () => {
         renderLogin();
+        expect(screen.getByText(/不會建立或停用後端帳號/)).toBeTruthy();
+    });
+
+    it('草稿列展開時,那行提示仍然看得到', () => {
+        renderLogin();
+        startDraft();
         expect(screen.getByText(/不會建立或停用後端帳號/)).toBeTruthy();
     });
 });
@@ -249,8 +287,8 @@ describe('S13 點名冊列不得靜默覆寫已輸入的帳號', () => {
         expect(username.value).toBe('admin');
 
         fireEvent.change(username, { target: { value: '' } });
-        fireEvent.click(screen.getByText('王五'));
-        expect(username.value).toBe('OP1');
+        fireEvent.click(screen.getByText('陳六')); // 換一列點,避免踩到「同一列已選取」
+        expect(username.value).toBe('OP2');
     });
 
     it('改動帳號欄會收掉保留提示', () => {
@@ -265,13 +303,13 @@ describe('S13 點名冊列不得靜默覆寫已輸入的帳號', () => {
         expect(screen.queryByText(/已保留你輸入的帳號/)).toBeNull();
     });
 
-    it('被擋下覆寫時,名冊編輯欄仍然照常填入(選取本身有生效)', () => {
+    it('被擋下覆寫時,該列仍然進入編輯狀態(選取本身有生效)', () => {
         renderLogin();
         fireEvent.change(fieldInput('帳號 (Username)'), { target: { value: 'admin' } });
         fireEvent.click(screen.getByText('王五'));
 
-        expect(fieldInput('代碼').value).toBe('OP1');
-        expect(fieldInput('操作員').value).toBe('王五');
+        expect(cellInput('代碼').value).toBe('OP1');
+        expect(cellInput('操作員').value).toBe('王五');
         expect(rosterButtons().remove.disabled).toBe(false);
     });
 });

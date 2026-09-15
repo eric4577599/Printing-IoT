@@ -74,8 +74,41 @@ describe('前端不得再有硬編碼憑證(S5,AC-44)', () => {
         for (const suffix of ['modules/auth/AuthContext.jsx', 'modules/auth/LoginModal.jsx']) {
             const code = readSource(suffix);
             expect(code, `${suffix} 不存在`).not.toBeNull();
-            expect(/password\s*:/i.test(code), `${suffix} 仍含 password 欄位`).toBe(false);
+            // \b 是必要的:沒有它,`isAdminMode ? loginPassword : X` 這種三元運算
+            // 會被當成 password 欄位誤報,而那既不是欄位也沒有值落地。
+            expect(/\bpassword\s*:/i.test(code), `${suffix} 仍含 password 欄位`).toBe(false);
         }
+    });
+
+    // (d-2) S17:LoginModal 刻意帶一個作業員約定密碼(DEFAULT_OPERATOR_PASSWORD)。
+    //       它不是外洩憑證,是全廠約定值 —— 但**只准有這一個**,而且只准是那個常數,
+    //       否則這個豁免會變成「以後想寫死什麼都可以」的破口。
+    it("LoginModal 的硬編碼密碼僅限 DEFAULT_OPERATOR_PASSWORD 一個", () => {
+        const code = readSource('modules/auth/LoginModal.jsx');
+        expect(code, 'LoginModal.jsx 不存在').not.toBeNull();
+
+        // 宣告樣式必須完全吻合(常數名 + 單引號字面值),換個名字或多寫一個都會被抓到
+        const declarations = code.match(/const\s+DEFAULT_OPERATOR_PASSWORD\s*=\s*'[^']*';/g) ?? [];
+        expect(declarations.length, '預設密碼常數的宣告不是剛好一個').toBe(1);
+
+        // 除了該常數之外,不得再有第二個被當成密碼送出的字面值
+        const literalPasswordCalls = code.match(/login\([^)]*,\s*['"`]/g) ?? [];
+        expect(literalPasswordCalls, '有把密碼字面值直接送進 login()').toEqual([]);
+    });
+
+    // (d-3) 約定密碼不得落地 —— 它雖然不是秘密,寫進 localStorage 只會多一份會漂掉的副本
+    it('LoginModal 不把密碼寫進 localStorage', () => {
+        const code = readSource('modules/auth/LoginModal.jsx');
+        const isComment = (line) => /^\s*(\/\/|\/\*|\*)/.test(line);
+
+        const offending = code
+            .split('\n')
+            .map((line, i) => [i + 1, line])
+            .filter(([, line]) => !isComment(line))
+            .filter(([, line]) => line.includes('localStorage') && /password/i.test(line))
+            .map(([n]) => n);
+
+        expect(offending, `以下行號同時碰 localStorage 與密碼:${offending.join(', ')}`).toEqual([]);
     });
 
     // (e) GeneralTab 自 S7 起必須把密碼送去 POST/PUT /v1/auth/users,

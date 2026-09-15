@@ -5,6 +5,17 @@ import { useAuth } from './AuthContext';
 import { useLanguage } from '../language/LanguageContext';
 
 /**
+ * S17:作業員的約定密碼。
+ *
+ * 現場觸控機台沒有實體鍵盤,12 碼英數在看板前輸入不現實,因此作業員一律以此值登入,
+ * 密碼欄在作業模式不渲染(仍保留在程式與樣式裡,要開放時改一個條件就回來)。
+ *
+ * **刻意寫在原始碼、不放 localStorage** —— 它不是秘密,是一個全廠約定值,
+ * 存起來只會多一個會漂掉的副本。對應後端 Auth:OperatorMinPasswordLength(spec20260915-1)。
+ */
+export const DEFAULT_OPERATOR_PASSWORD = '0000';
+
+/**
  * 名冊白名單重建(S5,S6 修正 username 遞補來源)。
  * 輸入:localStorage 讀出的名冊陣列(舊資料可能含 password 欄位,或缺 username);
  * 輸出:只含 id / name / username / shift / role 的新陣列;
@@ -26,7 +37,7 @@ const LoginModal = ({ isOpen, onClose }) => {
     const navigate = useNavigate();
 
     // -- State --
-    // 名冊只是「觸控便利清單」:點一列僅填入帳號,仍必須輸入密碼才能登入。
+    // 名冊只是「觸控便利清單」:點一列僅填入帳號,登入仍要按「選取」才送出。
     // 名冊為空時照常顯示,操作員手動輸入帳號即可,不得因此無法登入。
     const [users, setUsers] = useState(() => {
         const saved = localStorage.getItem('appUsers');
@@ -40,9 +51,16 @@ const LoginModal = ({ isOpen, onClose }) => {
         }
     });
 
-    // 登入表單(主流程與管理者子視窗共用同一組欄位語意)
+    // 登入表單(主流程與管理者模式共用同一組欄位語意)
     const [loginUsername, setLoginUsername] = useState('');
     const [loginPassword, setLoginPassword] = useState('');
+
+    // S17:管理者模式 —— 按「管理者」才展開密碼欄,作業模式完全看不到密碼
+    const [isAdminMode, setIsAdminMode] = useState(false);
+
+    // S17:登入失敗改為畫面上的一行訊息,不再用 alert()。
+    // alert 會卡住整個分頁(現場觸控機台要再點一次才解除,瀏覽器自動化更是直接失去回應)。
+    const [loginError, setLoginError] = useState('');
 
     // S13:記住「帳號欄目前這個值是名冊填的」,用來分辨使用者自己打的值(那種不可覆寫)
     const rosterFilledUsernameRef = React.useRef(null);
@@ -56,7 +74,19 @@ const LoginModal = ({ isOpen, onClose }) => {
     const handleUsernameChange = (value) => {
         rosterFilledUsernameRef.current = null;
         setUsernameKept(false);
+        setLoginError('');
         setLoginUsername(value);
+    };
+
+    /**
+     * 切換管理者模式。
+     * 輸入:是否進入管理者模式;輸出:無;
+     * 邏輯:兩個方向都把密碼欄的值清掉 —— 離開時不留殘值,進入時不沿用上一輪輸入。
+     */
+    const toggleAdminMode = (on) => {
+        setIsAdminMode(on);
+        setLoginPassword('');
+        setLoginError('');
     };
 
     // -- Shift Defaults (Updated per req) --
@@ -113,12 +143,21 @@ const LoginModal = ({ isOpen, onClose }) => {
     const [selectedUserId, setSelectedUserId] = useState(null);
     const [selectedShiftIdx, setSelectedShiftIdx] = useState(null);
 
+    // S17:名冊表底部按「+」會就地長出一列空白可編輯列(草稿列),取代原本表格上方那排編輯欄。
+    // 草稿列尚未寫進 localStorage,按「新增」才落地。
+    const [isDrafting, setIsDrafting] = useState(false);
+
+    // 編輯狀態與選取狀態分開:選取是「這一列是刪除 / 登入的對象」,
+    // 編輯是「這一列現在長著輸入框」。存檔後只收掉後者,選取留著才刪得掉。
+    const [editingId, setEditingId] = useState(null);
+
     // -- Handlers --
 
     /**
      * 點選名冊一列。
      * 輸入:名冊列;輸出:無;
-     * 邏輯:填入名冊編輯欄;帳號欄則**只在安全時才覆寫** —— 不代表已登入,密碼仍必須手動輸入。
+     * 邏輯:該列就地進入編輯狀態並填入編輯值;帳號欄則**只在安全時才覆寫**。
+     *       點列不代表已登入,仍要按「選取」才送出。
      *
      * S13:原本無條件覆寫帳號欄,實際踩到過 —— 帳號打好了、手滑點到名冊某列,
      * 帳號就被換成該列的代碼且畫面毫無提示,送出後只說「帳號或密碼錯誤」,
@@ -130,7 +169,10 @@ const LoginModal = ({ isOpen, onClose }) => {
      *  - 使用者自己打的 → **不覆寫**,並顯示一行提示,不靜默略過
      */
     const handleUserRowClick = (u) => {
+        setIsDrafting(false); // 點既有列等於放棄尚未儲存的空白列
+        setLoginError('');
         setSelectedUserId(u.id);
+        setEditingId(u.id);
         setNewUserCode(u.id);
         setNewUserName(u.name);
         setNewUserShift(u.shift || '');
@@ -164,25 +206,35 @@ const LoginModal = ({ isOpen, onClose }) => {
     };
 
     /**
-     * 送出登入(主流程與管理者子視窗共用的唯一登入路徑)。
+     * 送出登入(作業模式與管理者模式共用的唯一登入路徑)。
      * 輸入:無(取表單 state);輸出:無;
-     * 邏輯:帳號與密碼皆有值才呼叫後端 login();成功後寫入班別、關閉視窗並導回首頁,
-     *       失敗一律只提示「帳號或密碼錯誤」,不區分帳號不存在與密碼錯誤。
+     * 邏輯:帳號有值、密碼有來源才呼叫後端 login();成功後寫入班別、關閉視窗並導回首頁;
+     *       失敗只分「額度用盡」與「帳號或密碼錯誤」兩種,後者不區分帳號不存在與密碼錯誤。
      */
     const handleLogin = async () => {
-        if (!loginUsername || !loginPassword) {
-            alert(t('login.alert.invalidCredentials'));
+        // S17:密碼的**來源**依模式分流,驗證路徑仍然只有 POST /api/v1/auth/login 一條。
+        // 作業模式帶約定值,現場只要點名冊一列再按「選取」就能登入。
+        let submitted = DEFAULT_OPERATOR_PASSWORD;
+        if (isAdminMode) submitted = loginPassword;
+
+        if (!loginUsername.trim() || !submitted) {
+            setLoginError(t('login.alert.invalidCredentials'));
             return;
         }
-        const result = await login(loginUsername, loginPassword);
+        const result = await login(loginUsername.trim(), submitted);
         if (result?.ok) {
             const shiftCode = resolveShiftCode();
             if (shiftCode) setSessionShift(shiftCode);
             setLoginPassword('');
+            setLoginError('');
             onClose();
             navigate('/');
+        } else if (result?.reason === 'rateLimited') {
+            // 登入額度是整廠共用一個桶(report20260907-1),換班尖峰多人連點就會撞到。
+            // 一鍵登入讓誤觸「選取」變容易,這裡不講出來使用者只會看到「沒反應」。
+            setLoginError(t('login.alert.tooManyAttempts'));
         } else {
-            alert(t('login.alert.invalidCredentials'));
+            setLoginError(t('login.alert.invalidCredentials'));
         }
     };
 
@@ -206,6 +258,23 @@ const LoginModal = ({ isOpen, onClose }) => {
         setUsers(newUsers);
         localStorage.setItem('appUsers', JSON.stringify(newUsers));
         setSelectedUserId(newUser.id);
+        setIsDrafting(false); // 草稿列已落地,回到唯讀呈現
+        setEditingId(null);
+    };
+
+    /**
+     * 按名冊表底部的「+」。
+     * 輸入:無;輸出:無;
+     * 邏輯:清空三個編輯值並進入草稿狀態,表格底部隨即多一列空白可編輯列。
+     *       不預先寫進 localStorage —— 沒填完就離開的空列不該留在名冊裡。
+     */
+    const handleStartDraft = () => {
+        setIsDrafting(true);
+        setSelectedUserId(null);
+        setEditingId(null);
+        setNewUserCode('');
+        setNewUserName('');
+        setNewUserShift('');
     };
 
     const handleDeleteUser = () => {
@@ -215,6 +284,8 @@ const LoginModal = ({ isOpen, onClose }) => {
         setUsers(newUsers);
         localStorage.setItem('appUsers', JSON.stringify(newUsers));
         setSelectedUserId(null);
+        setIsDrafting(false);
+        setEditingId(null);
         setNewUserCode('');
         setNewUserName('');
         setNewUserShift('');
@@ -238,9 +309,6 @@ const LoginModal = ({ isOpen, onClose }) => {
         setSelectedShiftIdx(null);
     };
 
-    // Admin Login State —— 只是同一條登入路徑的另一個入口,不再有第二套驗證邏輯
-    const [showAdminLogin, setShowAdminLogin] = useState(false);
-
     if (!isOpen) return null;
 
     return (
@@ -248,7 +316,12 @@ const LoginModal = ({ isOpen, onClose }) => {
             <div className={styles.windowContainer} style={{ position: 'relative' }}>
                 {/* Part 1: Top Buttons */}
                 <div className={styles.topBar}>
-                    <button className={styles.largeBtn} onClick={() => setShowAdminLogin(true)} style={{ marginRight: 'auto' }}>{t('login.btn.admin')}</button>
+                    {/* S17:同一個位置,作業模式是入口、管理者模式是退路 —— 觸控機台上不再多一層子視窗 */}
+                    {isAdminMode ? (
+                        <button className={styles.largeBtn} onClick={() => toggleAdminMode(false)} style={{ marginRight: 'auto' }}>{t('login.btn.back')}</button>
+                    ) : (
+                        <button className={styles.largeBtn} onClick={() => toggleAdminMode(true)} style={{ marginRight: 'auto' }}>{t('login.btn.admin')}</button>
+                    )}
                     <button className={styles.largeBtn} onClick={handleLogin}>{t('login.btn.select')}</button>
                     <button className={styles.largeBtn} onClick={onClose}>{t('login.btn.exit')}</button>
                 </div>
@@ -287,55 +360,40 @@ const LoginModal = ({ isOpen, onClose }) => {
                             <span className={styles.fieldNote}>{t('login.hint.usernameKept')}</span>
                         )}
                     </div>
-                    <div className={styles.infoField}>
-                        <label>{t('login.placeholder.password')}</label>
-                        <input
-                            type="password"
-                            aria-label={t('login.placeholder.password')}
-                            value={loginPassword}
-                            onChange={e => setLoginPassword(e.target.value)}
-                            onKeyDown={e => { if (e.key === 'Enter') handleLogin(); }}
-                        />
-                    </div>
+                    {/*
+                      S17:密碼欄只在管理者模式渲染。
+                      作業員不需要密碼(前端帶約定值 DEFAULT_OPERATOR_PASSWORD),
+                      但這塊 markup / 樣式 / i18n 字串**全部保留** ——
+                      以後要開放作業員密碼,把這個條件改掉就回來了,不必重寫版面。
+                    */}
+                    {isAdminMode && (
+                        <div className={styles.infoField}>
+                            <label>{t('login.placeholder.password')}</label>
+                            <input
+                                type="password"
+                                aria-label={t('login.placeholder.password')}
+                                value={loginPassword}
+                                onChange={e => { setLoginPassword(e.target.value); setLoginError(''); }}
+                                onKeyDown={e => { if (e.key === 'Enter') handleLogin(); }}
+                                autoFocus
+                            />
+                        </div>
+                    )}
 
                 </div>
+
+                {/* S17:登入失敗說在畫面上,不用 alert —— alert 會卡住整個分頁 */}
+                {loginError && (
+                    <p className={styles.loginError} role="alert">{loginError}</p>
+                )}
 
                 {/* Part 3: User Table */}
                 {/*
-                  S12:代碼 / 班別 / 操作員 是**下面這張名冊表的編輯欄**,不是登入憑證,
-                  原本卻和帳號 / 密碼混在同一條 infoBar 裡。除了語意不清,六個欄位也塞不進
-                  640px 的卡片 —— infoBar 沒有 flex-wrap,最後兩欄直接溢位到卡片外面,
-                  使用者點不到,連帶讓「新增」永遠缺代碼而無法使用。
-                  改為獨立一列、依表頭順序(代碼 / 班別 / 操作員)擺在表格正上方。
+                  S12 把代碼 / 班別 / 操作員 從登入 infoBar 拆出來,獨立成表格上方一列。
+                  S17 再往前一步:編輯就發生在**它要改的那一列上**。
+                  表格上方那排欄位與表格列的對應關係只能靠猜,現場常見的誤解是
+                  「上面填一填、下面就會多一列」—— 現在按底部的「+」直接長出那一列。
                 */}
-                <div className={styles.rosterEditor}>
-                    <div className={styles.infoField}>
-                        <label>{t('login.label.code')}</label>
-                        <input
-                            aria-label={t('login.label.code')}
-                            value={newUserCode}
-                            onChange={e => setNewUserCode(e.target.value)}
-                        />
-                    </div>
-                    <div className={styles.infoField}>
-                        <label>{t('login.col.shift')}</label>
-                        <input
-                            aria-label={t('login.col.shift')}
-                            value={newUserShift}
-                            onChange={e => setNewUserShift(e.target.value)}
-                            placeholder="A/B"
-                        />
-                    </div>
-                    <div className={styles.infoField}>
-                        <label>{t('login.label.operator')}</label>
-                        <input
-                            aria-label={t('login.label.operator')}
-                            value={newUserName}
-                            onChange={e => setNewUserName(e.target.value)}
-                        />
-                    </div>
-                </div>
-
                 <div className={styles.tableSection}>
                     <div className={styles.tableWrapper}>
                         <table className={styles.table}>
@@ -354,11 +412,57 @@ const LoginModal = ({ isOpen, onClose }) => {
                                         className={selectedUserId === u.id ? styles.selectedRow : ''}
                                         style={{ cursor: 'pointer' }}
                                     >
-                                        <td className={styles.td} style={{ borderRight: '1px solid #ccc' }}>{u.id}</td>
-                                        <td className={styles.td} style={{ borderRight: '1px solid #ccc' }}>{u.shift}</td>
-                                        <td className={styles.td}>{u.name}</td>
+                                        {/* 選取中的那一列就地變成可編輯 —— 要改哪一列就點哪一列,不必回頭找上面的欄位 */}
+                                        {editingId === u.id && !isDrafting ? (
+                                            <>
+                                                <td className={styles.td} style={{ borderRight: '1px solid #ccc' }}>
+                                                    <input className={styles.cellInput} aria-label={t('login.label.code')} value={newUserCode} onChange={e => setNewUserCode(e.target.value)} />
+                                                </td>
+                                                <td className={styles.td} style={{ borderRight: '1px solid #ccc' }}>
+                                                    <input className={styles.cellInput} aria-label={t('login.col.shift')} value={newUserShift} onChange={e => setNewUserShift(e.target.value)} placeholder="A/B" />
+                                                </td>
+                                                <td className={styles.td}>
+                                                    <input className={styles.cellInput} aria-label={t('login.label.operator')} value={newUserName} onChange={e => setNewUserName(e.target.value)} />
+                                                </td>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <td className={styles.td} style={{ borderRight: '1px solid #ccc' }}>{u.id}</td>
+                                                <td className={styles.td} style={{ borderRight: '1px solid #ccc' }}>{u.shift}</td>
+                                                <td className={styles.td}>{u.name}</td>
+                                            </>
+                                        )}
                                     </tr>
                                 ))}
+
+                                {/* 草稿列:按「+」長出來的空白列,按「新增」才寫進名冊 */}
+                                {isDrafting && (
+                                    <tr className={styles.selectedRow}>
+                                        <td className={styles.td} style={{ borderRight: '1px solid #ccc' }}>
+                                            <input className={styles.cellInput} aria-label={t('login.label.code')} value={newUserCode} onChange={e => setNewUserCode(e.target.value)} autoFocus />
+                                        </td>
+                                        <td className={styles.td} style={{ borderRight: '1px solid #ccc' }}>
+                                            <input className={styles.cellInput} aria-label={t('login.col.shift')} value={newUserShift} onChange={e => setNewUserShift(e.target.value)} placeholder="A/B" />
+                                        </td>
+                                        <td className={styles.td}>
+                                            <input className={styles.cellInput} aria-label={t('login.label.operator')} value={newUserName} onChange={e => setNewUserName(e.target.value)} />
+                                        </td>
+                                    </tr>
+                                )}
+
+                                {/* 整列都是按鈕:觸控機台上小圖示按不到,所以讓「+」佔滿一列 */}
+                                {!isDrafting && (
+                                    <tr>
+                                        <td className={styles.td} colSpan={3} style={{ padding: 0 }}>
+                                            <button
+                                                type="button"
+                                                className={styles.addRowBtn}
+                                                onClick={handleStartDraft}
+                                                aria-label={t('login.btn.addRow')}
+                                            >+</button>
+                                        </td>
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -429,33 +533,11 @@ const LoginModal = ({ isOpen, onClose }) => {
                     <button className={styles.largeBtn} style={{ marginLeft: '5px', fontSize: '0.9rem', padding: '2px 10px' }}>{t('login.btn.customPeriod')}</button>
                 </div>
 
-                {/* Admin Modal Overlay */}
-                {showAdminLogin && (
-                    <div className={styles.adminOverlay}>
-                        <div className={styles.adminModal}>
-                            <h3>{t('login.admin.title')}</h3>
-                            <input
-                                type="text"
-                                placeholder={t('login.placeholder.username')}
-                                className={styles.adminInput}
-                                value={loginUsername}
-                                onChange={e => handleUsernameChange(e.target.value)}
-                                autoFocus
-                            />
-                            <input
-                                type="password"
-                                placeholder={t('login.placeholder.password')}
-                                className={styles.adminInput}
-                                value={loginPassword}
-                                onChange={e => setLoginPassword(e.target.value)}
-                            />
-                            <div className={styles.adminButtons}>
-                                <button className={`${styles.adminBtn} ${styles.adminBtnCancel}`} onClick={() => setShowAdminLogin(false)}>{t('login.btn.cancel')}</button>
-                                <button className={styles.adminBtn} onClick={handleLogin}>{t('login.btn.login')}</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                {/*
+                  S17:adminOverlay 子視窗移除。
+                  它與主畫面共用同一組 state、同一個 handleLogin,本來就沒有隔離意義,
+                  在觸控機台上還多一層開關。管理者模式改成「同一張卡片上多一個密碼欄」。
+                */}
             </div>
         </div>
     );
