@@ -242,3 +242,31 @@
     border: 4px solid var(--status-error);
     animation: pulse-red 2s infinite;
 }
+/* B15:取代 alert() 的畫面訊息;固定在畫面上方,點一下即關閉 */
+.notice {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2000;
+    max-width: min(90vw, 640px);
+    padding: 12px 20px;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+.noticeWarn {
+    background: #fdecea;
+    color: #b3261e;
+    border: 1px solid #f5c2bd;
+}
+
+.noticeInfo {
+    background: #e8f1fd;
+    color: #0b57d0;
+    border: 1px solid #b9d3f7;
+}

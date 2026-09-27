@@ -18,7 +18,7 @@ const FinishOrderModal = (await import('../../components/modals/FinishOrderModal
  *         僅在 closed→open 邊緣以最新 initialData 初始化一次。
  * 2. #6 生產端 — 送出時回傳 defects 陣列(供 Dashboard 加總不良數),而非單一 defectQty。
  * 3. S3 / AC-30 — defects 每項形狀為 { code, reason, qty },列數跟隨 useReasonCodes;
- *                 既有的短缺門檻 alert 行為不變。
+ *                 短缺門檻仍中止送出(B15 起改為視窗內訊息,不 alert)。
  */
 
 /**
@@ -212,8 +212,8 @@ describe('FinishOrderModal', () => {
         expect(payload.defects.map(d => d.qty)).toEqual([12, 0, 5, 0]);
     });
 
-    // AC-30:既有的短缺門檻 alert 行為不變
-    it('AC-30 短缺超過門檻且未填原因時仍 alert 並中止送出', () => {
+    // AC-30:短缺超過門檻且未填原因仍中止送出;B15 起提示改為視窗內訊息,不再 alert
+    it('B15 短缺超過門檻且未填原因時中止送出,以視窗內訊息提示而非 alert', () => {
         const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => { });
         const onConfirm = vi.fn();
 
@@ -226,11 +226,80 @@ describe('FinishOrderModal', () => {
             />
         );
 
+        expect(baseElement.querySelector('[role="alert"]')).toBeNull();
+
         const buttons = [...baseElement.querySelectorAll('button')];
         fireEvent.click(buttons.find(b => b.textContent && b.textContent.trim() !== '×'));
 
-        expect(alertSpy).toHaveBeenCalledTimes(1);
+        expect(alertSpy).not.toHaveBeenCalled();
         expect(onConfirm).not.toHaveBeenCalled();
+        const msg = baseElement.querySelector('[role="alert"]');
+        expect(msg).not.toBeNull();
+        // 訊息要帶出目標量與門檻,現場才知道差多少
+        expect(msg.textContent).toContain('500');
+        expect(msg.textContent).toContain('50');
+        expect(baseElement.querySelector('select[name="shortageReason"]').getAttribute('aria-invalid')).toBe('true');
+    });
+
+    it('B15 選了欠量原因後提示消失,再按確定即可送出', () => {
+        const onConfirm = vi.fn();
+        const onClose = vi.fn();
+        const { baseElement } = renderWithLang(
+            <FinishOrderModal
+                isOpen={true}
+                onClose={onClose}
+                onConfirm={onConfirm}
+                initialData={{ operator: 'Eric', qty: 100, targetQty: 500 }}
+            />
+        );
+        const confirmBtn = () => [...baseElement.querySelectorAll('button')]
+            .find(b => b.textContent && b.textContent.trim() !== '×');
+
+        fireEvent.click(confirmBtn());
+        expect(baseElement.querySelector('[role="alert"]')).not.toBeNull();
+
+        fireEvent.change(baseElement.querySelector('select[name="shortageReason"]'), { target: { value: 'Reason A' } });
+        expect(baseElement.querySelector('[role="alert"]')).toBeNull();
+
+        fireEvent.click(confirmBtn());
+        expect(onConfirm).toHaveBeenCalledTimes(1);
+        expect(onConfirm.mock.calls[0][0].shortageReason).toBe('Reason A');
+        expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('B15 欠量在門檻內不需原因,不顯示提示', () => {
+        const onConfirm = vi.fn();
+        const { baseElement } = renderWithLang(
+            <FinishOrderModal
+                isOpen={true}
+                onClose={() => { }}
+                onConfirm={onConfirm}
+                initialData={{ operator: 'Eric', qty: 450, targetQty: 500 }}
+            />
+        );
+        fireEvent.click([...baseElement.querySelectorAll('button')]
+            .find(b => b.textContent && b.textContent.trim() !== '×'));
+
+        expect(onConfirm).toHaveBeenCalledTimes(1);
+        expect(baseElement.querySelector('[role="alert"]')).toBeNull();
+    });
+
+    it('B15 關閉再開啟時,上一次的欠量提示不殘留', () => {
+        const props = (isOpen) => ({
+            isOpen,
+            onClose: () => { },
+            onConfirm: () => { },
+            initialData: { operator: 'Eric', qty: 100, targetQty: 500 },
+        });
+        const { baseElement, rerender } = renderWithLang(<FinishOrderModal {...props(true)} />);
+        fireEvent.click([...baseElement.querySelectorAll('button')]
+            .find(b => b.textContent && b.textContent.trim() !== '×'));
+        expect(baseElement.querySelector('[role="alert"]')).not.toBeNull();
+
+        rerender(<LanguageProvider><FinishOrderModal {...props(false)} /></LanguageProvider>);
+        rerender(<LanguageProvider><FinishOrderModal {...props(true)} /></LanguageProvider>);
+
+        expect(baseElement.querySelector('[role="alert"]')).toBeNull();
     });
 
     it('AC-30 重新開啟時不良數量歸零,不殘留上一張工單的輸入', () => {

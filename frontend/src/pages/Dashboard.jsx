@@ -17,6 +17,7 @@ import { calculateOEE, durationToMinutes } from '../utils/reportUtils';
 import { sendCompletionWithRetry } from '../utils/completionRetry';
 import { resolveFactoryDate, DEFAULT_DAY_BOUNDARY_HOUR, DEFAULT_TIME_ZONE } from '../utils/factoryDate';
 import { useLanguage } from '../modules/language/LanguageContext';
+import { useTransientNotice } from '../hooks/useTransientNotice';
 
 /**
  * 修補 localStorage 內某一筆生產歷史紀錄
@@ -270,6 +271,9 @@ const Dashboard = () => {
 
     const [showFinishModal, setShowFinishModal] = useState(false);
 
+    // B15:F 鍵的警示改為畫面上一行訊息,不再用 alert() —— alert 會凍結整個分頁
+    const { notice, showNotice, clearNotice } = useTransientNotice();
+
     // S3 / F7:工廠時區與日界(啟動時向後端取一次,取不到就用預設 8 / Asia/Taipei)。
     // 用 ref 供 handleConfirmFinish 讀取,避免閉包捕捉到過期的設定值。
     const factoryTimeRef = useRef({ dayBoundaryHour: DEFAULT_DAY_BOUNDARY_HOUR, timeZone: DEFAULT_TIME_ZONE });
@@ -298,7 +302,7 @@ const Dashboard = () => {
         if (currentCount > 0) {
             setShowFinishModal(true);
         } else {
-            alert(`${t('dashboard.monitor.productionQty')} 0! ${t('dashboard.logs.f10Return')}`);
+            showNotice(`${t('dashboard.monitor.productionQty')} 0! ${t('dashboard.logs.f10Return')}`);
             addLog('Finish failed: Count is 0');
         }
     };
@@ -596,7 +600,7 @@ const Dashboard = () => {
                     {
                         // Motor Off Logic: Block Start
                         if (!isPlcConnected) {
-                            alert(t('dashboard.alerts.plcDisconnected'));
+                            showNotice(t('dashboard.alerts.plcDisconnected'));
                             addLog('F3 Failed: PLC Disconnected');
                             return;
                         }
@@ -641,7 +645,7 @@ const Dashboard = () => {
                                     addLog('F3: Cannot move active order');
                                 }
                             } else {
-                                alert(t('dashboard.alerts.selectQueuedOrder'));
+                                showNotice(t('dashboard.alerts.selectQueuedOrder'));
                             }
                         } else {
                             // 非 placeholder：重新同步目前工單到後端
@@ -659,7 +663,7 @@ const Dashboard = () => {
                                     console.error('Failed to sync CurrentOrder:', err);
                                 });
                             }
-                            alert(`F3: ${t('dashboard.alerts.startProduction')}`);
+                            showNotice(`F3: ${t('dashboard.alerts.startProduction')}`, 'info');
                             addLog(t('dashboard.logs.f3Start'));
                         }
                     }
@@ -667,7 +671,7 @@ const Dashboard = () => {
                 case 'F4': // Finish Order
                     // Check speed = 0 before allowing finish
                     if (currentDataRef.current.line_speed > 0) {
-                        alert(t('dashboard.alerts.speedNotZero'));
+                        showNotice(t('dashboard.alerts.speedNotZero'));
                         addLog('F4 Failed: Speed is not 0');
                         return;
                     }
@@ -695,7 +699,7 @@ const Dashboard = () => {
                     {
                         // Check speed = 0 before allowing return
                         if (currentDataRef.current.line_speed > 0) {
-                            alert(t('dashboard.alerts.speedNotZeroReturn'));
+                            showNotice(t('dashboard.alerts.speedNotZeroReturn'));
                             addLog('F10 Failed: Speed is not 0');
                             return;
                         }
@@ -944,6 +948,15 @@ const Dashboard = () => {
 
     return (
         <div className={`${styles.container} ${!isPlcConnected ? styles.emergencyState : ''}`}>
+            {notice && (
+                <div
+                    className={`${styles.notice} ${notice.tone === 'info' ? styles.noticeInfo : styles.noticeWarn}`}
+                    role="alert"
+                    onClick={clearNotice}
+                >
+                    {notice.text}
+                </div>
+            )}
             {/* Monitor Section */}
             <div className={styles.monitorSection}>
                 <div className={styles.mainMetric}>

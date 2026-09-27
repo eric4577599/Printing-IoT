@@ -244,7 +244,12 @@ const LoginModal = ({ isOpen, onClose }) => {
     // I will replace only the top section and handleLogin.
 
     const handleAddUser = () => {
-        if (!newUserCode || !newUserName) return alert(t('login.alert.enterCodeName'));
+        // B15:缺欄位提示走同一行畫面訊息,不用 alert —— alert 會卡住整個分頁
+        if (!newUserCode || !newUserName) {
+            setLoginError(t('login.alert.enterCodeName'));
+            return;
+        }
+        setLoginError('');
         // S5:名冊物件不得含 password 欄位(帳號密碼由後端建立,見 spec §5.4)
         // S6:username 是後端帳號(代碼,例如 OP1),不是顯示名稱 —— 兩者混用會讓點名冊登入必然失敗
         const newUser = { id: newUserCode, name: newUserName, username: newUserCode, role: 'OPERATOR', shift: newUserShift.toUpperCase() };

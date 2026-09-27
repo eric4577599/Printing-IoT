@@ -95,3 +95,13 @@
     background-color: rgba(255, 255, 255, 0.8);
     outline: none;
 }
+/* B15:取代 alert() 的視窗內錯誤訊息,放在頁尾按鈕左側 */
+.formError {
+    margin: 0 auto 0 0;
+    padding: 6px 10px;
+    border-radius: 4px;
+    background: #fdecea;
+    color: #b3261e;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}

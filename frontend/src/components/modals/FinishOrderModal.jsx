@@ -40,6 +40,9 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
     // 各代碼對應的輸入數量;列由 defectReasons 決定,qty 一律初始 0
     const [defectQtys, setDefectQtys] = useState({});
 
+    // B15:欠量未填原因的提示改為視窗內一行訊息,不再用 alert() —— alert 會凍結整個分頁
+    const [shortageError, setShortageError] = useState('');
+
     // 修正:原 effect 依賴 [isOpen, initialData],父層(Dashboard)每秒重建 initialData 物件,
     // 導致 goodQty 每秒被即時計數覆寫、操作員無法手動修改。改為只在 closed→open 邊緣以最新
     // initialData 初始化一次;用 ref 持有最新 initialData,effect 僅依賴 isOpen。
@@ -50,6 +53,7 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
         if (isOpen) {
             // S3 / F8:每次開啟都把不良數量歸零,避免上一張工單的輸入殘留
             setDefectQtys({});
+            setShortageError('');
             const init = initialDataRef.current;
             if (init) {
                 setFormData(prev => ({
@@ -70,6 +74,8 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
             ...prev,
             [name]: type === 'checkbox' ? checked : value
         }));
+        // 選了欠量原因,提示就沒有意義了
+        if (name === 'shortageReason' && value) setShortageError('');
     };
 
     /**
@@ -111,7 +117,7 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
         }
 
         if (shortageGap > 0 && shortageGap > threshold && !formData.shortageReason) {
-            alert(`${t('modalExt.finishOrder.shortageAlertPre')} (${formData.targetQty}) ${t('modalExt.finishOrder.shortageAlertMid')} ${threshold}${t('modalExt.finishOrder.shortageAlertPost')}`);
+            setShortageError(`${t('modalExt.finishOrder.shortageAlertPre')} (${formData.targetQty}) ${t('modalExt.finishOrder.shortageAlertMid')} ${threshold}${t('modalExt.finishOrder.shortageAlertPost')}`);
             return;
         }
 
@@ -195,7 +201,8 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
                                 name="shortageReason"
                                 value={formData.shortageReason}
                                 onChange={handleInputChange}
-                                style={{ flex: 1, padding: '4px' }}
+                                aria-invalid={shortageError ? true : undefined}
+                                style={{ flex: 1, padding: '4px', ...(shortageError ? { outline: '2px solid #b3261e' } : {}) }}
                             >
                                 <option value="">{t('modalExt.finishOrder.pleaseSelect')}</option>
                                 <option value="Reason A">{t('modalExt.finishOrder.reasonA')}</option>
@@ -258,7 +265,10 @@ const FinishOrderModal = ({ isOpen, onClose, onConfirm, initialData }) => {
                         </div>
                     </div>
                 </div >
-                <div className={styles.footer} style={{ justifyContent: 'flex-end', gap: '10px' }}>
+                <div className={styles.footer} style={{ justifyContent: 'flex-end', alignItems: 'center', gap: '10px' }}>
+                    {shortageError && (
+                        <p className={styles.formError} role="alert">{shortageError}</p>
+                    )}
                     <button className={styles.primaryBtn} onClick={handleSubmit}>{t('ui.buttons.confirm')}</button>
                     <button className={styles.secondaryBtn} onClick={onClose}>{t('ui.buttons.cancel')}</button>
                 </div>
