@@ -38,6 +38,8 @@ Conventional Commits:`feat:` `fix:` `docs:` `refactor:` `test:` `chore:`。
 
 ## 專案區(以下由各專案自行填寫)
 
+**定位(2026-10-14 Eric 定):** 本專案仍放個人區,是 Eric 以與公司 LT IoT 相同架構做的自我測試,不是公司產品的程式來源。
+
 ### 技術棧
 
 - 後端 **.NET 9**(全部 csproj `net9.0`)—— API / Worker / Core / Infrastructure / Tests 五個專案,EF Core + PostgreSQL 15 + Redis 7 + MQTTnet(Mosquitto)。
@@ -75,3 +77,7 @@ Conventional Commits:`feat:` `fix:` `docs:` `refactor:` `test:` `chore:`。
 - 前端改完要**重建容器**才會上線(compose 掛的是原始碼,實際服務的是 build 出來的 bundle)。
 - macOS dot-underscore(`._*`)會弄壞 `dotnet build`:`find . -name "._*" -delete`。
 - 大小寫:Mac 不敏感、Linux 容器敏感,import 路徑大小寫必須完全一致,否則本機過、進 Docker 炸。
+
+### context 超過 70%(2026-10-29 Eric 定)
+
+狀態列 ctx 超過 70% 時:停下新工作 → 寫/更新 `handoff.md`(Next Step 逐字寫清空後的後續命令)→ 執行 `python3 "/Volumes/G70Pro/cusor pool/M-Agent/clear_seat.py" request <本座位路徑>` 通知 M-Agent,由它用 osascript 送 `/clear` → 清空後讀 handoff 的 Next Step 接著做。不依賴 auto-compact。細節見 `M-Agent/docs/rule20261029-context-70.md`。
