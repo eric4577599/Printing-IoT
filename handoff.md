@@ -1,5 +1,5 @@
 # Handoff — Claude(Printing IoT)
-> 最後更新:2026-11-05 18:15
+> 最後更新:2026-11-05 21:40
 
 ## ⛔ 下一個接手的人先看這段
 
@@ -62,6 +62,7 @@ OP1~OP5 的密碼已改為 `0000`(直接改資料庫雜湊,因為走 API 要輸�
 - ✅ **B18 已修**(`report20261105-1.md`):斷線自動重連 + 重訂閱 + 沉默警告;實機重啟 broker 驗過。
   **commit 後尚未 push**;下次斷線不會再失聰。
 - ✅ **損耗率查證已回覆**(2026-11-05,`M-Agent/docs/inbox/20261105-reply-printing-iot-loss-rate.md`):資料夾內查無公式,3.1/3.5 無法重算;下一步要向製表人/正隆資訊課要欄位定義。
+- ⏳ **向 Stacker / Stacker-LT AI 問「正隆損耗率定義」尚未送達**:TeamChat 需登入(Claude 不可輸入密碼),轉交 M-Agent 的訊息因權限模式不同而過期。待 Eric 貼給 eric-ai,或登入 TeamChat 後由我送 `knowledge`(workspace Team LT / team-iot 未定)。答案回來補進上述回覆檔。
 - 剩下 B19(車速送不到前端)與下方實機驗收 E3、Backlog。
 
 ### 1. 實機驗收(唯一真正卡住的事,需真人開瀏覽器)
@@ -251,3 +252,4 @@ Claude 可以自己走完**,不必等 Eric 先登入。**管理者登入**(設�
 
 - 2026-10-14 JD 與 10-29 context 70% 規則:✅ 2026-11-05 已寫入 CLAUDE.md(commit 63d499c),ack 已回。
 - 2026-11-05 損耗率查證:✅ 已回覆。
+- 2026-11-05 全體「完成未完成工作」:✅ 已回 `M-Agent/docs/inbox/下班回報-Printing-IoT.md`;未 push。
