@@ -20,6 +20,26 @@ public class MqttWorker : BackgroundService
     private IConnectionMultiplexer? _redis;
     private readonly string _brokerAddress;
     private readonly int _brokerPort;
+    private MqttClientOptions? _mqttOptions;
+    private long _lastMessageTicks = DateTime.UtcNow.Ticks;
+
+    /// <summary>連線正常時的檢查間隔。</summary>
+    private static readonly TimeSpan CheckInterval = TimeSpan.FromSeconds(10);
+    /// <summary>重連退避上限。</summary>
+    private static readonly TimeSpan MaxBackoff = TimeSpan.FromSeconds(60);
+    /// <summary>連線中但這麼久沒收到任何訊息,就印警告讓失聰看得見。</summary>
+    private static readonly TimeSpan SilenceWarning = TimeSpan.FromMinutes(10);
+
+    /// <summary>
+    /// 計算第 N 次連續重連失敗後的等待時間。
+    /// 輸入:連續失敗次數(從 1 起)。邏輯:2 秒起每次加倍,上限 60 秒。輸出:等待時間。
+    /// </summary>
+    public static TimeSpan NextBackoff(int failures)
+    {
+        if (failures <= 0) return TimeSpan.Zero;
+        var seconds = 2.0 * Math.Pow(2, Math.Min(failures - 1, 10));
+        return TimeSpan.FromSeconds(Math.Min(seconds, MaxBackoff.TotalSeconds));
+    }
 
     public MqttWorker(
         ILogger<MqttWorker> logger,
@@ -46,7 +66,7 @@ public class MqttWorker : BackgroundService
         var factory = new MqttFactory();
         _mqttClient = factory.CreateMqttClient();
 
-        var mqttOptions = new MqttClientOptionsBuilder()
+        _mqttOptions = new MqttClientOptionsBuilder()
             .WithTcpServer(_brokerAddress, _brokerPort)
             .WithClientId("BackendWorker")
             .Build();
@@ -54,11 +74,22 @@ public class MqttWorker : BackgroundService
         _mqttClient.ApplicationMessageReceivedAsync += HandleMessageAsync;
 
         _logger.LogInformation($"Connecting to MQTT Broker at {_brokerAddress}:{_brokerPort}");
-        await _mqttClient.ConnectAsync(mqttOptions, cancellationToken);
+        await _mqttClient.ConnectAsync(_mqttOptions, cancellationToken);
+        await SubscribeAllAsync();
 
-        await _mqttClient.SubscribeAsync("factory/machine/update");
+        await base.StartAsync(cancellationToken);
+    }
 
-        var db = _redis.GetDatabase();
+    /// <summary>
+    /// 訂閱模擬器與真機 topic。
+    /// 輸入:無(topic 每次都重讀 Redis `config/communication`)。邏輯:連線建立或重建後都要呼叫,
+    /// 因為 clean session 的訂閱不會跟著重連保留。輸出:無。
+    /// </summary>
+    private async Task SubscribeAllAsync()
+    {
+        await _mqttClient!.SubscribeAsync("factory/machine/update");
+
+        var db = _redis!.GetDatabase();
         var configJson = await db.StringGetAsync("config/communication");
         string wiseTopic = "Advantech/+/data";
 
@@ -84,24 +115,60 @@ public class MqttWorker : BackgroundService
         }
         else
         {
-             _logger.LogInformation($"No config found in Redis, using default topic: {wiseTopic}");
+            _logger.LogInformation($"No config found in Redis, using default topic: {wiseTopic}");
         }
 
         await _mqttClient.SubscribeAsync(wiseTopic);
-
-        await base.StartAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// 連線看守迴圈。
+    /// 輸入:停止權杖。邏輯:斷線時真正重連並重新訂閱,失敗以指數退避重試(上限 60 秒);
+    /// 連線中但長時間沒有任何訊息則印警告。輸出:無,直到停止。
+    /// </summary>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // BackgroundService guarantees StartAsync completes (and assigns _mqttClient) before ExecuteAsync runs.
+        var failures = 0;
+        var silenceWarned = false;
         while (!stoppingToken.IsCancellationRequested)
         {
-            if (!_mqttClient!.IsConnected)
+            try
             {
-                _logger.LogWarning("MQTT Client disconnected. Reconnecting...");
+                if (!_mqttClient!.IsConnected)
+                {
+                    _logger.LogWarning("MQTT Client disconnected. Reconnecting...");
+                    await _mqttClient.ConnectAsync(_mqttOptions!, stoppingToken);
+                    await SubscribeAllAsync();
+                    failures = 0;
+                    Interlocked.Exchange(ref _lastMessageTicks, DateTime.UtcNow.Ticks);
+                    silenceWarned = false;
+                    _logger.LogInformation("MQTT Client reconnected and resubscribed.");
+                }
+                else
+                {
+                    var silent = DateTime.UtcNow - new DateTime(Interlocked.Read(ref _lastMessageTicks), DateTimeKind.Utc);
+                    if (silent > SilenceWarning && !silenceWarned)
+                    {
+                        _logger.LogWarning("MQTT connected but no message received for {Minutes:F0} minutes.", silent.TotalMinutes);
+                        silenceWarned = true;
+                    }
+                }
             }
-            await Task.Delay(10000, stoppingToken);
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                failures++;
+                var wait = NextBackoff(failures);
+                _logger.LogError(ex, "MQTT reconnect failed (attempt {Failures}); retry in {Wait}s", failures, wait.TotalSeconds);
+                try { await Task.Delay(wait, stoppingToken); } catch (OperationCanceledException) { break; }
+                continue;
+            }
+
+            try { await Task.Delay(CheckInterval, stoppingToken); } catch (OperationCanceledException) { break; }
         }
     }
 
@@ -109,6 +176,7 @@ public class MqttWorker : BackgroundService
     {
         try
         {
+            Interlocked.Exchange(ref _lastMessageTicks, DateTime.UtcNow.Ticks);
             var topic = e.ApplicationMessage.Topic;
             var payload = e.ApplicationMessage.ConvertPayloadToString();
 

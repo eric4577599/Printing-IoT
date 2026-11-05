@@ -1,5 +1,5 @@
 # Handoff — Claude(Printing IoT)
-> 最後更新:2026-09-27 11:30
+> 最後更新:2026-11-05 18:15
 
 ## ⛔ 下一個接手的人先看這段
 
@@ -31,7 +31,7 @@
 
 ## Current State
 
-工作分支 `main`。9/16 以前的 commit 都已 push;**2026-09-27 的 B15 兩個 commit 尚未 push**。
+工作分支 `main`。9/16 以前的 commit 都已 push;**2026-09-27 起的 B15 兩個 commit、2026-11-05 的 B18 與 CLAUDE.md 兩個 commit 尚未 push**。
 `fix/audit-20260903` 與 `feat/extract-maintenance` 已完成任務,確認上線無誤後可清掉。
 
 **2026-09-15:S16 已整個還原,改做 S17**(`docs/spec20260915-1.md`、`docs/report20260915-1.md`)——
@@ -57,12 +57,13 @@ OP1~OP5 的密碼已改為 `0000`(直接改資料庫雜湊,因為走 API 要輸�
 
 ## Next Step
 
-### 0. 🔴 B18 Worker 聽不到 MQTT(最優先,影響現場資料)
+### 0. 待辦(2026-11-05 更新)
 
-`Worker.cs` 斷線後**不會重連**,只會每 10 秒印一行「Reconnecting...」但實際什麼都沒做。
-2026-09-26 09:17 起停聽約 26 小時才被發現;9/27 已重啟 Worker 止血,**程式碼未修,下次斷線會再發生**。
-細節與修法方向見 `report20260927-1.md` §3.1。**要驗 Worker 有沒有在聽:看 Redis `factory/monitor` 的 timestamp。**
-
+- ✅ **B18 已修**(`report20261105-1.md`):斷線自動重連 + 重訂閱 + 沉默警告;實機重啟 broker 驗過。
+  **commit 後尚未 push**;下次斷線不會再失聰。
+- 🟡 **`docs/inbox/20261105-loss-rate-question.md`**(M-Agent 交辦):查正隆資料夾「損耗率怎麼算」,
+  回覆寫到 `M-Agent/docs/inbox/20261105-reply-printing-iot-loss-rate.md`。**尚未開始**;需 Google Drive 唯讀。
+- 剩下 B19(車速送不到前端)與下方實機驗收 E3、Backlog。
 
 ### 1. 實機驗收(唯一真正卡住的事,需真人開瀏覽器)
 
@@ -246,3 +247,8 @@ Claude 可以自己走完**,不必等 Eric 先登入。**管理者登入**(設�
     **不是**真的每台一個桶 → `report20260907-1.md`。
 15. **產品庫仍 localStorage-only**,只有訂單遷到後端 → `[[schedule-orders-backend-sync]]`。
 16. **前端 i18n 未完**:Settings / modals / Docs 仍有約 340 字串硬編碼 → `[[i18n-app-wide-retrofit]]`。
+
+## M-Agent 交辦
+
+- 2026-10-14 JD 與 10-29 context 70% 規則:✅ 2026-11-05 已寫入 CLAUDE.md(commit 63d499c),ack 已回。
+- 2026-11-05 損耗率查證:見 Next Step 0。
