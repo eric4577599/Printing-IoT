@@ -31,7 +31,7 @@
 
 ## Current State
 
-工作分支 `main`。9/16 以前的 commit 都已 push;**2026-09-27 起的 B15 兩個 commit、2026-11-05 的 B18 與 CLAUDE.md 兩個 commit、2026-11-13 的 B19 兩個 commit 尚未 push**。
+工作分支 `main`。**截至 2026-11-13 全部 commit 已 push**(`7c10267`,Eric 親自執行)。
 `fix/audit-20260903` 與 `feat/extract-maintenance` 已完成任務,確認上線無誤後可清掉。
 
 **2026-09-15:S16 已整個還原,改做 S17**(`docs/spec20260915-1.md`、`docs/report20260915-1.md`)——
@@ -60,10 +60,10 @@ OP1~OP5 的密碼已改為 `0000`(直接改資料庫雜湊,因為走 API 要輸�
 ### 0. 待辦(2026-11-05 更新)
 
 - ✅ **B18 已修**(`report20261105-1.md`):斷線自動重連 + 重訂閱 + 沉默警告;實機重啟 broker 驗過。
-  **commit 後尚未 push**;下次斷線不會再失聰。
+  已 push;下次斷線不會再失聰。
 - ✅ **損耗率查證已回覆**(2026-11-05,`M-Agent/docs/inbox/20261105-reply-printing-iot-loss-rate.md`):資料夾內查無公式,3.1/3.5 無法重算;下一步要向製表人/正隆資訊課要欄位定義。
 - ✅ **損耗率定義已取得**(2026-11-06 stacker-ai 回覆,原文在 `docs/inbox/20261106-stacker-loss-rate-answer.md`;**尚未補進** `M-Agent/docs/inbox/20261105-reply-printing-iot-loss-rate.md`,沙箱不讓本座位寫 M-Agent 目錄,需 Eric 或 M-Agent 處理):損耗率 = 設計損耗÷良品張數;入庫不足率 = 欠量張數÷良品張數。資料來源是 SQL Server `SmartIoT_<機台>`。不必再問 TeamChat。
-- ✅ **B19 已修**(`report20261113-2.md`,commit afa81e6):API 反序列化區分大小寫,車速等欄位全落回預設值。已重建 backend-api 並實測畫面車速。**F4/F10 車速防呆尚未實機走過**。未 push。
+- ✅ **B19 已修**(`report20261113-2.md`,commit afa81e6):API 反序列化區分大小寫,車速等欄位全落回預設值。已重建 backend-api 並實測畫面車速。**F4/F10 車速防呆尚未實機走過**。已 push。
 - ✅ **T-20261113-01 學習筆記已完成**(Greenstone 三份協定,`docs/report20261113-1.md`;**客戶保密,已加入 `.git/info/exclude`,不進版控**)。回覆 M-Agent `20261113-done-Printing IoT.md` 尚未寫(見「M-Agent 交辦」)。
 - 剩下實機驗收 E3、**F4/F10 車速防呆實機驗**、Backlog。
 
@@ -253,6 +253,6 @@ Claude 可以自己走完**,不必等 Eric 先登入。**管理者登入**(設�
 
 - 2026-10-14 JD 與 10-29 context 70% 規則:✅ 2026-11-05 已寫入 CLAUDE.md(commit 63d499c),ack 已回。
 - 2026-11-05 損耗率查證:✅ 已回覆。
-- 2026-11-05 全體「完成未完成工作」:✅ 已回 `M-Agent/docs/inbox/下班回報-Printing-IoT.md`;未 push。
+- 2026-11-05 全體「完成未完成工作」:✅ 已回 `M-Agent/docs/inbox/下班回報-Printing-IoT.md`。
 - 2026-11-13 T-20261113-01(Greenstone 協定學習):✅ 筆記完成;結案回覆檔待寫(沙箱曾擋 M-Agent 目錄)。
 - 2026-11-13 損耗率答案補進 `M-Agent/docs/inbox/20261105-reply-printing-iot-loss-rate.md` §8:未完成,內容見 `docs/inbox/20261106-stacker-loss-rate-answer.md`。
