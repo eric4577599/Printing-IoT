@@ -1,5 +1,5 @@
 # Handoff — Claude(Printing IoT)
-> 最後更新:2026-11-05 21:40
+> 最後更新:2026-11-13 09:20
 
 ## ⛔ 下一個接手的人先看這段
 
@@ -62,8 +62,9 @@ OP1~OP5 的密碼已改為 `0000`(直接改資料庫雜湊,因為走 API 要輸�
 - ✅ **B18 已修**(`report20261105-1.md`):斷線自動重連 + 重訂閱 + 沉默警告;實機重啟 broker 驗過。
   **commit 後尚未 push**;下次斷線不會再失聰。
 - ✅ **損耗率查證已回覆**(2026-11-05,`M-Agent/docs/inbox/20261105-reply-printing-iot-loss-rate.md`):資料夾內查無公式,3.1/3.5 無法重算;下一步要向製表人/正隆資訊課要欄位定義。
-- ⏳ **向 Stacker / Stacker-LT AI 問「正隆損耗率定義」尚未送達**:TeamChat 需登入(Claude 不可輸入密碼),轉交 M-Agent 的訊息因權限模式不同而過期。待 Eric 貼給 eric-ai,或登入 TeamChat 後由我送 `knowledge`(workspace Team LT / team-iot 未定)。答案回來補進上述回覆檔。
-- 剩下 B19(車速送不到前端)與下方實機驗收 E3、Backlog。
+- ✅ **損耗率定義已取得**(2026-11-06 stacker-ai 回覆,原文在 `docs/inbox/20261106-stacker-loss-rate-answer.md`;**尚未補進** `M-Agent/docs/inbox/20261105-reply-printing-iot-loss-rate.md`,沙箱不讓本座位寫 M-Agent 目錄,需 Eric 或 M-Agent 處理):損耗率 = 設計損耗÷良品張數;入庫不足率 = 欠量張數÷良品張數。資料來源是 SQL Server `SmartIoT_<機台>`。不必再問 TeamChat。
+- ✅ **B19 已修**(`report20261113-2.md`,commit afa81e6):API 反序列化區分大小寫,車速等欄位全落回預設值。已重建 backend-api 並實測畫面車速。**F4/F10 車速防呆尚未實機走過**。未 push。
+- 剩下實機驗收 E3、Backlog。
 
 ### 1. 實機驗收(唯一真正卡住的事,需真人開瀏覽器)
 
@@ -112,7 +113,6 @@ Claude 可以自己走完**,不必等 Eric 先登入。**管理者登入**(設�
 
 | # | 事項 | 出處 |
 |---|---|---|
-| B19 | **車速送不到前端** —— Redis `speed: 50` 時 `/api/monitor/realtime` 回 `speed: 0`、`deviceId: null`,計數卻有更新。連帶「車速不為 0 不准完工/退回」兩道防呆目前觸發不了 | `report20260927-1.md` §3.2 |
 | B20 | **其他頁面仍有約 50 個 alert / confirm**(排程、報表、分析、設定、maintenance);`hooks/useFKeyHandler.js` 是沒人引用的死碼 | 同上 §3.3 |
 | B16 | **回填會把「有 defectQty 但沒有不良明細」的舊紀錄靜默算成 0 不良**,且「有損轉換」不會示警(差異偵測比的是送出的明細加總,不是紀錄自己的 defectQty)。是否真有這種舊資料未證實 | 同上 §3.2 |
 | B17 | **完工實績的 `DeviceId` 是空的** —— 設定頁的機台識別碼未填,多台機器的實績分不出來源 | 同上 §3.3 |
