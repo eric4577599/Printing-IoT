@@ -74,6 +74,7 @@ export const CURATED_INDEX = {
     'Operator Manual.md': { category: CATEGORY.WORKFLOW, name: 'Operator Manual' },
     'Supervisor_Manual.md': { category: CATEGORY.WORKFLOW, name: 'Supervisor Manual' },
 
+    '系統設計說明書.md': { category: CATEGORY.DESIGN, name: '系統設計說明書(現況,2026/11/15)' },
     'SASD說明書.md': { category: CATEGORY.DESIGN, i18nKey: 'docs.file.sasd' },
     '開發說明書.md': { category: CATEGORY.DESIGN, i18nKey: 'docs.file.dev' },
     '維護保養開發設計書.md': { category: CATEGORY.DESIGN, i18nKey: 'docs.file.maintenance' },

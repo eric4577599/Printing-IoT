@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="690" viewBox="0 0 1000 690" font-family="'PingFang TC','Noto Sans TC','Microsoft JhengHei','Heiti TC',sans-serif" role="img" aria-label="完工(F4)到實績落地的流程"><title>完工(F4)到實績落地的流程</title><defs><marker id="ah" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#455a64"/></marker></defs><rect width="1000" height="690" fill="#ffffff"/><text x="20" y="28" font-size="17" font-weight="700" fill="#1a237e">完工(F4)到實績落地的流程</text><rect x="40" y="50" width="120" height="34" rx="17.0" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.6"/>
+<text x="100.0" y="72.0" text-anchor="middle" font-size="13" fill="#0d3c75" font-weight="700">按 F4 完工</text>
+<polygon points="100,110.0 175.0,150 100,190.0 25.0,150" fill="#fff3e0" stroke="#e65100" stroke-width="1.6"/>
+<text x="100" y="155.0" text-anchor="middle" font-size="13" fill="#7a2e00">車速 = 0 ?</text>
+<path d="M 100,84 L 100,110" fill="none" stroke="#455a64" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="230" y="125" width="190" height="50" rx="8" fill="#ffebee" stroke="#c62828" stroke-width="1.6"/>
+<text x="325.0" y="145.5" text-anchor="middle" font-size="14" fill="#7f1d1d" font-weight="700">提示「車速不為 0」</text><text x="325.0" y="164.5" text-anchor="middle" font-size="14" fill="#7f1d1d">不開啟完工視窗</text>
+<path d="M 175,150 L 230,150" fill="none" stroke="#455a64" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="191.5" y="135.0" width="22" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="202.5" y="147.0" text-anchor="middle" font-size="12" fill="#455a64">否</text>
+<polygon points="100,220.0 175.0,260 100,300.0 25.0,260" fill="#fff3e0" stroke="#e65100" stroke-width="1.6"/>
+<text x="100" y="265.0" text-anchor="middle" font-size="13" fill="#7a2e00">本筆數量 &gt; 0 ?</text>
+<path d="M 100,190 L 100,220" fill="none" stroke="#455a64" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="89.0" y="190.0" width="22" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="100.0" y="202.0" text-anchor="middle" font-size="12" fill="#455a64">是</text>
+<rect x="230" y="235" width="190" height="50" rx="8" fill="#ffebee" stroke="#c62828" stroke-width="1.6"/>
+<text x="325.0" y="255.5" text-anchor="middle" font-size="14" fill="#7f1d1d" font-weight="700">提示「生產數量 0」</text><text x="325.0" y="274.5" text-anchor="middle" font-size="14" fill="#7f1d1d">改用 F10 退回</text>
+<path d="M 175,260 L 230,260" fill="none" stroke="#455a64" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="191.5" y="245.0" width="22" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="202.5" y="257.0" text-anchor="middle" font-size="12" fill="#455a64">否</text>
+<rect x="25" y="330" width="150" height="60" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.6"/>
+<text x="100.0" y="346.0" text-anchor="middle" font-size="14" fill="#0d3c75" font-weight="700">完工視窗</text><text x="100.0" y="365.0" text-anchor="middle" font-size="14" fill="#0d3c75">填良品、不良明細</text><text x="100.0" y="384.0" text-anchor="middle" font-size="14" fill="#0d3c75">短缺原因</text>
+<path d="M 100,300 L 100,330" fill="none" stroke="#455a64" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="89.0" y="300.0" width="22" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="100.0" y="312.0" text-anchor="middle" font-size="12" fill="#455a64">是</text>
+<rect x="25" y="420" width="150" height="70" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.6"/>
+<text x="100.0" y="441.0" text-anchor="middle" font-size="14" fill="#0d3c75" font-weight="700">前端組成績</text><text x="100.0" y="460.0" text-anchor="middle" font-size="14" fill="#0d3c75">寫本機快取</text><text x="100.0" y="479.0" text-anchor="middle" font-size="14" fill="#0d3c75">syncState = pending</text>
+<path d="M 100,390 L 100,420" fill="none" stroke="#455a64" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="82.0" y="390.0" width="36" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="100.0" y="402.0" text-anchor="middle" font-size="12" fill="#455a64">確認</text>
+<rect x="260" y="420" width="190" height="70" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.6"/>
+<text x="355.0" y="441.0" text-anchor="middle" font-size="14" fill="#0d3c75" font-weight="700">POST /api/production/</text><text x="355.0" y="460.0" text-anchor="middle" font-size="14" fill="#0d3c75">completions</text><text x="355.0" y="479.0" text-anchor="middle" font-size="14" fill="#0d3c75">(帶 clientRecordId 冪等鍵)</text>
+<path d="M 175,455 L 260,455" fill="none" stroke="#455a64" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="520" y="330" width="220" height="150" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="1.6"/>
+<text x="630.0" y="362.5" text-anchor="middle" font-size="14" fill="#1b4d1f" font-weight="700">後端落地(單次存檔)</text><text x="630.0" y="381.5" text-anchor="middle" font-size="14" fill="#1b4d1f">1 驗證欄位,失敗 400 零寫入</text><text x="630.0" y="400.5" text-anchor="middle" font-size="14" fill="#1b4d1f">2 以冪等鍵去重(已存在回 200)</text><text x="630.0" y="419.5" text-anchor="middle" font-size="14" fill="#1b4d1f">3 重算不良總數、停機次數</text><text x="630.0" y="438.5" text-anchor="middle" font-size="14" fill="#1b4d1f">4 算工廠日(08:00 換日)</text><text x="630.0" y="457.5" text-anchor="middle" font-size="14" fill="#1b4d1f">5 OEE 四個率值</text>
+<path d="M 450,455 L 520,420" fill="none" stroke="#455a64" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="780" y="330" width="190" height="70" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="1.6"/>
+<text x="875.0" y="351.0" text-anchor="middle" font-size="14" fill="#1b4d1f" font-weight="700">有 orderId 時</text><text x="875.0" y="370.0" text-anchor="middle" font-size="14" fill="#1b4d1f">工單狀態 → Completed</text><text x="875.0" y="389.0" text-anchor="middle" font-size="14" fill="#1b4d1f">(失敗只記 log,實績照落)</text>
+<path d="M 740,380 L 780,370" fill="none" stroke="#455a64" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="780" y="430" width="190" height="50" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="1.6"/>
+<text x="875.0" y="450.5" text-anchor="middle" font-size="14" fill="#1b4d1f" font-weight="700">回傳 201 / 200</text><text x="875.0" y="469.5" text-anchor="middle" font-size="14" fill="#1b4d1f">+ 後端算的率值</text>
+<path d="M 630,480 L 630,500 L 875,500 L 875,480" fill="none" stroke="#455a64" stroke-width="1.6" marker-end="url(#ah)"/>
+<polygon points="355,555.0 450.0,600 355,645.0 260.0,600" fill="#fff3e0" stroke="#e65100" stroke-width="1.6"/>
+<text x="355" y="605.0" text-anchor="middle" font-size="13" fill="#7a2e00">送成功了嗎 ?</text>
+<path d="M 355,490 L 355,555" fill="none" stroke="#455a64" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="323.0" y="507.5" width="64" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="355.0" y="519.5" text-anchor="middle" font-size="12" fill="#455a64">送出結果</text>
+<rect x="560" y="570" width="250" height="60" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="1.6"/>
+<text x="685.0" y="595.5" text-anchor="middle" font-size="14" fill="#1b4d1f" font-weight="700">成功:本機紀錄改 synced</text><text x="685.0" y="614.5" text-anchor="middle" font-size="14" fill="#1b4d1f">以後端的工廠日與 OEE 覆寫</text>
+<path d="M 450,600 L 560,600" fill="none" stroke="#455a64" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="494.0" y="585.0" width="22" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="505.0" y="597.0" text-anchor="middle" font-size="12" fill="#455a64">是</text>
+<rect x="30" y="660" width="270" height="100" rx="8" fill="#fff3e0" stroke="#e65100" stroke-width="1.6"/>
+<text x="165.0" y="686.5" text-anchor="middle" font-size="14" fill="#7a2e00" font-weight="700">失敗:依狀態碼判斷是否重試</text><text x="165.0" y="705.5" text-anchor="middle" font-size="14" fill="#7a2e00">斷網 / 429 / 408 / 5xx / 401 → 重試</text><text x="165.0" y="724.5" text-anchor="middle" font-size="14" fill="#7a2e00">400 / 403 / 409 → 不重試</text><text x="165.0" y="743.5" text-anchor="middle" font-size="14" fill="#7a2e00">階梯 2 秒 → 8 秒 → 30 秒</text>
+<path d="M 300,625 L 200,660" fill="none" stroke="#455a64" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="213.0" y="628.5" width="22" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="224.0" y="640.5" text-anchor="middle" font-size="12" fill="#455a64">否</text>
+<rect x="360" y="690" width="290" height="70" rx="8" fill="#ffebee" stroke="#c62828" stroke-width="1.6"/>
+<text x="505.0" y="711.0" text-anchor="middle" font-size="14" fill="#7f1d1d" font-weight="700">重試用盡:留 pending,不阻擋現場</text><text x="505.0" y="730.0" text-anchor="middle" font-size="14" fill="#7f1d1d">之後由報表頁「本機舊實績回填」補送</text><text x="505.0" y="749.0" text-anchor="middle" font-size="14" fill="#7f1d1d">(S10 掃描 → 回填,可重跑)</text>
+<path d="M 300,710 L 360,720" fill="none" stroke="#455a64" stroke-width="1.6" marker-end="url(#ah)"/>
+<path d="M 150,660 L 150,640 L 260,560 L 260,520" fill="none" stroke="#455a64" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#ah)"/>
+<rect x="187.0" y="585.0" width="36" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="205.0" y="597.0" text-anchor="middle" font-size="12" fill="#455a64">重試</text>
+<text x="690" y="686.0" text-anchor="start" font-size="12" fill="#37474f" font-weight="700">冪等是重試安全的前提:</text><text x="690" y="705.0" text-anchor="start" font-size="12" fill="#37474f">同一個 clientRecordId</text><text x="690" y="724.0" text-anchor="start" font-size="12" fill="#37474f">重送不會產生第二筆。</text></svg>

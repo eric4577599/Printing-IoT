@@ -1,5 +1,7 @@
 # MQTT 訊息處理流程
 
+> **⚠ 2026-11-15 註記**:本文件是歷史快照,部分內容(例如完工實績改走 REST API、Mitsubishi Evol 設定)已與現況不同。**請以《系統設計說明書》為準。**
+
 本文檔描述 Flexo IoT 系統中，WISE 設備數據與模擬訊號如何透過 MQTT 協定流向前端 Log 與後端即時監控服務的完整流程。
 
 ## 系統架構：雙軌制 (Dual-Path Architecture)

@@ -48,6 +48,9 @@
   .chip.mm{background:var(--mm-soft);color:var(--mm);border:1px solid #e8c99e}
   .chip.new{background:#e9f5ea;color:var(--ok);border:1px solid #b5d8b8}
   .chip.cur{background:#eef2f6;color:var(--ink-soft);border:1px solid var(--line)}
+  figure.shot{margin:14px 0;max-width:100%}
+  figure.shot img{max-width:100%;height:auto;border:1px solid var(--line);border-radius:4px;background:#fff;display:block}
+  figure.shot figcaption{font-size:.82rem;color:var(--ink-soft);margin-top:6px}
   .tbl-scroll{overflow-x:auto;margin:14px 0}
   table{border-collapse:collapse;width:100%;font-size:.9rem;background:var(--paper)}
   th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
@@ -203,7 +206,7 @@
   <header class="doc">
     <p class="doc-id">Printing IoT · Operator's Guide</p>
     <h1>印刷 IoT 系統操作說明書 v3.0(定稿)</h1>
-    <p class="doc-meta">2026-07-04 初版 · <b>2026-07-07 定稿</b> · 對應架構:方案 C′(零件管理併入 MM)· 含<b>全 UI 畫面線框</b> · 定稿:內容與 2026-07-07 實作現況一致</p>
+    <p class="doc-meta">2026-07-04 初版 · <b>2026-07-07 定稿</b> · 對應架構:方案 C′(零件管理併入 MM)· 含<b>全 UI 畫面線框</b> · 定稿:內容與 2026-07-07 實作現況一致 · <b>2026-11-15 增補</b>:實機畫面截圖、流程圖,並更正 F3 前提等說明</p>
   </header>
 
   <!-- ═══ 版本重點 ═══ -->
@@ -227,6 +230,21 @@
           <td><b>系統入口</b></td>
           <td>三個網址(主系統 / 零件 / MM)</td>
           <td>兩個網址:主系統 + MM(見〈系統全景〉)</td>
+        </tr>
+        <tr>
+          <td><b>2026-11-15 增補:圖文</b></td>
+          <td>只有線框與文字</td>
+          <td>各章補上<b>實機畫面截圖</b>與<b>流程圖</b>(圖檔在 <code>pic/</code>);截圖中 <code>SIM</code> 開頭訂單為測試模擬資料</td>
+        </tr>
+        <tr>
+          <td><b>2026-11-15 增補:稼動率口徑</b></td>
+          <td>日報不扣準備時間、月報扣</td>
+          <td>日報與月報<b>同口徑</b>(運轉 ÷ (運轉 + 停機 − 準備))</td>
+        </tr>
+        <tr>
+          <td><b>2026-11-15 增補:通訊設定</b></td>
+          <td>裝置類型只有 WISE / Modbus</td>
+          <td>新增 <b>Mitsubishi Evol (RS-232)</b> 裝置類型、PLC 與 ERP 的<b>啟用開關</b>(目前只記錄設定值)</td>
         </tr>
         <tr>
           <td><b>保養維修</b></td>
@@ -307,6 +325,10 @@
       MM 網域 <code>mms.ericchh.work</code> 待 Cloudflare 設定生效(待 Eric 手動執行),生效前請使用本機入口 <code>http://localhost:5301</code>。</div>
 
     <h3 id="s-login">1.1 班別選擇視窗(S1)</h3>
+    <figure class="shot"><a href="pic/ui/ui-01-login.png" target="_blank" rel="noopener"><img src="pic/ui/ui-01-login.png" alt="實機畫面 · 登入視窗(班別選擇 + 點名冊)" loading="lazy"></a><figcaption>實機畫面 · 登入視窗(班別選擇 + 點名冊)</figcaption></figure>
+
+    <figure class="shot"><a href="pic/flow/flow-05-auth.svg" target="_blank" rel="noopener"><img src="pic/flow/flow-05-auth.svg" alt="流程圖 · 登入、角色與權杖(作業員免打密碼;其他角色先按「管理者」輸入密碼)" loading="lazy"></a><figcaption>流程圖 · 登入、角色與權杖(作業員免打密碼;其他角色先按「管理者」輸入密碼)</figcaption></figure>
+
     <p>開啟主系統後首先出現。選班別/操作員後按「選取」進入;管理員由「管理者」按鈕另行登入。</p>
     <div class="wire">
       <p class="wire-cap">S1 · 班別選擇視窗 <span class="chip cur">現況</span></p>
@@ -354,6 +376,8 @@
       班別資訊會記錄在生產報表中,請確認選擇正確。生產中途換班請按 <kbd>F9</kbd> 重新選擇班別。</div>
 
     <h3 id="s-nav">1.2 導航列、功能鍵列與狀態列(S2)</h3>
+    <figure class="shot"><a href="pic/ui/ui-10-language-menu.png" target="_blank" rel="noopener"><img src="pic/ui/ui-10-language-menu.png" alt="實機畫面 · 導覽列與語言選單(5 種語言)" loading="lazy"></a><figcaption>實機畫面 · 導覽列與語言選單(5 種語言)</figcaption></figure>
+
     <div class="wire full">
       <p class="wire-cap">S2 · 主系統頂部導航與底部狀態(功能鍵列僅即時監控頁顯示)<span class="chip cur">現況</span></p>
       <div class="bar">
@@ -376,6 +400,8 @@
     <p>管理員另有「模擬生產控制」工具(開關、Local/Remote 模式、Power、速度滑桿),僅在系統設定啟用時顯示於導航列右側。</p>
 
     <h3 id="s-org">1.3 系統組織圖(畫面地圖)</h3>
+    <figure class="shot"><a href="pic/flow/flow-01-architecture.svg" target="_blank" rel="noopener"><img src="pic/flow/flow-01-architecture.svg" alt="流程圖 · 系統架構與連接埠(主系統與 MM 為兩組獨立容器)" loading="lazy"></a><figcaption>流程圖 · 系統架構與連接埠(主系統與 MM 為兩組獨立容器)</figcaption></figure>
+
     <p>全系統畫面的階層關係。編號對應第 2 章畫面清單;縮排項目是該頁開出的彈窗/子畫面。</p>
     <div class="org">
       <div class="org-root">PriIoT 產品線<small>兩個入口 · 後端互不引用 · 資料庫各自獨立</small></div>
@@ -475,6 +501,10 @@
     <p class="sec-sub">操作員最常使用的畫面,監看當前生產狀態</p>
 
     <h3 id="s-dash">3.1 主畫面配置(S3)</h3>
+    <figure class="shot"><a href="pic/ui/ui-02-monitor.jpg" target="_blank" rel="noopener"><img src="pic/ui/ui-02-monitor.jpg" alt="實機畫面 · 即時監控(待機狀態):上方生產數量與車速、中間本日/本筆統計、綠色狀態框、左下排程佇列、右側機器狀態、底部 F 鍵列" loading="lazy"></a><figcaption>實機畫面 · 即時監控(待機狀態):上方生產數量與車速、中間本日/本筆統計、綠色狀態框、左下排程佇列、右側機器狀態、底部 F 鍵列</figcaption></figure>
+
+    <figure class="shot"><a href="pic/flow/flow-02-realtime.svg" target="_blank" rel="noopener"><img src="pic/flow/flow-02-realtime.svg" alt="流程圖 · 即時資料流(設備訊號 → Worker → Redis → API → 看板,前端每 1 秒輪詢)" loading="lazy"></a><figcaption>流程圖 · 即時資料流(設備訊號 → Worker → Redis → API → 看板,前端每 1 秒輪詢)</figcaption></figure>
+
     <div class="wire full">
       <p class="wire-cap">S3 · 即時監控主畫面(三欄式)<span class="chip cur">現況</span></p>
       <div class="split">
@@ -540,7 +570,7 @@
       <tbody>
         <tr><td><kbd>F1</kbd></td><td>上移</td><td>將選取的工單往上移動一格</td></tr>
         <tr><td><kbd>F2</kbd></td><td>下移</td><td>將選取的工單往下移動一格</td></tr>
-        <tr><td><kbd>F3</kbd></td><td>送單</td><td>開始生產當前工單(需先停機)</td></tr>
+        <tr><td><kbd>F3</kbd></td><td>送單</td><td>把<b>選取的排隊工單</b>送入生產(需 <b>PLC 連線</b>,與車速無關)</td></tr>
         <tr><td><kbd>F4</kbd></td><td>完工</td><td>結束當前工單,開啟完工確認視窗(需先停機)</td></tr>
         <tr><td><kbd>F5</kbd></td><td>良品 +1</td><td>手動增加生產計數</td></tr>
         <tr><td><kbd>F6</kbd></td><td>不良 −1</td><td>手動減少生產計數(不良扣除)</td></tr>
@@ -553,6 +583,10 @@
     </table></div>
 
     <h3>3.3 標準操作流程</h3>
+    <figure class="shot"><a href="pic/flow/flow-04-operator-flow.svg" target="_blank" rel="noopener"><img src="pic/flow/flow-04-operator-flow.svg" alt="流程圖 · 作業員生產流程與 F 鍵(F3 需 PLC 連線;F4、F10 需車速為 0)" loading="lazy"></a><figcaption>流程圖 · 作業員生產流程與 F 鍵(F3 需 PLC 連線;F4、F10 需車速為 0)</figcaption></figure>
+
+    <figure class="shot"><a href="pic/flow/flow-03-completion.svg" target="_blank" rel="noopener"><img src="pic/flow/flow-03-completion.svg" alt="流程圖 · 完工(F4)到實績落地:先存本機、背景送後端、失敗自動重試、仍失敗留 pending 待回填" loading="lazy"></a><figcaption>流程圖 · 完工(F4)到實績落地:先存本機、背景送後端、失敗自動重試、仍失敗留 pending 待回填</figcaption></figure>
+
     <div class="flow">
       <span class="step core-step"><b>1. 確認排程</b><small>選定要生產的工單</small></span>
       <span class="go">→</span>
@@ -567,6 +601,8 @@
     <p>含判斷分支的完整流程請見 <a href="#flows">§19.1 生產作業流程圖</a>。</p>
 
     <h3 id="s-order">3.4 訂單詳情視窗(S4,F7 開啟)</h3>
+    <figure class="shot"><a href="pic/ui/ui-02b-order-detail.jpg" target="_blank" rel="noopener"><img src="pic/ui/ui-02b-order-detail.jpg" alt="實機畫面 · 訂單詳情視窗(F7):紙箱規格、機台各軸位置、印刷部 1~4 色" loading="lazy"></a><figcaption>實機畫面 · 訂單詳情視窗(F7):紙箱規格、機台各軸位置、印刷部 1~4 色</figcaption></figure>
+
     <div class="wire">
       <p class="wire-cap">S4 · 訂單詳情 <span class="chip cur">現況</span></p>
       <div class="modal">
@@ -649,6 +685,8 @@
     <p class="sec-sub">管理生產工單順序與產品資料庫</p>
 
     <h3 id="s-sched">4.1 主畫面配置(S7)</h3>
+    <figure class="shot"><a href="pic/ui/ui-03-schedule.jpg" target="_blank" rel="noopener"><img src="pic/ui/ui-03-schedule.jpg" alt="實機畫面 · 生產排程:左為排程佇列(可拖曳排序,執行中鎖定),右為產品庫" loading="lazy"></a><figcaption>實機畫面 · 生產排程:左為排程佇列(可拖曳排序,執行中鎖定),右為產品庫</figcaption></figure>
+
     <div class="wire full">
       <p class="wire-cap">S7 · 生產排程(左:排程佇列 / 右:產品庫)<span class="chip cur">現況</span></p>
       <div class="split">
@@ -742,6 +780,10 @@
     <p class="sec-sub">查詢與匯出生產記錄</p>
 
     <h3 id="s-report">5.1 主畫面配置(S10)</h3>
+    <figure class="shot"><a href="pic/ui/ui-04-report-detail.jpg" target="_blank" rel="noopener"><img src="pic/ui/ui-04-report-detail.jpg" alt="實機畫面 · 生產明細(2026/10/01 ~ 10/31,模擬資料)" loading="lazy"></a><figcaption>實機畫面 · 生產明細(2026/10/01 ~ 10/31,模擬資料)</figcaption></figure>
+
+    <figure class="shot"><a href="pic/ui/ui-05-report-detail-stops.jpg" target="_blank" rel="noopener"><img src="pic/ui/ui-05-report-detail-stops.jpg" alt="實機畫面 · 選取一筆後,下方列出該筆的停車明細" loading="lazy"></a><figcaption>實機畫面 · 選取一筆後,下方列出該筆的停車明細</figcaption></figure>
+
     <div class="wire full">
       <p class="wire-cap">S10 · 生產報表(以生產明細為例)<span class="chip cur">現況</span></p>
       <div class="bar">
@@ -769,6 +811,14 @@
     </div>
 
     <h3>5.2 報表類型與操作</h3>
+    <figure class="shot"><a href="pic/ui/ui-06-report-daily.jpg" target="_blank" rel="noopener"><img src="pic/ui/ui-06-report-daily.jpg" alt="實機畫面 · 生產日報表:統計彙總卡片(稼動率與月報同口徑)與每筆明細" loading="lazy"></a><figcaption>實機畫面 · 生產日報表:統計彙總卡片(稼動率與月報同口徑)與每筆明細</figcaption></figure>
+
+    <figure class="shot"><a href="pic/ui/ui-07-report-monthly.jpg" target="_blank" rel="noopener"><img src="pic/ui/ui-07-report-monthly.jpg" alt="實機畫面 · 生產月報表(2026 年 10 月):每個生產日一列;10/21 為刻意放入的異常日" loading="lazy"></a><figcaption>實機畫面 · 生產月報表(2026 年 10 月):每個生產日一列;10/21 為刻意放入的異常日</figcaption></figure>
+
+    <figure class="shot"><a href="pic/ui/ui-08-report-stop-reasons.jpg" target="_blank" rel="noopener"><img src="pic/ui/ui-08-report-stop-reasons.jpg" alt="實機畫面 · 停車原因分析(依次數遞減)" loading="lazy"></a><figcaption>實機畫面 · 停車原因分析(依次數遞減)</figcaption></figure>
+
+    <figure class="shot"><a href="pic/flow/flow-06-report-calc.svg" target="_blank" rel="noopener"><img src="pic/flow/flow-06-report-calc.svg" alt="流程圖 · 報表數字從哪裡來、怎麼算(OEE 與工廠日)" loading="lazy"></a><figcaption>流程圖 · 報表數字從哪裡來、怎麼算(OEE 與工廠日)</figcaption></figure>
+
     <div class="tbl-scroll"><table>
       <thead><tr><th>報表</th><th>說明</th></tr></thead>
       <tbody>
@@ -800,6 +850,8 @@
     <p class="sec-sub">進階的生產效能分析與圖表</p>
 
     <h3 id="s-analysis">6.1 主畫面配置(S11)</h3>
+    <figure class="shot"><a href="pic/ui/ui-09-analysis.jpg" target="_blank" rel="noopener"><img src="pic/ui/ui-09-analysis.jpg" alt="實機畫面 · 生產分析(圖表視圖,2026/10/01 ~ 10/31)" loading="lazy"></a><figcaption>實機畫面 · 生產分析(圖表視圖,2026/10/01 ~ 10/31)</figcaption></figure>
+
     <div class="wire full">
       <p class="wire-cap">S11 · 生產分析(左:篩選側欄 / 右:圖表與指標)<span class="chip cur">現況</span></p>
       <div class="split">
@@ -889,6 +941,8 @@
     </div>
 
     <h3>7.2 各分類內容</h3>
+    <figure class="shot"><a href="pic/flow/flow-07-comm-settings.svg" target="_blank" rel="noopener"><img src="pic/flow/flow-07-comm-settings.svg" alt="流程圖 · 通訊設定頁的結構與去向(啟用開關、Mitsubishi Evol 目前只記錄設定值)" loading="lazy"></a><figcaption>流程圖 · 通訊設定頁的結構與去向(啟用開關、Mitsubishi Evol 目前只記錄設定值)</figcaption></figure>
+
     <div class="tbl-scroll"><table>
       <thead><tr><th>分類</th><th>主要內容</th></tr></thead>
       <tbody>
@@ -1472,10 +1526,10 @@
     <div class="fc">
       <span class="n start">上工:班別選擇(S1)</span><span class="a">↓</span>
       <span class="n">即時監控頁確認排程佇列<small>必要時 F1 / F2 調整順序</small></span><span class="a">↓</span>
-      <span class="n dec">◆ 車速 = 0?</span>
+      <span class="n dec">◆ PLC 已連線?</span>
       <div class="branch">
-        <div class="lane"><span class="tag no">否</span><span class="n">先停機<small>送單前必須停機</small></span><span class="loop">↩ 回到判斷</span></div>
-        <div class="lane"><span class="tag yes">是</span><span class="n">按 <b>F3</b> 送單</span></div>
+        <div class="lane"><span class="tag no">否</span><span class="n">先確認設備連線<small>狀態列 PLC 燈須為綠色;未連線按 F3 會被擋下</small></span><span class="loop">↩ 回到判斷</span></div>
+        <div class="lane"><span class="tag yes">是</span><span class="n">選一筆排隊工單,按 <b>F3</b> 送單</span></div>
       </div>
       <span class="a">↓</span>
       <span class="n">生產中<small>數量自動累計;F5 / F6 手動修正</small></span><span class="a">↓</span>
@@ -1485,13 +1539,10 @@
         <div class="lane"><span class="tag no">無</span><span class="n">生產至達標</span></div>
       </div>
       <span class="a">↓</span>
-      <span class="n">停機後按 <b>F4</b> 完工</span><span class="a">↓</span>
+      <span class="n">讓機器停下(<b>車速須為 0</b>)後按 <b>F4</b> 完工</span><span class="a">↓</span>
       <span class="n">完工確認(S5)<small>良品 / 不良數量、欠量原因、製程類別</small></span><span class="a">↓</span>
-      <span class="n dec">◆ 自動下一筆 ON?(F8 切換)</span>
-      <div class="branch">
-        <div class="lane"><span class="tag yes">是</span><span class="n">自動帶入下一筆工單</span><span class="loop">↩ 回到「車速 = 0?」</span></div>
-        <div class="lane"><span class="tag no">否</span><span class="n end">本筆結束,人工選下一單</span></div>
-      </div>
+      <span class="n">完工單移出佇列,<b>下一筆直接遞補為目前工單</b><small>佇列空了就回到待機;F8「自動下一筆」只影響 F10 退回,不影響完工</small></span><span class="a">↓</span>
+      <span class="n end">回到「選工單、按 F3」</span>
     </div>
 
     <h3>19.2 MM:突發故障維修(M4 → M5 → M10)</h3>
