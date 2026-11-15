@@ -287,17 +287,25 @@ The left menu has **7 categories**: **General** (company header, user accounts, 
 
 **Core efficiency** (standard average speed; **shortage-input threshold**, default 50 sheets — it colors the Monitor QTY text: green when remaining is below the threshold, red otherwise. The Monitor's automatic stop-reason window uses a **built-in** "more than 50 sheets remain" rule that this setting does not change); **Time utilization** (standard preparation time); **Continuous production** (N seconds / M sheets); **Targets** (OEE target, trial-run targets); **Preparation-time signal** — colors the Monitor QTY field: green (< 100%), yellow (100%~120%), red (> 120%).
 
-### 7.4 Other categories
+### 7.4 Box type
 
-**Unit** (metric mm or inch, plus a template table), **Box type**, **Report**: simple pages; follow the on-screen fields.
+![Figure 7-4 Box type settings](pic/ui/ui-15-settings-boxtype.jpg "Figure 7-4 Box type settings (administrator view)")
 
-### 7.5 Communication settings
+Defines how each box type is derived from **sheet dimensions** to finished **length, width, height**, and how the **quantity** is calculated. Left: the box-type list with **Add / Edit / Delete** (e.g. RSC(A1), HSC(A2)). Right: **Basic info** (name, **ERP alias**, description); **Formulas** for **L, W, H** and **Qty** using `+ - * / ( )` and section variables (S1, L, W…); **Length definition** (S1–S5, enable/name each, with a correction in mm and a formula); **Width definition** (Leading / Body / Tail).
 
-![Figure 7-4 Communication settings](pic/ui/ui-13-settings-communication.jpg "Figure 7-4 Communication settings (administrator view; PLC at the top, ERP below, data logging at the bottom)")
+> **⚠** Changing a formula affects the dimension conversion of **orders created afterwards** — check before saving.
+
+### 7.5 Other categories
+
+**Unit** (metric mm or inch, plus a template table) and **Report**: simple pages; follow the on-screen fields.
+
+### 7.6 Communication settings
+
+![Figure 7-5 Communication settings](pic/ui/ui-13-settings-communication.jpg "Figure 7-4 Communication settings (administrator view; PLC at the top, ERP below, data logging at the bottom)")
 
 From top to bottom: **PLC control** (green "Connected (Motor On)" tag = device signals arriving; **enable switch**, "Simulate signal", device type, protocol, MQTT broker/topic, monitoring interval, **Test Connection**, **Monitor messages**); **ERP integration** (switch, protocol, connection and paths); **Data logging** (write interval in seconds).
 
-![Figure 7-5 Structure of the communication settings](pic/flow/flow-07-comm-settings.svg "Figure 7-5 Structure of the communication settings")
+![Figure 7-6 Structure of the communication settings](pic/flow/flow-07-comm-settings.svg "Figure 7-6 Structure of the communication settings")
 
 **PLC / device block**
 
