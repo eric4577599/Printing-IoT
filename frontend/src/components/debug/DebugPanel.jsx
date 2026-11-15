@@ -14,7 +14,7 @@ const DebugPanel = ({ logs = [], componentInfo = '' }) => {
                     onClick={() => setIsMinimized(!isMinimized)}
                     title={isMinimized ? "Expand" : "Minimize"}
                 >
-                    {isMinimized ? '&lt;' : '&gt;'}
+                    {isMinimized ? '<' : '>'}
                 </button>
             </div>
 

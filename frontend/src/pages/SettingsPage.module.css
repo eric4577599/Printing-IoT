@@ -10,7 +10,43 @@
     /* Ensure no body scroll leaks */
 }
 
-/* ... skipped sidebar ... */
+/* 左側分類選單。這段原本被略過(只剩上面那行註解),導致選單沒有任何樣式,
+   顯示成左上角的小字清單;由 settingsPageStyles 測試確保 JSX 用到的類別都有定義。 */
+.sidebar {
+    width: 200px;
+    min-width: 200px;
+    background: var(--bg-panel, #fff);
+    border-right: 1px solid var(--border-color, #e0e0e0);
+    overflow-y: auto;
+    padding: 8px 0;
+}
+
+.sidebarHeader {
+    padding: 14px 20px;
+    font-weight: 700;
+    color: var(--primary-blue, #1976d2);
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+    margin-bottom: 4px;
+}
+
+.menuItem {
+    padding: 12px 20px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    color: var(--text-primary, #1a1a2e);
+    transition: background 0.15s;
+}
+
+.menuItem:hover {
+    background: rgba(25, 118, 210, 0.06);
+}
+
+.active {
+    background: rgba(25, 118, 210, 0.1);
+    border-left-color: var(--primary-blue, #1976d2);
+    color: var(--primary-blue, #1976d2);
+    font-weight: 600;
+}
 
 .content {
     flex: 1;
