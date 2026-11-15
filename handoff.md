@@ -82,7 +82,6 @@ OP1~OP5 的密碼已改為 `0000`(直接改資料庫雜湊,因為走 API 要輸�
   2. **說明視窗(`components/modals/HelpModal.jsx`)內容全是中文**:載入 `public/help/{monitor,schedule,reports,analysis,settings}.html`(`lang="zh-TW"`),只有視窗標題與側欄有翻譯。要補英文等語系需另寫內容(或改為渲染新操作手冊章節);**待 Eric 決定要補哪些語言**。
   3. ~~越南文報表頁標題被裁切~~ **已修(eb4b679)**:來源欄寬 80→130,實機確認未裁切。
   4. ~~語言選擇不保存~~ **已修(eb4b679)**:存 localStorage `printingiot.language`,壞值退回繁中;測試 `tests/modules/languagePersist.test.jsx`。
-  4. 語言選擇**不持久化**(`LanguageContext` 預設 `tw`,重新整理即回繁中)。
 - 剩下:E3 的 2 小時實際計時(選做)、上列 i18n/版面項目、Backlog。
 
 ### 1. 實機驗收(唯一真正卡住的事,需真人開瀏覽器)
