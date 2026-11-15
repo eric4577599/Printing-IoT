@@ -78,9 +78,10 @@ OP1~OP5 的密碼已改為 `0000`(直接改資料庫雜湊,因為走 API 要輸�
 - ✅ **2026-11-15 後續(已 commit/部署,見 `docs/report20261115-3.md`)**:B21 設定頁選單樣式補回(+靜態測試)、B22 通訊設定分頁僅 ADMIN/ENGINEER 顯示(對齊後端 SystemConfig)、B23 舊設定缺 `erp_*` 的顯示異常(`parseCommSettings` 退回預設;順帶補讀先前漏掉的 `plc_monitor_interval`)、B24 `&gt;` 字面顯示。**F4/F10 車速防呆實機驗通過**(車速 50 時兩鍵都被擋;車速 0 時 F4 放行)。**E3 機制等效驗證通過**(無效存取權杖 → 自動換發、仍登入);**2 小時實際計時未做**。損耗率答案已寫入 M-Agent 回覆檔 §8。
 - ✅ **中英文頁面配置檢查(2026-11-15)**:英文介面逐頁掃描(殘留中文 + 版面溢出),繁中/越南文/泰文掃溢出。結果:排程、報表四分頁、文件頁、設定多數分頁乾淨(殘留中文皆為資料庫資料:客戶/產品/機台部位/停機原因名稱)。**報表設定「休息/點心/支援」已改為可勾選選項**(`utils/reportFilters.js`,存語言無關代號 `rest/snack/support`,舊中文值自動對應;自訂關鍵字改行內輸入;該設定目前**沒有任何報表程式讀取**,只存 localStorage)。
 - **配置檢查發現、尚未修(i18n 與版面)**:
-  1. **分析頁 6 處寫死中文**:`pages/analysis/components/AnalysisSidebar.jsx`「開始:」「結束:」、`AnalysisSummary.jsx`「張/分」「筆」、`AnalysisPage.jsx` 的「小時/分/分鐘」。
+  1. ~~分析頁 6 處寫死中文~~ **已修(eb4b679)**:改走 `analysis.startLabel/endLabel/units.*`(5 語系)。
   2. **說明視窗(`components/modals/HelpModal.jsx`)內容全是中文**:載入 `public/help/{monitor,schedule,reports,analysis,settings}.html`(`lang="zh-TW"`),只有視窗標題與側欄有翻譯。要補英文等語系需另寫內容(或改為渲染新操作手冊章節);**待 Eric 決定要補哪些語言**。
-  3. **越南文報表頁一處標題被裁切**(「Nguồn dữ liệu」,overflow hidden)。
+  3. ~~越南文報表頁標題被裁切~~ **已修(eb4b679)**:來源欄寬 80→130,實機確認未裁切。
+  4. ~~語言選擇不保存~~ **已修(eb4b679)**:存 localStorage `printingiot.language`,壞值退回繁中;測試 `tests/modules/languagePersist.test.jsx`。
   4. 語言選擇**不持久化**(`LanguageContext` 預設 `tw`,重新整理即回繁中)。
 - 剩下:E3 的 2 小時實際計時(選做)、上列 i18n/版面項目、Backlog。
 
