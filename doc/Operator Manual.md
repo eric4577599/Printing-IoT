@@ -265,9 +265,10 @@ If results stayed local (`pending`), the Reports page shows a **backfill panel**
 
 ## 7. Settings (administrators)
 
-The left menu has **7 categories**: **General** (company header, user accounts, shifts, stop and defect reasons), **Unit**, **Machine**, **Formula**, **Communication**, **Box type**, **Report**. Categories you may not use show *Access Denied*.
+The left menu has **7 categories**: **General** (company header, user accounts, shifts, stop and defect reasons), **Unit**, **Machine**, **Formula**, **Communication** (administrators and engineers only), **Box type**, **Report**. Categories you may not use show *Access Denied*.
 
-> **ℹ** The category menu at the top left ("Settings / General / Unit…") currently has **no styling** and appears as small text, but **clicking works**. When logged in as an administrator, a **"Debug Log (Admin)"** overlay also appears on the right; its top-right button minimizes it. Operators can **open** most tabs (the Communication page looks the same as the administrator's), but **saving needs the matching permission**; the user maintenance block shows a read-only notice.
+> **ℹ** The category menu is on the left. The **Communication tab is shown only to administrators (ADMIN) and engineers (ENGINEER)**; operators and supervisors do not see it. The other tabs can be opened, but **saving needs the matching permission** and the user maintenance block shows a read-only notice. Administrators also get a **"Debug Log (Admin)"** overlay on the right; its top-right button minimizes it.
+> Some screenshots in this chapter were taken before the menu styling fix of 2026-11-15 (a small text list at the top left); the current menu is a white panel on the left with the active tab highlighted. Functions and categories are unchanged.
 
 ### 7.1 General
 
