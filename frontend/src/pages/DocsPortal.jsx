@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import useProductionStore from '../stores/productionStore';
 import { useLanguage } from '../modules/language/LanguageContext';
 import { useAuth } from '../modules/auth/AuthContext';
-import { listDocs, loadDoc } from '../modules/docs/docRegistry';
+import { listDocs, loadDoc, resolveDocImage } from '../modules/docs/docRegistry';
+import { MarkdownView } from '../modules/docs/markdownRender';
 
 /**
  * DocsPortal — 內建文件入口
@@ -259,14 +260,7 @@ const DocsPortal = () => {
             <h2 style={{ marginTop: '0', borderBottom: '2px solid var(--primary-blue, #1976d2)', paddingBottom: '8px' }}>
               {selectedFile?.name}
             </h2>
-            <pre style={{
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              fontFamily: 'inherit',
-              fontSize: '0.95rem',
-            }}>
-              {content}
-            </pre>
+            <MarkdownView source={content} resolveImage={resolveDocImage} />
           </div>
         )}
       </main>

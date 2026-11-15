@@ -28,6 +28,31 @@ const loaders = import.meta.glob('../../../../doc/*.md', {
     import: 'default',
 });
 
+/**
+ * 建置時收進 doc/pic 底下的圖片(截圖、流程圖 SVG),值為建置後的網址。
+ * 用 eager 是因為這裡只有「網址字串」,圖檔本身仍是各自獨立的靜態檔,不會塞進 bundle。
+ * (這同時解掉 B14:原本 doc/pic 沒進 bundle,文件內的圖片連結必斷。)
+ */
+const imageUrls = import.meta.glob('../../../../doc/pic/**/*.{png,jpg,jpeg,gif,webp,svg}', {
+    query: '?url',
+    import: 'default',
+    eager: true,
+});
+
+/**
+ * 把文件內寫的圖片路徑換成可載入的網址
+ * @param {string} src - 文件內的路徑,如 `pic/ui/login.png`(相對 doc/,開頭 ./ 可有可無)
+ * @returns {string|null} 建置後的網址;不在 doc/pic 內、含 `..`、或是外部網址 → null
+ * @description 只認 doc/pic 內由建置收進來的檔案,**不載入任何外部圖片**(文件頁不該替第三方送出請求)。
+ */
+export function resolveDocImage(src) {
+    if (typeof src !== 'string') return null;
+    if (/^[a-z][a-z0-9+.-]*:/i.test(src) || src.startsWith('//') || src.includes('..')) return null;
+    const rel = decodeURIComponent(src).replace(/^\.\//, '').replace(/^\//, '');
+    const hit = Object.keys(imageUrls).find(k => k.endsWith(`/doc/${rel}`));
+    return hit ? imageUrls[hit] : null;
+}
+
 /** 分類代碼 —— 顯示名稱走 i18n,這裡只放資料 */
 export const CATEGORY = {
     WORKFLOW: 'workflow',
