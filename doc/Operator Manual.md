@@ -267,13 +267,13 @@ If results stayed local (`pending`), the Reports page shows a **backfill panel**
 
 The left menu has **7 categories**: **General** (company header, user accounts, shifts, stop and defect reasons), **Unit**, **Machine**, **Formula**, **Communication**, **Box type**, **Report**. Categories you may not use show *Access Denied*.
 
-> **ℹ** The category menu at the top left ("Settings / General / Unit…") currently has **no styling** and appears as small text, but **clicking works**. Operators can **open** most tabs, but **saving needs the matching permission**; blocks such as user maintenance show a read-only notice.
+> **ℹ** The category menu at the top left ("Settings / General / Unit…") currently has **no styling** and appears as small text, but **clicking works**. When logged in as an administrator, a **"Debug Log (Admin)"** overlay also appears on the right; its top-right button minimizes it. Operators can **open** most tabs (the Communication page looks the same as the administrator's), but **saving needs the matching permission**; the user maintenance block shows a read-only notice.
 
 ### 7.1 General
 
-![Figure 7-1 General settings](pic/ui/ui-11-settings-general.jpg "Figure 7-1 General settings (operator view, read-only)")
+![Figure 7-1 General settings](pic/ui/ui-11-settings-general.jpg "Figure 7-1 General settings (administrator view: the user table is editable)")
 
-**Company header** (names, address, phone, fax, logo — printed on reports); **User settings** (accounts; **only a system administrator can edit**, others see a read-only notice); **Shift times** (e.g. Day 08:00~18:00, Night 20:00~04:00); **Stop reasons** and **Defect reasons** further down — shop-floor dialogs and reports share this list.
+**Company header** (names, address, phone, fax, logo — printed on reports); **User settings** (the table lists user, code, role and status, with a red **Disable** button per row — a disabled account cannot log in — and an input row at the bottom to **add** an account; **only a system administrator can edit**, others see a read-only notice and an empty table); **Shift times** (e.g. Day 08:00~18:00, Night 20:00~04:00); **Stop reasons** and **Defect reasons** further down — shop-floor dialogs and reports share this list.
 
 ### 7.2 Machine
 
@@ -293,7 +293,7 @@ The left menu has **7 categories**: **General** (company header, user accounts, 
 
 ### 7.5 Communication settings
 
-![Figure 7-4 Communication settings](pic/ui/ui-13-settings-communication.jpg "Figure 7-4 Communication settings (PLC at the top, ERP below, data logging at the bottom)")
+![Figure 7-4 Communication settings](pic/ui/ui-13-settings-communication.jpg "Figure 7-4 Communication settings (administrator view; PLC at the top, ERP below, data logging at the bottom)")
 
 From top to bottom: **PLC control** (green "Connected (Motor On)" tag = device signals arriving; **enable switch**, "Simulate signal", device type, protocol, MQTT broker/topic, monitoring interval, **Test Connection**, **Monitor messages**); **ERP integration** (switch, protocol, connection and paths); **Data logging** (write interval in seconds).
 
