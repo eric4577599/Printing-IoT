@@ -295,7 +295,7 @@ const ReportsPage = () => {
                         <div className={styles.headerCell} style={{ width: 60 }}>{t('reportView.col.defect')}</div>
                         <div className={styles.headerCell} style={{ width: 150 }}>{t('reportView.col.finishedAt')}</div>
                         <div className={styles.headerCell} style={{ width: 50 }}>OEE</div>
-                        <div className={styles.headerCell} style={{ width: 80 }}>{t('reportView.col.source')}</div>
+                        <div className={styles.headerCell} style={{ width: 130 }}>{t('reportView.col.source')}</div>
                     </div>
                     <div className={styles.tableBody}>
                         {detailRecords.length === 0 ? (
@@ -326,7 +326,7 @@ const ReportsPage = () => {
                                     <div className={`${styles.cell} ${textClass}`} style={{ width: 60 }}>{record.defectQty}</div>
                                     <div className={`${styles.cell} ${textClass}`} style={{ width: 150 }}>{formatFinishedAt(record.finishedAt)}</div>
                                     <div className={`${styles.cell} ${textClass}`} style={{ width: 50 }}>{record.oee != null ? `${record.oee}%` : '-'}</div>
-                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 80 }}>{isLocalOnly ? t('reportView.source.local') : t('reportView.source.backend')}</div>
+                                    <div className={`${styles.cell} ${textClass}`} style={{ width: 130 }}>{isLocalOnly ? t('reportView.source.local') : t('reportView.source.backend')}</div>
                                 </div>
                             );
                         })}

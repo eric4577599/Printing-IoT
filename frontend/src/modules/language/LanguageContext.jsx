@@ -293,6 +293,8 @@ export const translations = {
             category: { title: '分類條件' },
             display: { title: '顯示欄位' },
             dateRange: '日期範圍',
+            startLabel: '開始:', endLabel: '結束:',
+            units: { sheets: '張', sheetsPerMin: '張/分', records: '筆', hours: '小時', minShort: '分', minLong: '分鐘' },
             quickDate: { today: '今日', yesterday: '昨日', last7days: '近 7 日', last30days: '近 30 日', thisMonth: '本月' },
             actions: { clearFilters: '清除條件', downloadImage: '下載圖檔', exportExcel: '匯出 Excel', print: '列印' },
             summary: { totalQty: '總良品數', avgDailyQty: '日均產量', totalStopTime: '總停車時間', avgSpeed: '平均車速', recordsCount: '紀錄筆數' },
@@ -680,6 +682,8 @@ export const translations = {
             category: { title: '分类条件' },
             display: { title: '显示字段' },
             dateRange: '日期范围',
+            startLabel: '开始:', endLabel: '结束:',
+            units: { sheets: '张', sheetsPerMin: '张/分', records: '笔', hours: '小时', minShort: '分', minLong: '分钟' },
             quickDate: { today: '今日', yesterday: '昨日', last7days: '近 7 日', last30days: '近 30 日', thisMonth: '本月' },
             actions: { clearFilters: '清除条件', downloadImage: '下载图档', exportExcel: '导出 Excel', print: '打印' },
             summary: { totalQty: '总良品数', avgDailyQty: '日均产量', totalStopTime: '总停车时间', avgSpeed: '平均车速', recordsCount: '记录笔数' },
@@ -1067,6 +1071,8 @@ export const translations = {
             category: { title: 'Group By' },
             display: { title: 'Display Fields' },
             dateRange: 'Date Range',
+            startLabel: 'Start:', endLabel: 'End:',
+            units: { sheets: 'sheets', sheetsPerMin: 'sheets/min', records: 'records', hours: 'h', minShort: 'min', minLong: 'min' },
             quickDate: { today: 'Today', yesterday: 'Yesterday', last7days: 'Last 7d', last30days: 'Last 30d', thisMonth: 'This Month' },
             actions: { clearFilters: 'Clear Filters', downloadImage: 'Download Image', exportExcel: 'Export Excel', print: 'Print' },
             summary: { totalQty: 'Total Good', avgDailyQty: 'Daily Avg', totalStopTime: 'Total Stop Time', avgSpeed: 'Avg Speed', recordsCount: 'Records' },
@@ -1284,6 +1290,8 @@ export const translations = {
             category: { title: 'Điều kiện phân loại' },
             display: { title: 'Cột hiển thị' },
             dateRange: 'Khoảng ngày',
+            startLabel: 'Bắt đầu:', endLabel: 'Kết thúc:',
+            units: { sheets: 'tờ', sheetsPerMin: 'tờ/phút', records: 'bản ghi', hours: 'giờ', minShort: 'phút', minLong: 'phút' },
             quickDate: { today: 'Hôm nay', yesterday: 'Hôm qua', last7days: '7 ngày qua', last30days: '30 ngày qua', thisMonth: 'Tháng này' },
             actions: { clearFilters: 'Xóa điều kiện', downloadImage: 'Tải ảnh', exportExcel: 'Xuất Excel', print: 'In' },
             summary: { totalQty: 'Tổng sản phẩm tốt', avgDailyQty: 'Sản lượng TB ngày', totalStopTime: 'Tổng thời gian dừng', avgSpeed: 'Tốc độ TB', recordsCount: 'Số bản ghi' },
@@ -1423,6 +1431,8 @@ export const translations = {
             category: { title: 'เงื่อนไขจัดกลุ่ม' },
             display: { title: 'คอลัมน์ที่แสดง' },
             dateRange: 'ช่วงวันที่',
+            startLabel: 'เริ่ม:', endLabel: 'สิ้นสุด:',
+            units: { sheets: 'แผ่น', sheetsPerMin: 'แผ่น/นาที', records: 'รายการ', hours: 'ชม.', minShort: 'นาที', minLong: 'นาที' },
             quickDate: { today: 'วันนี้', yesterday: 'เมื่อวาน', last7days: '7 วันล่าสุด', last30days: '30 วันล่าสุด', thisMonth: 'เดือนนี้' },
             actions: { clearFilters: 'ล้างเงื่อนไข', downloadImage: 'ดาวน์โหลดรูป', exportExcel: 'ส่งออก Excel', print: 'พิมพ์' },
             summary: { totalQty: 'ของดีรวม', avgDailyQty: 'ผลผลิตเฉลี่ยต่อวัน', totalStopTime: 'เวลาหยุดรวม', avgSpeed: 'ความเร็วเฉลี่ย', recordsCount: 'จำนวนรายการ' },
@@ -1444,8 +1454,22 @@ export const translations = {
     }
 };
 
+const LANGUAGE_STORAGE_KEY = 'printingiot.language';
+const readStoredLanguage = () => {
+    try {
+        const v = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+        if (v && Object.prototype.hasOwnProperty.call(translations, v)) return v;
+    } catch { /* 讀不到就用預設 */ }
+    return 'tw';
+};
+
 export const LanguageProvider = ({ children }) => {
-    const [language, setLanguage] = useState('tw'); // Default Traditional Chinese
+    // 語言選擇存在 localStorage,重新整理後保留;讀寫失敗(隱私模式等)就退回預設繁體中文
+    const [language, setLanguageState] = useState(readStoredLanguage);
+    const setLanguage = (lang) => {
+        setLanguageState(lang);
+        try { localStorage.setItem(LANGUAGE_STORAGE_KEY, lang); } catch { /* 無法保存不影響使用 */ }
+    };
 
     const t = (key) => {
         // key format: 'nav.monitor'

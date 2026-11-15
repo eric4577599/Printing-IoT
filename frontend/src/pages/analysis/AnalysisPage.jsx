@@ -82,7 +82,9 @@ const AnalysisPage = () => {
     const formatStopTime = (minutes) => {
         const hours = Math.floor(minutes / 60);
         const mins = Math.round(minutes % 60);
-        return hours > 0 ? `${hours} 小時 ${mins} 分` : `${mins} 分鐘`;
+        return hours > 0
+            ? `${hours} ${t('analysis.units.hours')} ${mins} ${t('analysis.units.minShort')}`
+            : `${mins} ${t('analysis.units.minLong')}`;
     };
 
     const handleQuickDate = (type) => {

@@ -69,8 +69,8 @@ const AnalysisSidebar = ({
             <div className={styles.section}>
                 <h4 className={styles.sectionTitle}>📅 {t('analysis.dateRange')}</h4>
                 <div className={styles.dateRange}>
-                    <label>開始: <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={styles.dateInput} /></label>
-                    <label>結束: <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={styles.dateInput} /></label>
+                    <label>{t('analysis.startLabel')} <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={styles.dateInput} /></label>
+                    <label>{t('analysis.endLabel')} <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={styles.dateInput} /></label>
                 </div>
                 <div className={styles.quickDateButtons}>
                     {['today', 'yesterday', 'last7days', 'thisMonth'].map(type => (
