@@ -47,7 +47,9 @@ Opening the system (default `http://localhost:5600`) shows the **login window**.
 
 ### Administrator / engineer / supervisor login
 
-1. Press **Admin**. 2. Enter account and password (12 letters/digits). 3. Press **Select**.
+1. Press **Admin**: a **Password** field appears and the top-left button becomes **Back** (returns to operator mode). 2. Enter account and password (12 letters/digits). 3. Press **Select**.
+
+![Figure 1-1b Administrator login mode](pic/ui/ui-01b-login-admin.png "Figure 1-1b Administrator login mode: the password field appears")
 
 ### What happens behind the login
 
