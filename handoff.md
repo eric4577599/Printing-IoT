@@ -67,6 +67,13 @@ OP1~OP5 的密碼已改為 `0000`(直接改資料庫雜湊,因為走 API 要輸�
 - ✅ **T-20261113-01 學習筆記已完成**(Greenstone 三份協定,`docs/report20261113-1.md`;**客戶保密,已加入 `.git/info/exclude`,不進版控**)。回覆 M-Agent `20261113-done-Printing IoT.md` 尚未寫(見「M-Agent 交辦」)。
 - ✅ **設定頁通訊設定擴充**(2026-11-15,commit 395654f / b47a97b / 7c55f00,已 push、已部署 frontend):ERP「通訊協定」新增 `mhi_evol`(Mitsubishi Evol);「連線方式」新增 `serial`(RS-232,欄位 serialPort/baudRate 預設 9600/dataBits 8/parity even/stopBits 1,payload 鍵 `erp_serial_port` 等);PLC 與 ERP 各加啟用開關(綁 `plc_enabled`/`erp_enabled`)與 WISE 協定說明列。測試 `CommunicationTab.test.jsx`。
   **全部只是設定值**:後端不讀 `plc_enabled`/`erp_enabled`,Worker 沒有 Evol 協定或序列埠驅動,開關旁已加「僅記錄設定值」提示。要真的生效 = 另一件事:Worker 讀 enabled、實作 Evol(RS-232)驅動,且 Docker 要掛序列埠裝置(Mac 上麻煩),須先評估。Evol 協定依據為 Greenstone 學習筆記(`report20261113-1.md`,保密、不進版控)。
+- ✅ **2026-11-15 本日完成(已 commit,多數已 push,見下)**:
+  - 日報與月報**稼動率口徑統一**(扣準備時間),前後端 + 測試;日報平均 OEE 與月報 OEE 仍不同(加權平均 vs 合計重算,設計如此)。
+  - **Mitsubishi Evol / RS-232 / 啟用開關**:Evol 屬**設備(PLC)區塊**的裝置類型(不是 ERP);序列埠欄位為 `plc_serial_*`。**全部只存設定值,Worker 無驅動、`plc_enabled`/`erp_enabled` 無人讀**。
+  - **10 月模擬生產紀錄**(294 筆,`ClientRecordId LIKE 'SIM202610-%'`,清除 SQL 見 `docs/report20261115-1.md`)。
+  - **文件圖文化**:文件頁改用輕量 Markdown 渲染器(`modules/docs/markdownRender.jsx` + `markdownParse.js`,無新相依,HTML 當純文字、不放行 `javascript:`、不載外部圖);`doc/pic/**` 圖檔建置時收入(順解 B14);新增 `doc/系統設計說明書.md`(現況)、重寫 `doc/操作說明書.md` 與 `doc/Operator Manual.md`(v4.0),增補 `doc/操作說明文件.html`;22 張圖(實機截圖 14 + SVG 流程圖 7 + 既有)。**流程圖由 `scripts/gen-doc-diagrams.py` 產生**,改圖請改腳本重跑。
+  - **nginx**:`index.html` 回 `Cache-Control: no-cache`,`/assets/` 不存在回 404。原因:部署後瀏覽器拿舊 `index.html` 指向已被換掉的 JS,nginx 回退成 HTML 當 JS 執行 → **整頁空白**(每次部署都會發生)。
+  - 文件更正:F3 的前提是 **PLC 連線**(不是先停機);完工後下一筆直接遞補(與 Auto Next 無關,Auto Next 只影響 F10)。
 - 剩下實機驗收 E3、**F4/F10 車速防呆實機驗**、Backlog。
 
 ### 1. 實機驗收(唯一真正卡住的事,需真人開瀏覽器)
@@ -116,6 +123,9 @@ Claude 可以自己走完**,不必等 Eric 先登入。**管理者登入**(設�
 
 | # | 事項 | 出處 |
 |---|---|---|
+| B21 | **設定頁左側分類選單沒有樣式** —— `SettingsPage.module.css` 沒有 `sidebar` / `menuItem` / `sidebarHeader` / `active` 規則(自最早的 commit 就沒有),顯示成左上角小字清單,功能正常 | `docs/report20261115-2.md` |
+| B22 | **作業員(OP1)可開啟「通訊設定」「計算公式」等分頁**(儲存由後端 `SystemConfig` 擋 403)。前端沒有依角色隱藏;且**改欄位時前端先樂觀更新本機狀態**,被後端擋下後畫面仍顯示新值。是否要在前端依角色隱藏/唯讀,待決 | 同上 |
+| B23 | 設定頁「通訊」ERP 區塊在目前環境顯示:連線方式一個都沒選,輸入/輸出路徑欄位顯示 `192.168.1.100` / `3000`(疑似舊設定缺 `erp_connection_type`,落入檔案分支) | 同上 |
 | B20 | **其他頁面仍有約 50 個 alert / confirm**(排程、報表、分析、設定、maintenance);`hooks/useFKeyHandler.js` 是沒人引用的死碼 | 同上 §3.3 |
 | B16 | **回填會把「有 defectQty 但沒有不良明細」的舊紀錄靜默算成 0 不良**,且「有損轉換」不會示警(差異偵測比的是送出的明細加總,不是紀錄自己的 defectQty)。是否真有這種舊資料未證實 | 同上 §3.2 |
 | B17 | **完工實績的 `DeviceId` 是空的** —— 設定頁的機台識別碼未填,多台機器的實績分不出來源 | 同上 §3.3 |
