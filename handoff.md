@@ -74,6 +74,7 @@ OP1~OP5 的密碼已改為 `0000`(直接改資料庫雜湊,因為走 API 要輸�
   - **文件圖文化**:文件頁改用輕量 Markdown 渲染器(`modules/docs/markdownRender.jsx` + `markdownParse.js`,無新相依,HTML 當純文字、不放行 `javascript:`、不載外部圖);`doc/pic/**` 圖檔建置時收入(順解 B14);新增 `doc/系統設計說明書.md`(現況)、重寫 `doc/操作說明書.md` 與 `doc/Operator Manual.md`(v4.0),增補 `doc/操作說明文件.html`;22 張圖(實機截圖 14 + SVG 流程圖 7 + 既有)。**流程圖由 `scripts/gen-doc-diagrams.py` 產生**,改圖請改腳本重跑。
   - **nginx**:`index.html` 回 `Cache-Control: no-cache`,`/assets/` 不存在回 404。原因:部署後瀏覽器拿舊 `index.html` 指向已被換掉的 JS,nginx 回退成 HTML 當 JS 執行 → **整頁空白**(每次部署都會發生)。
   - 文件更正:F3 的前提是 **PLC 連線**(不是先停機);完工後下一筆直接遞補(與 Auto Next 無關,Auto Next 只影響 F10)。
+  - **刪除舊資料(Eric 11-15 指示,已確認範圍)**:① 資料庫 `ProductionCompletions` 9/15 的 2 筆真實測試實績(訂單 123123123123,含 8 筆不良明細),交易內刪除;備份 CSV 在專案根 `backups/`(已加入 `.git/info/exclude`,不進版控)。**模擬的 10 月 294 筆保留**。該訂單本身(`Orders`)未刪。② `doc/` 移除 13 個舊檔(9 個誤放的 report/spec + 4 個保養維修相關),同步清掉 docRegistry 登錄與 5 語系多語系鍵;檔案仍可由 git 歷史找回。
 - 剩下實機驗收 E3、**F4/F10 車速防呆實機驗**、Backlog。
 
 ### 1. 實機驗收(唯一真正卡住的事,需真人開瀏覽器)

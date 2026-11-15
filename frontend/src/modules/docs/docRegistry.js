@@ -77,7 +77,6 @@ export const CURATED_INDEX = {
     '系統設計說明書.md': { category: CATEGORY.DESIGN, name: '系統設計說明書(現況,2026/11/15)' },
     'SASD說明書.md': { category: CATEGORY.DESIGN, i18nKey: 'docs.file.sasd' },
     '開發說明書.md': { category: CATEGORY.DESIGN, i18nKey: 'docs.file.dev' },
-    '維護保養開發設計書.md': { category: CATEGORY.DESIGN, i18nKey: 'docs.file.maintenance' },
     'MQTT訊息處理流程.md': { category: CATEGORY.DESIGN, i18nKey: 'docs.file.mqtt' },
     '整合設計與重新拆分規劃_20260617.md': { category: CATEGORY.DESIGN, name: '整合設計與重新拆分規劃 2026/06/17' },
 
@@ -93,8 +92,6 @@ export const CURATED_INDEX = {
     'ERROR_TEST_MATRIX.md': { category: CATEGORY.TESTING, name: 'Error Test Matrix' },
     'PROJECT_REVIEW_2026_01_16.md': { category: CATEGORY.TESTING, i18nKey: 'docs.file.review', suffix: '2026/01/16' },
 
-    '20260122_維修管理系統分離_團隊會議議程.md': { category: CATEGORY.MEETING, i18nKey: 'docs.file.meeting1', prefix: '2026/01/22' },
-    '20260122正隆苗栗保養計劃討論.md': { category: CATEGORY.MEETING, i18nKey: 'docs.file.meeting2', prefix: '2026/01/22' },
 };
 
 /**
