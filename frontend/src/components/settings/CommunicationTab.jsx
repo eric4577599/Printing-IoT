@@ -16,6 +16,33 @@ import {
     describeSeconds,
 } from '../../utils/dataLogInterval';
 
+/**
+ * 滑動開關。輸入:checked、onChange(boolean)、label;輸出:role="switch" 的按鈕。
+ * 邏輯:沿用既有 enabled 欄位的布林值,不引入新相依套件。
+ */
+function ToggleSwitch({ checked, onChange, label }) {
+    return (
+        <button
+            type="button"
+            role="switch"
+            aria-checked={!!checked}
+            onClick={() => onChange(!checked)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        >
+            <span style={{
+                width: '38px', height: '20px', borderRadius: '10px', position: 'relative',
+                background: checked ? '#4caf50' : '#bdbdbd', transition: 'background 0.2s'
+            }}>
+                <span style={{
+                    position: 'absolute', top: '2px', left: checked ? '20px' : '2px',
+                    width: '16px', height: '16px', borderRadius: '50%', background: '#fff', transition: 'left 0.2s'
+                }} />
+            </span>
+            <span style={{ fontWeight: 'bold' }}>{label}</span>
+        </button>
+    );
+}
+
 const CommunicationTab = () => {
     const { t } = useLanguage();
 
@@ -183,6 +210,11 @@ const CommunicationTab = () => {
                             {isPlcConnected ? 'Connected (Motor On)' : 'Disconnected (Motor Off)'}
                         </span>
                     </h4>
+                    <ToggleSwitch
+                        checked={commSettings.plc.enabled}
+                        onChange={v => handleCommChange('plc', 'enabled', v)}
+                        label={t('settingsExt.comm.enableSwitch')}
+                    />
                     {/* New: Simulate Signal Option */}
                     <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', background: '#fff', padding: '5px 10px', borderRadius: '4px', border: '1px solid #ccc' }}>
                         <input
@@ -207,6 +239,14 @@ const CommunicationTab = () => {
                                 <option value="modbus">Generic Modbus TCP</option>
                             </select>
                         </div>
+
+                        {commSettings.plc.deviceType === 'wise' && (
+                            <div className={styles.inputRow}>
+                                <label>{t('settings.comm.protocol')}:</label>
+                                <span>MQTT · Advantech WISE-4000</span>
+                                <span style={{ marginLeft: '10px', fontSize: '0.8rem', color: '#888' }}>{t('settingsExt.comm.switchNote')}</span>
+                            </div>
+                        )}
 
                         {/* MQTT Settings for Wise/MQTT Mode */}
                         {commSettings.plc.deviceType === 'wise' ? (
@@ -366,6 +406,15 @@ const CommunicationTab = () => {
                 </h4>
                 <div style={{ marginBottom: '15px', fontSize: '0.9rem', color: '#666' }}>
                     {t('settingsExt.comm.erpDesc')}
+                </div>
+
+                <div className={styles.inputRow}>
+                    <ToggleSwitch
+                        checked={commSettings.erp.enabled}
+                        onChange={v => handleCommChange('erp', 'enabled', v)}
+                        label={t('settingsExt.comm.enableSwitch')}
+                    />
+                    <span style={{ marginLeft: '10px', fontSize: '0.8rem', color: '#888' }}>{t('settingsExt.comm.switchNote')}</span>
                 </div>
 
                 <div className={styles.inputRow}>
