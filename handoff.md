@@ -1,5 +1,5 @@
 # Handoff — Claude(Printing IoT)
-> 最後更新:2026-11-13 下班
+> 最後更新:2026-11-15 收工
 
 ## ⛔ 下一個接手的人先看這段
 
@@ -65,6 +65,8 @@ OP1~OP5 的密碼已改為 `0000`(直接改資料庫雜湊,因為走 API 要輸�
 - ✅ **損耗率定義已取得**(2026-11-06 stacker-ai 回覆,原文在 `docs/inbox/20261106-stacker-loss-rate-answer.md`;**尚未補進** `M-Agent/docs/inbox/20261105-reply-printing-iot-loss-rate.md`,沙箱不讓本座位寫 M-Agent 目錄,需 Eric 或 M-Agent 處理):損耗率 = 設計損耗÷良品張數;入庫不足率 = 欠量張數÷良品張數。資料來源是 SQL Server `SmartIoT_<機台>`。不必再問 TeamChat。
 - ✅ **B19 已修**(`report20261113-2.md`,commit afa81e6):API 反序列化區分大小寫,車速等欄位全落回預設值。已重建 backend-api 並實測畫面車速。**F4/F10 車速防呆尚未實機走過**。已 push。
 - ✅ **T-20261113-01 學習筆記已完成**(Greenstone 三份協定,`docs/report20261113-1.md`;**客戶保密,已加入 `.git/info/exclude`,不進版控**)。回覆 M-Agent `20261113-done-Printing IoT.md` 尚未寫(見「M-Agent 交辦」)。
+- ✅ **設定頁通訊設定擴充**(2026-11-15,commit 395654f / b47a97b / 7c55f00,已 push、已部署 frontend):ERP「通訊協定」新增 `mhi_evol`(Mitsubishi Evol);「連線方式」新增 `serial`(RS-232,欄位 serialPort/baudRate 預設 9600/dataBits 8/parity even/stopBits 1,payload 鍵 `erp_serial_port` 等);PLC 與 ERP 各加啟用開關(綁 `plc_enabled`/`erp_enabled`)與 WISE 協定說明列。測試 `CommunicationTab.test.jsx`。
+  **全部只是設定值**:後端不讀 `plc_enabled`/`erp_enabled`,Worker 沒有 Evol 協定或序列埠驅動,開關旁已加「僅記錄設定值」提示。要真的生效 = 另一件事:Worker 讀 enabled、實作 Evol(RS-232)驅動,且 Docker 要掛序列埠裝置(Mac 上麻煩),須先評估。Evol 協定依據為 Greenstone 學習筆記(`report20261113-1.md`,保密、不進版控)。
 - 剩下實機驗收 E3、**F4/F10 車速防呆實機驗**、Backlog。
 
 ### 1. 實機驗收(唯一真正卡住的事,需真人開瀏覽器)
