@@ -44,6 +44,12 @@ export function buildCommPayload(s) {
         erp_port: erp.port,
         erp_input_dir: erp.inputDir,
         erp_output_dir: erp.outputDir,
+        // 序列埠(RS-232)連線參數,erp_connection_type 為 serial 時使用
+        erp_serial_port: erp.serialPort,
+        erp_baud_rate: erp.baudRate,
+        erp_data_bits: erp.dataBits,
+        erp_parity: erp.parity,
+        erp_stop_bits: erp.stopBits,
 
         data_log_interval: s?.dataLogInterval,
         machine_id: s?.machineId,

@@ -37,7 +37,13 @@ const CommunicationTab = () => {
             host: '192.168.1.100',
             port: 3000,
             inputDir: '',
-            outputDir: ''
+            outputDir: '',
+            // 序列埠預設值:9600 bps、8 資料位元、偶同位、1 停止位元
+            serialPort: '',
+            baudRate: 9600,
+            dataBits: 8,
+            parity: 'even',
+            stopBits: 1
         },
         dataLogInterval: 300, // 定時寫入間隔（秒），預設5分鐘
         machineId: 'MACHINE_01', // 機台識別碼
@@ -83,7 +89,13 @@ const CommunicationTab = () => {
                             host: data.erp_host,
                             port: data.erp_port,
                             inputDir: data.erp_input_dir,
-                            outputDir: data.erp_output_dir
+                            outputDir: data.erp_output_dir,
+                            // 舊設定沒有這些鍵,缺值時落回預設
+                            serialPort: data.erp_serial_port ?? '',
+                            baudRate: data.erp_baud_rate ?? 9600,
+                            dataBits: data.erp_data_bits ?? 8,
+                            parity: data.erp_parity ?? 'even',
+                            stopBits: data.erp_stop_bits ?? 1
                         },
                         dataLogInterval: data.data_log_interval || DATA_LOG_INTERVAL_DEFAULT,
                         machineId: data.machine_id || 'MACHINE_01',
@@ -393,6 +405,13 @@ const CommunicationTab = () => {
                                 onChange={() => handleCommChange('erp', 'connectionType', 'file')}
                             /> File Share
                         </label>
+                        <label>
+                            <input
+                                type="radio"
+                                checked={commSettings.erp.connectionType === 'serial'}
+                                onChange={() => handleCommChange('erp', 'connectionType', 'serial')}
+                            /> {t('settingsExt.comm.connSerial')}
+                        </label>
                     </div>
                 </div>
 
@@ -413,6 +432,64 @@ const CommunicationTab = () => {
                                 onChange={e => handleCommChange('erp', 'port', Number(e.target.value))}
                                 style={{ width: '80px' }}
                             />
+                        </div>
+                    </div>
+                ) : commSettings.erp.connectionType === 'serial' ? (
+                    <div style={{ marginLeft: '20px' }}>
+                        <div className={styles.inputRow}>
+                            <label>{t('settingsExt.comm.serialPort')}:</label>
+                            <input
+                                value={commSettings.erp.serialPort}
+                                onChange={e => handleCommChange('erp', 'serialPort', e.target.value)}
+                                placeholder="/dev/ttyUSB0 或 COM1"
+                                style={{ width: '200px' }}
+                            />
+                        </div>
+                        <div className={styles.inputRow}>
+                            <label>{t('settingsExt.comm.baudRate')}:</label>
+                            <select
+                                value={commSettings.erp.baudRate}
+                                onChange={e => handleCommChange('erp', 'baudRate', Number(e.target.value))}
+                                style={{ padding: '6px', width: '110px' }}
+                            >
+                                {[1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200].map(b => (
+                                    <option key={b} value={b}>{b}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className={styles.inputRow}>
+                            <label>{t('settingsExt.comm.dataBits')}:</label>
+                            <select
+                                value={commSettings.erp.dataBits}
+                                onChange={e => handleCommChange('erp', 'dataBits', Number(e.target.value))}
+                                style={{ padding: '6px', width: '110px' }}
+                            >
+                                <option value={7}>7</option>
+                                <option value={8}>8</option>
+                            </select>
+                        </div>
+                        <div className={styles.inputRow}>
+                            <label>{t('settingsExt.comm.parity')}:</label>
+                            <select
+                                value={commSettings.erp.parity}
+                                onChange={e => handleCommChange('erp', 'parity', e.target.value)}
+                                style={{ padding: '6px', width: '110px' }}
+                            >
+                                <option value="none">{t('settingsExt.comm.parityNone')}</option>
+                                <option value="even">{t('settingsExt.comm.parityEven')}</option>
+                                <option value="odd">{t('settingsExt.comm.parityOdd')}</option>
+                            </select>
+                        </div>
+                        <div className={styles.inputRow}>
+                            <label>{t('settingsExt.comm.stopBits')}:</label>
+                            <select
+                                value={commSettings.erp.stopBits}
+                                onChange={e => handleCommChange('erp', 'stopBits', Number(e.target.value))}
+                                style={{ padding: '6px', width: '110px' }}
+                            >
+                                <option value={1}>1</option>
+                                <option value={2}>2</option>
+                            </select>
                         </div>
                     </div>
                 ) : (

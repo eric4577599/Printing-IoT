@@ -21,6 +21,7 @@ const full = {
     erp: {
         enabled: true, protocol: 'lmc_flexo', connectionType: 'tcp',
         host: '192.168.1.100', port: 3000, inputDir: '/in', outputDir: '/out',
+        serialPort: '/dev/ttyUSB0', baudRate: 9600, dataBits: 8, parity: 'even', stopBits: 1,
     },
     dataLogInterval: 6,
     machineId: 'M20',
@@ -42,6 +43,16 @@ describe('buildCommPayload', () => {
     it('ERP 協定選 Mitsubishi Evol(mhi_evol)時原樣送出,不被改寫', () => {
         const p = buildCommPayload({ ...full, erp: { ...full.erp, protocol: 'mhi_evol' } });
         expect(p.erp_protocol).toBe('mhi_evol');
+    });
+
+    it('序列埠(RS-232)連線參數完整送出', () => {
+        const p = buildCommPayload({ ...full, erp: { ...full.erp, connectionType: 'serial' } });
+        expect(p.erp_connection_type).toBe('serial');
+        expect(p.erp_serial_port).toBe('/dev/ttyUSB0');
+        expect(p.erp_baud_rate).toBe(9600);
+        expect(p.erp_data_bits).toBe(8);
+        expect(p.erp_parity).toBe('even');
+        expect(p.erp_stop_bits).toBe(1);
     });
 
     it('機台識別碼與 MM 網址都送得出去', () => {
