@@ -79,4 +79,14 @@ describe('CommunicationTab', () => {
         // Evol 走序列埠,不適用 MQTT 測試連線
         expect(screen.queryByText(/Test Connection/)).toBeNull();
     });
+
+    it('B23:後端設定完全沒有 erp_* 時,連線方式落回 TCP,輸入框不殘留舊文字', async () => {
+        const old = { ...backendSettings };
+        for (const k of Object.keys(old)) if (k.startsWith('erp_')) delete old[k];
+        getCommunicationSettings.mockResolvedValue(old);
+        await renderTab();
+        const radios = await screen.findAllByRole('radio');
+        expect(radios.some(r => r.checked && r.parentElement.textContent.includes('TCP/IP'))).toBe(true);
+        expect(screen.queryByText(/輸入路徑|Input Dir/)).toBeNull();   // 不是檔案共享分支
+    });
 });

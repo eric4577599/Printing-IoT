@@ -14,6 +14,8 @@
 //
 // 本模組把它收斂成一個函式:**新增欄位只會有一個地方要改**。
 
+import { DATA_LOG_INTERVAL_DEFAULT } from './dataLogInterval';
+
 /**
  * 由完整的通訊設定狀態產生送給後端的 payload
  * @param {Object} s - CommunicationTab 的 commSettings 完整狀態
@@ -61,3 +63,69 @@ export function buildCommPayload(s) {
 
 /** payload 應有的鍵集合 —— 供測試釘住「不得再有人漏送欄位」 */
 export const COMM_PAYLOAD_KEYS = Object.freeze(Object.keys(buildCommPayload({})));
+
+/**
+ * 通訊設定的預設值 —— 也是 CommunicationTab 的初始狀態,單一來源。
+ * 載入後端設定時,後端沒有的鍵一律落回這裡的值。
+ */
+export const DEFAULT_COMM_SETTINGS = Object.freeze({
+    plc: Object.freeze({
+        enabled: true, simulate: false, deviceType: 'wise', ip: '192.168.1.1', port: 502,
+        motorSignal: 'DI-0', countSignal: 'DI-1', monitor_interval: 1.0,
+        mqttBroker: '', mqttTopic: '',
+        // Mitsubishi Evol 用序列埠(RS-232)預設值:9600 bps、8 資料位元、偶同位、1 停止位元
+        serialPort: '', baudRate: 9600, dataBits: 8, parity: 'even', stopBits: 1,
+    }),
+    erp: Object.freeze({
+        enabled: true, protocol: 'lmc_flexo', connectionType: 'tcp',
+        host: '192.168.1.100', port: 3000, inputDir: '', outputDir: '',
+    }),
+    dataLogInterval: DATA_LOG_INTERVAL_DEFAULT,
+    machineId: 'MACHINE_01',
+    mmBaseUrl: '',
+});
+
+/**
+ * 把後端回傳的通訊設定(snake_case)轉成 CommunicationTab 的狀態
+ * @param {Object} data - GET /api/settings/communication 的回應
+ * @returns {Object} 與 DEFAULT_COMM_SETTINGS 同形的狀態,**任何欄位都不會是 undefined**
+ * @description 舊設定可能缺鍵(例如在 ERP 欄位出現前存的設定完全沒有 erp_*)。
+ *              缺鍵若變成 undefined,畫面會出現「連線方式一個都沒選」,且 React 會把原本
+ *              TCP 分支的輸入框 DOM 重用到檔案分支,殘留舊文字(B23)。
+ *              也補上先前漏讀的 plc_monitor_interval —— 沒讀回來,下一次「儲存」就會把它洗掉。
+ */
+export function parseCommSettings(data) {
+    const d = data ?? {};
+    const D = DEFAULT_COMM_SETTINGS;
+    return {
+        plc: {
+            enabled: d.plc_enabled ?? D.plc.enabled,
+            simulate: d.plc_simulate ?? D.plc.simulate,
+            deviceType: d.plc_device_type ?? D.plc.deviceType,
+            ip: d.plc_ip ?? D.plc.ip,
+            port: d.plc_port ?? D.plc.port,
+            motorSignal: d.plc_motor_signal ?? D.plc.motorSignal,
+            countSignal: d.plc_count_signal ?? D.plc.countSignal,
+            monitor_interval: d.plc_monitor_interval ?? D.plc.monitor_interval,
+            mqttBroker: d.mqtt_broker_url ?? D.plc.mqttBroker,
+            mqttTopic: d.mqtt_topic ?? D.plc.mqttTopic,
+            serialPort: d.plc_serial_port ?? D.plc.serialPort,
+            baudRate: d.plc_baud_rate ?? D.plc.baudRate,
+            dataBits: d.plc_data_bits ?? D.plc.dataBits,
+            parity: d.plc_parity ?? D.plc.parity,
+            stopBits: d.plc_stop_bits ?? D.plc.stopBits,
+        },
+        erp: {
+            enabled: d.erp_enabled ?? D.erp.enabled,
+            protocol: d.erp_protocol ?? D.erp.protocol,
+            connectionType: d.erp_connection_type ?? D.erp.connectionType,
+            host: d.erp_host ?? D.erp.host,
+            port: d.erp_port ?? D.erp.port,
+            inputDir: d.erp_input_dir ?? D.erp.inputDir,
+            outputDir: d.erp_output_dir ?? D.erp.outputDir,
+        },
+        dataLogInterval: d.data_log_interval || D.dataLogInterval,
+        machineId: d.machine_id || D.machineId,
+        mmBaseUrl: d.mm_base_url || D.mmBaseUrl,
+    };
+}

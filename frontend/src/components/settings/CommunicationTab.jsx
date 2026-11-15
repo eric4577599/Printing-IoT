@@ -7,7 +7,7 @@ import {
     updateCommunicationSettings,
     testMqttConnection
 } from '../../services/api';
-import { buildCommPayload } from '../../utils/commPayload';
+import { buildCommPayload, parseCommSettings } from '../../utils/commPayload';
 import {
     DATA_LOG_INTERVAL_MIN,
     DATA_LOG_INTERVAL_MAX,
@@ -47,35 +47,7 @@ const CommunicationTab = () => {
     const { t } = useLanguage();
 
     // --- Communication Settings State ---
-    const [commSettings, setCommSettings] = useState({
-        plc: {
-            enabled: true,
-            simulate: false,
-            deviceType: 'wise',
-            ip: '192.168.1.1',
-            port: 502,
-            motorSignal: 'DI-0',
-            countSignal: 'DI-1',
-            // Mitsubishi Evol 用序列埠(RS-232)預設值:9600 bps、8 資料位元、偶同位、1 停止位元
-            serialPort: '',
-            baudRate: 9600,
-            dataBits: 8,
-            parity: 'even',
-            stopBits: 1
-        },
-        erp: {
-            enabled: true,
-            protocol: 'lmc_flexo',
-            connectionType: 'tcp',
-            host: '192.168.1.100',
-            port: 3000,
-            inputDir: '',
-            outputDir: ''
-        },
-        dataLogInterval: 300, // 定時寫入間隔（秒），預設5分鐘
-        machineId: 'MACHINE_01', // 機台識別碼
-        mmBaseUrl: '' // P1:MM 維護模組網址,空字串代表未設定(導覽列不顯示入口)
-    });
+    const [commSettings, setCommSettings] = useState(() => parseCommSettings({}));
 
     /*
       S15:間隔改以「秒」輸入(原本是分鐘,`Math.floor(秒/60)` 讓 6 秒顯示成 0 分鐘,
@@ -97,37 +69,7 @@ const CommunicationTab = () => {
             try {
                 const data = await getCommunicationSettings();
                 if (data) {
-                    setCommSettings({
-                        plc: {
-                            enabled: data.plc_enabled,
-                            simulate: data.plc_simulate,
-                            deviceType: data.plc_device_type,
-                            ip: data.plc_ip,
-                            port: data.plc_port,
-                            motorSignal: data.plc_motor_signal,
-                            countSignal: data.plc_count_signal,
-                            mqttBroker: data.mqtt_broker_url,
-                            mqttTopic: data.mqtt_topic,
-                            // 舊設定沒有這些鍵,缺值時落回預設
-                            serialPort: data.plc_serial_port ?? '',
-                            baudRate: data.plc_baud_rate ?? 9600,
-                            dataBits: data.plc_data_bits ?? 8,
-                            parity: data.plc_parity ?? 'even',
-                            stopBits: data.plc_stop_bits ?? 1
-                        },
-                        erp: {
-                            enabled: data.erp_enabled,
-                            protocol: data.erp_protocol,
-                            connectionType: data.erp_connection_type,
-                            host: data.erp_host,
-                            port: data.erp_port,
-                            inputDir: data.erp_input_dir,
-                            outputDir: data.erp_output_dir
-                        },
-                        dataLogInterval: data.data_log_interval || DATA_LOG_INTERVAL_DEFAULT,
-                        machineId: data.machine_id || 'MACHINE_01',
-                        mmBaseUrl: data.mm_base_url || ''
-                    });
+                    setCommSettings(parseCommSettings(data));
                     // S15:草稿要跟著後端的值走,否則畫面顯示的是預設值而非實際生效值
                     setLogIntervalDraft(String(data.data_log_interval || DATA_LOG_INTERVAL_DEFAULT));
                 }

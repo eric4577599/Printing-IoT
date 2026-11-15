@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildCommPayload, COMM_PAYLOAD_KEYS } from '../../utils/commPayload';
+import { buildCommPayload, COMM_PAYLOAD_KEYS, parseCommSettings, DEFAULT_COMM_SETTINGS } from '../../utils/commPayload';
 
 /**
  * 回歸釘樁:通訊設定 payload 不得再漏欄位。
@@ -77,5 +77,38 @@ describe('buildCommPayload', () => {
     it('未設定 MM 網址時送空字串,不是 undefined(undefined 會被 JSON 丟掉)', () => {
         expect(buildCommPayload({}).mm_base_url).toBe('');
         expect(JSON.parse(JSON.stringify(buildCommPayload({})))).toHaveProperty('mm_base_url');
+    });
+});
+
+describe('parseCommSettings(B23:舊設定缺鍵時退回預設,不得有 undefined)', () => {
+    const hasUndefined = (o) => Object.values(o).some(v => (v && typeof v === 'object') ? hasUndefined(v) : v === undefined);
+
+    it('空物件與 null 都得到完整預設值', () => {
+        expect(hasUndefined(parseCommSettings({}))).toBe(false);
+        expect(hasUndefined(parseCommSettings(null))).toBe(false);
+        expect(parseCommSettings({}).erp.connectionType).toBe('tcp');
+    });
+
+    it('實際的舊設定(完全沒有 erp_* 與 plc_monitor_interval)', () => {
+        const old = { plc_enabled: true, plc_device_type: 'wise', plc_ip: '192.168.1.1', plc_port: 502,
+            data_log_interval: 6, machine_id: 'M20', mqtt_broker_url: 'b', mqtt_topic: 't', mm_base_url: 'u' };
+        const s = parseCommSettings(old);
+        expect(hasUndefined(s)).toBe(false);
+        expect(s.erp).toEqual(DEFAULT_COMM_SETTINGS.erp);
+        expect(s.plc.monitor_interval).toBe(1.0);   // 沒讀回來,下一次儲存就會洗掉它
+        expect(s.dataLogInterval).toBe(6);
+    });
+
+    it('與 buildCommPayload 互為反函式', () => {
+        const back = parseCommSettings(buildCommPayload(full));
+        expect(buildCommPayload(back)).toEqual(buildCommPayload(full));
+    });
+
+    it('後端有的值不被預設蓋掉', () => {
+        const s = parseCommSettings({ erp_enabled: false, erp_connection_type: 'file', erp_input_dir: '/in', plc_device_type: 'mhi_evol' });
+        expect(s.erp.enabled).toBe(false);
+        expect(s.erp.connectionType).toBe('file');
+        expect(s.erp.inputDir).toBe('/in');
+        expect(s.plc.deviceType).toBe('mhi_evol');
     });
 });

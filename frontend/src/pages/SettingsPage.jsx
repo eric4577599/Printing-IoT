@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../modules/language/LanguageContext';
+import { useAuth } from '../modules/auth/AuthContext';
 import FormulaTab from '../components/settings/FormulaTab';
 import BoxTypeTab from '../components/settings/BoxTypeTab';
 import ReportTab from '../components/settings/ReportTab';
@@ -11,11 +12,12 @@ import styles from './SettingsPage.module.css';
 
 const SettingsPage = () => {
     const { t } = useLanguage();
+    const { hasRole } = useAuth();
     const [activeTab, setActiveTab] = useState('formula');
 
-    // RBAC: Check visibility
-    // RBAC: Check visibility
-    const canSeeCommunication = true; // user?.role === 'ADMIN';
+    // RBAC:通訊設定只對 ADMIN / ENGINEER 顯示,與後端 SystemConfig 政策一致(B22)。
+    // 原本一律 true,作業員也能開啟並改動畫面上的值(後端擋 403,但畫面已先樂觀更新)。
+    const canSeeCommunication = hasRole('ADMIN', 'ENGINEER');
     const canSeeFormula = true; // user?.role === 'ADMIN';
     const canSeeBoxType = true; // Open to all or admin?
 
