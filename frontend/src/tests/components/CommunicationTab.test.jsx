@@ -3,8 +3,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { LanguageProvider } from '../../modules/language/LanguageContext';
 
 /**
- * 通訊設定頁:PLC(WISE)與 ERP 的啟用開關、WISE 協定說明列、ERP 的 Mitsubishi Evol 協定與
- * 序列埠(RS-232)連線方式。重點是「操作畫面後,送給後端的 payload 真的變了」。
+ * 通訊設定頁:PLC(WISE)與 ERP 的啟用開關、WISE 協定說明列、設備端的 Mitsubishi Evol 協定與
+ * 序列埠(RS-232)連線參數(Evol 是印刷機協定,不是 ERP)。重點是「操作畫面後,送給後端的 payload 真的變了」。
  */
 
 const getCommunicationSettings = vi.fn();
@@ -60,22 +60,23 @@ describe('CommunicationTab', () => {
         expect(lastPayload().plc_enabled).toBe(false);
     });
 
-    it('ERP 協定可選 Mitsubishi Evol,並送出 mhi_evol', async () => {
+    it('ERP 協定下拉不含 Evol,連線方式不含序列埠(Evol 是設備協定)', async () => {
         await renderTab();
-        const select = (await screen.findByDisplayValue('LMC Flexo Protocol (@doc/20190323)'));
-        fireEvent.change(select, { target: { value: 'mhi_evol' } });
-        await waitFor(() => expect(lastPayload().erp_protocol).toBe('mhi_evol'));
+        const erpSelect = await screen.findByDisplayValue('LMC Flexo Protocol (@doc/20190323)');
+        expect([...erpSelect.options].map(o => o.value)).toEqual(['lmc_flexo', 'custom']);
+        expect(screen.getAllByRole('radio').some(r => r.parentElement.textContent.includes('RS-232'))).toBe(false);
     });
 
-    it('連線方式選序列埠:出現參數欄位,預設 9600/8/偶/1,並送出 serial', async () => {
+    it('設備類型可選 Mitsubishi Evol:出現序列埠欄位,預設 9600/8/偶/1,送出 mhi_evol', async () => {
         await renderTab();
-        const radios = await screen.findAllByRole('radio');
-        const serial = radios.find(r => r.parentElement.textContent.includes('RS-232') || r.parentElement.textContent.includes('序列埠'));
-        expect(serial).toBeTruthy();
-        fireEvent.click(serial);
-        await waitFor(() => expect(lastPayload().erp_connection_type).toBe('serial'));
+        const deviceSelect = await screen.findByDisplayValue('Advantech MQTT (Wise-4000)');
+        fireEvent.change(deviceSelect, { target: { value: 'mhi_evol' } });
+        await waitFor(() => expect(lastPayload().plc_device_type).toBe('mhi_evol'));
         const p = lastPayload();
-        expect([p.erp_baud_rate, p.erp_data_bits, p.erp_parity, p.erp_stop_bits]).toEqual([9600, 8, 'even', 1]);
+        expect([p.plc_baud_rate, p.plc_data_bits, p.plc_parity, p.plc_stop_bits]).toEqual([9600, 8, 'even', 1]);
         expect(screen.getByPlaceholderText('/dev/ttyUSB0 或 COM1')).toBeTruthy();
+        expect(screen.getByText('Mitsubishi Evol (MHI) · RS-232')).toBeTruthy();
+        // Evol 走序列埠,不適用 MQTT 測試連線
+        expect(screen.queryByText(/Test Connection/)).toBeNull();
     });
 });

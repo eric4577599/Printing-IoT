@@ -36,6 +36,12 @@ export function buildCommPayload(s) {
         plc_monitor_interval: plc.monitor_interval,
         mqtt_broker_url: plc.mqttBroker,
         mqtt_topic: plc.mqttTopic,
+        // 序列埠(RS-232)連線參數,plc_device_type 為 mhi_evol 時使用
+        plc_serial_port: plc.serialPort,
+        plc_baud_rate: plc.baudRate,
+        plc_data_bits: plc.dataBits,
+        plc_parity: plc.parity,
+        plc_stop_bits: plc.stopBits,
 
         erp_enabled: erp.enabled,
         erp_protocol: erp.protocol,
@@ -44,12 +50,6 @@ export function buildCommPayload(s) {
         erp_port: erp.port,
         erp_input_dir: erp.inputDir,
         erp_output_dir: erp.outputDir,
-        // 序列埠(RS-232)連線參數,erp_connection_type 為 serial 時使用
-        erp_serial_port: erp.serialPort,
-        erp_baud_rate: erp.baudRate,
-        erp_data_bits: erp.dataBits,
-        erp_parity: erp.parity,
-        erp_stop_bits: erp.stopBits,
 
         data_log_interval: s?.dataLogInterval,
         machine_id: s?.machineId,

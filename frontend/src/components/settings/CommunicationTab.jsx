@@ -55,7 +55,13 @@ const CommunicationTab = () => {
             ip: '192.168.1.1',
             port: 502,
             motorSignal: 'DI-0',
-            countSignal: 'DI-1'
+            countSignal: 'DI-1',
+            // Mitsubishi Evol 用序列埠(RS-232)預設值:9600 bps、8 資料位元、偶同位、1 停止位元
+            serialPort: '',
+            baudRate: 9600,
+            dataBits: 8,
+            parity: 'even',
+            stopBits: 1
         },
         erp: {
             enabled: true,
@@ -64,13 +70,7 @@ const CommunicationTab = () => {
             host: '192.168.1.100',
             port: 3000,
             inputDir: '',
-            outputDir: '',
-            // 序列埠預設值:9600 bps、8 資料位元、偶同位、1 停止位元
-            serialPort: '',
-            baudRate: 9600,
-            dataBits: 8,
-            parity: 'even',
-            stopBits: 1
+            outputDir: ''
         },
         dataLogInterval: 300, // 定時寫入間隔（秒），預設5分鐘
         machineId: 'MACHINE_01', // 機台識別碼
@@ -107,7 +107,13 @@ const CommunicationTab = () => {
                             motorSignal: data.plc_motor_signal,
                             countSignal: data.plc_count_signal,
                             mqttBroker: data.mqtt_broker_url,
-                            mqttTopic: data.mqtt_topic
+                            mqttTopic: data.mqtt_topic,
+                            // 舊設定沒有這些鍵,缺值時落回預設
+                            serialPort: data.plc_serial_port ?? '',
+                            baudRate: data.plc_baud_rate ?? 9600,
+                            dataBits: data.plc_data_bits ?? 8,
+                            parity: data.plc_parity ?? 'even',
+                            stopBits: data.plc_stop_bits ?? 1
                         },
                         erp: {
                             enabled: data.erp_enabled,
@@ -116,13 +122,7 @@ const CommunicationTab = () => {
                             host: data.erp_host,
                             port: data.erp_port,
                             inputDir: data.erp_input_dir,
-                            outputDir: data.erp_output_dir,
-                            // 舊設定沒有這些鍵,缺值時落回預設
-                            serialPort: data.erp_serial_port ?? '',
-                            baudRate: data.erp_baud_rate ?? 9600,
-                            dataBits: data.erp_data_bits ?? 8,
-                            parity: data.erp_parity ?? 'even',
-                            stopBits: data.erp_stop_bits ?? 1
+                            outputDir: data.erp_output_dir
                         },
                         dataLogInterval: data.data_log_interval || DATA_LOG_INTERVAL_DEFAULT,
                         machineId: data.machine_id || 'MACHINE_01',
@@ -237,13 +237,14 @@ const CommunicationTab = () => {
                             >
                                 <option value="wise">Advantech MQTT (Wise-4000)</option>
                                 <option value="modbus">Generic Modbus TCP</option>
+                                <option value="mhi_evol">Mitsubishi Evol (MHI)</option>
                             </select>
                         </div>
 
-                        {commSettings.plc.deviceType === 'wise' && (
+                        {(commSettings.plc.deviceType === 'wise' || commSettings.plc.deviceType === 'mhi_evol') && (
                             <div className={styles.inputRow}>
                                 <label>{t('settings.comm.protocol')}:</label>
-                                <span>MQTT · Advantech WISE-4000</span>
+                                <span>{commSettings.plc.deviceType === 'wise' ? 'MQTT · Advantech WISE-4000' : 'Mitsubishi Evol (MHI) · RS-232'}</span>
                                 <span style={{ marginLeft: '10px', fontSize: '0.8rem', color: '#888' }}>{t('settingsExt.comm.switchNote')}</span>
                             </div>
                         )}
@@ -294,6 +295,64 @@ const CommunicationTab = () => {
                                     </div>
                                 </div>
                             </>
+                        ) : commSettings.plc.deviceType === 'mhi_evol' ? (
+                            <div style={{ marginLeft: '20px' }}>
+                                <div className={styles.inputRow}>
+                                    <label>{t('settingsExt.comm.serialPort')}:</label>
+                                    <input
+                                        value={commSettings.plc.serialPort}
+                                        onChange={e => handleCommChange('plc', 'serialPort', e.target.value)}
+                                        placeholder="/dev/ttyUSB0 或 COM1"
+                                        style={{ width: '200px' }}
+                                    />
+                                </div>
+                                <div className={styles.inputRow}>
+                                    <label>{t('settingsExt.comm.baudRate')}:</label>
+                                    <select
+                                        value={commSettings.plc.baudRate}
+                                        onChange={e => handleCommChange('plc', 'baudRate', Number(e.target.value))}
+                                        style={{ padding: '6px', width: '110px' }}
+                                    >
+                                        {[1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200].map(b => (
+                                            <option key={b} value={b}>{b}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className={styles.inputRow}>
+                                    <label>{t('settingsExt.comm.dataBits')}:</label>
+                                    <select
+                                        value={commSettings.plc.dataBits}
+                                        onChange={e => handleCommChange('plc', 'dataBits', Number(e.target.value))}
+                                        style={{ padding: '6px', width: '110px' }}
+                                    >
+                                        <option value={7}>7</option>
+                                        <option value={8}>8</option>
+                                    </select>
+                                </div>
+                                <div className={styles.inputRow}>
+                                    <label>{t('settingsExt.comm.parity')}:</label>
+                                    <select
+                                        value={commSettings.plc.parity}
+                                        onChange={e => handleCommChange('plc', 'parity', e.target.value)}
+                                        style={{ padding: '6px', width: '110px' }}
+                                    >
+                                        <option value="none">{t('settingsExt.comm.parityNone')}</option>
+                                        <option value="even">{t('settingsExt.comm.parityEven')}</option>
+                                        <option value="odd">{t('settingsExt.comm.parityOdd')}</option>
+                                    </select>
+                                </div>
+                                <div className={styles.inputRow}>
+                                    <label>{t('settingsExt.comm.stopBits')}:</label>
+                                    <select
+                                        value={commSettings.plc.stopBits}
+                                        onChange={e => handleCommChange('plc', 'stopBits', Number(e.target.value))}
+                                        style={{ padding: '6px', width: '110px' }}
+                                    >
+                                        <option value={1}>1</option>
+                                        <option value={2}>2</option>
+                                    </select>
+                                </div>
+                            </div>
                         ) : (
                             <div className={styles.inputRow}>
                                 <label>{t('settings.comm.ip')}:</label>
@@ -318,7 +377,8 @@ const CommunicationTab = () => {
                             </div>
                         )}
 
-                        {/* MQTT Connection Test */}
+                        {/* MQTT Connection Test(Evol 走序列埠,不適用) */}
+                        {commSettings.plc.deviceType !== 'mhi_evol' && (
                         <div style={{ marginTop: '15px' }}>
                             <button
                                 onClick={async () => {
@@ -382,6 +442,7 @@ const CommunicationTab = () => {
                                 📊 {t('settingsExt.comm.monitorMsg')}
                             </button>
                         </div>
+                        )}
                     </div>
                 </div>
 
@@ -425,7 +486,6 @@ const CommunicationTab = () => {
                         style={{ padding: '6px', width: '300px' }}
                     >
                         <option value="lmc_flexo">LMC Flexo Protocol (@doc/20190323)</option>
-                        <option value="mhi_evol">Mitsubishi Evol (MHI)</option>
                         <option value="custom">Custom JSON / XML</option>
                     </select>
                 </div>
@@ -454,13 +514,6 @@ const CommunicationTab = () => {
                                 onChange={() => handleCommChange('erp', 'connectionType', 'file')}
                             /> File Share
                         </label>
-                        <label>
-                            <input
-                                type="radio"
-                                checked={commSettings.erp.connectionType === 'serial'}
-                                onChange={() => handleCommChange('erp', 'connectionType', 'serial')}
-                            /> {t('settingsExt.comm.connSerial')}
-                        </label>
                     </div>
                 </div>
 
@@ -481,64 +534,6 @@ const CommunicationTab = () => {
                                 onChange={e => handleCommChange('erp', 'port', Number(e.target.value))}
                                 style={{ width: '80px' }}
                             />
-                        </div>
-                    </div>
-                ) : commSettings.erp.connectionType === 'serial' ? (
-                    <div style={{ marginLeft: '20px' }}>
-                        <div className={styles.inputRow}>
-                            <label>{t('settingsExt.comm.serialPort')}:</label>
-                            <input
-                                value={commSettings.erp.serialPort}
-                                onChange={e => handleCommChange('erp', 'serialPort', e.target.value)}
-                                placeholder="/dev/ttyUSB0 或 COM1"
-                                style={{ width: '200px' }}
-                            />
-                        </div>
-                        <div className={styles.inputRow}>
-                            <label>{t('settingsExt.comm.baudRate')}:</label>
-                            <select
-                                value={commSettings.erp.baudRate}
-                                onChange={e => handleCommChange('erp', 'baudRate', Number(e.target.value))}
-                                style={{ padding: '6px', width: '110px' }}
-                            >
-                                {[1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200].map(b => (
-                                    <option key={b} value={b}>{b}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className={styles.inputRow}>
-                            <label>{t('settingsExt.comm.dataBits')}:</label>
-                            <select
-                                value={commSettings.erp.dataBits}
-                                onChange={e => handleCommChange('erp', 'dataBits', Number(e.target.value))}
-                                style={{ padding: '6px', width: '110px' }}
-                            >
-                                <option value={7}>7</option>
-                                <option value={8}>8</option>
-                            </select>
-                        </div>
-                        <div className={styles.inputRow}>
-                            <label>{t('settingsExt.comm.parity')}:</label>
-                            <select
-                                value={commSettings.erp.parity}
-                                onChange={e => handleCommChange('erp', 'parity', e.target.value)}
-                                style={{ padding: '6px', width: '110px' }}
-                            >
-                                <option value="none">{t('settingsExt.comm.parityNone')}</option>
-                                <option value="even">{t('settingsExt.comm.parityEven')}</option>
-                                <option value="odd">{t('settingsExt.comm.parityOdd')}</option>
-                            </select>
-                        </div>
-                        <div className={styles.inputRow}>
-                            <label>{t('settingsExt.comm.stopBits')}:</label>
-                            <select
-                                value={commSettings.erp.stopBits}
-                                onChange={e => handleCommChange('erp', 'stopBits', Number(e.target.value))}
-                                style={{ padding: '6px', width: '110px' }}
-                            >
-                                <option value={1}>1</option>
-                                <option value={2}>2</option>
-                            </select>
                         </div>
                     </div>
                 ) : (

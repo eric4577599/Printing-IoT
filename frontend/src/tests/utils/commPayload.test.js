@@ -17,11 +17,11 @@ const full = {
         enabled: true, simulate: false, deviceType: 'wise', ip: '192.168.1.1', port: 502,
         motorSignal: 'DI-0', countSignal: 'DI-1', monitor_interval: 1.5,
         mqttBroker: 'broker.example', mqttTopic: 'Advantech/+/data',
+        serialPort: '/dev/ttyUSB0', baudRate: 9600, dataBits: 8, parity: 'even', stopBits: 1,
     },
     erp: {
         enabled: true, protocol: 'lmc_flexo', connectionType: 'tcp',
         host: '192.168.1.100', port: 3000, inputDir: '/in', outputDir: '/out',
-        serialPort: '/dev/ttyUSB0', baudRate: 9600, dataBits: 8, parity: 'even', stopBits: 1,
     },
     dataLogInterval: 6,
     machineId: 'M20',
@@ -40,19 +40,19 @@ describe('buildCommPayload', () => {
         expect(p.mqtt_topic).toBe('Advantech/+/data');
     });
 
-    it('ERP 協定選 Mitsubishi Evol(mhi_evol)時原樣送出,不被改寫', () => {
-        const p = buildCommPayload({ ...full, erp: { ...full.erp, protocol: 'mhi_evol' } });
-        expect(p.erp_protocol).toBe('mhi_evol');
+    it('設備類型選 Mitsubishi Evol(mhi_evol)時原樣送出,不被改寫', () => {
+        const p = buildCommPayload({ ...full, plc: { ...full.plc, deviceType: 'mhi_evol' } });
+        expect(p.plc_device_type).toBe('mhi_evol');
     });
 
-    it('序列埠(RS-232)連線參數完整送出', () => {
-        const p = buildCommPayload({ ...full, erp: { ...full.erp, connectionType: 'serial' } });
-        expect(p.erp_connection_type).toBe('serial');
-        expect(p.erp_serial_port).toBe('/dev/ttyUSB0');
-        expect(p.erp_baud_rate).toBe(9600);
-        expect(p.erp_data_bits).toBe(8);
-        expect(p.erp_parity).toBe('even');
-        expect(p.erp_stop_bits).toBe(1);
+    it('序列埠(RS-232)連線參數屬於設備(plc_*),ERP 不再帶這些鍵', () => {
+        const p = buildCommPayload(full);
+        expect(p.plc_serial_port).toBe('/dev/ttyUSB0');
+        expect(p.plc_baud_rate).toBe(9600);
+        expect(p.plc_data_bits).toBe(8);
+        expect(p.plc_parity).toBe('even');
+        expect(p.plc_stop_bits).toBe(1);
+        expect(Object.keys(p).filter(k => k.startsWith('erp_') && /serial|baud|parity|stop_bits|data_bits/.test(k))).toEqual([]);
     });
 
     it('機台識別碼與 MM 網址都送得出去', () => {
