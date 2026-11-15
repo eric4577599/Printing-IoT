@@ -161,6 +161,35 @@ describe('calculateUtilization(AC-24:向下相容且支援準備時間)', () => 
     });
 });
 
+describe('calculateDailySummary 稼動率與月報同口徑(扣準備時間)', () => {
+    const records = [
+        { goodQty: 900, defectQty: 100, targetQty: 1000, runTime: 100, stopTime: 20, prepTime: 10, stopCount: 1, oee: 80 },
+        { goodQty: 400, defectQty: 50, targetQty: 500, runTime: 60, stopTime: 40, prepTime: 5, stopCount: 2, oee: 70 },
+    ];
+
+    it('utilization = 運轉 ÷ (運轉 + 停機 − 準備),與 calculateUtilization 帶準備時間一致', () => {
+        const summary = calculateDailySummary(records);
+        expect(summary.utilization).toBeCloseTo((160 / (220 - 15)) * 100, 10);
+        expect(summary.utilization).toBe(calculateUtilization(160, 60, 15));
+        // 舊行為(不扣準備時間)是 160/220 ≈ 72.7,不應再出現
+        expect(summary.utilization).not.toBeCloseTo((160 / 220) * 100, 5);
+    });
+
+    it('支援後端欄位名 prepTimeMinutes', () => {
+        const mapped = records.map(({ prepTime, ...r }) => ({ ...r, prepTimeMinutes: prepTime }));
+        expect(calculateDailySummary(mapped).utilization).toBe(calculateDailySummary(records).utilization);
+    });
+
+    it('沒有準備時間欄位時行為不變(向下相容)', () => {
+        const noPrep = records.map(({ prepTime, ...r }) => r);
+        expect(calculateDailySummary(noPrep).utilization).toBe(calculateUtilization(160, 60));
+    });
+
+    it('空陣列仍回 0', () => {
+        expect(calculateDailySummary([]).utilization).toBe(0);
+    });
+});
+
 describe('calculateWeightedAvgOEE / calculateDailySummary(AC-25:加權平均)', () => {
     // AC-25:兩筆紀錄(OEE 90 / 產量 100,OEE 50 / 產量 900)→ 54,不是 70
     const records = [

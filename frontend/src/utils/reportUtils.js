@@ -371,6 +371,8 @@ export function calculateDailySummary(records) {
     const totalRunTime = sum(records, 'runTime');
     const totalStopTime = sum(records, 'stopTime');
     const totalStopCount = sum(records, 'stopCount');
+    // 準備時間:欄位名兼容本機列(prepTime)與後端列(prepTimeMinutes),缺值視為 0
+    const totalPrepTime = sum(records, 'prepTime') || sum(records, 'prepTimeMinutes') || 0;
 
     return {
         totalOrders: records.length,
@@ -383,7 +385,8 @@ export function calculateDailySummary(records) {
         totalStopTime,
         totalStopCount,
         avgOEE: calculateWeightedAvgOEE(records),   // GAP-05:改為依產量加權,不再用算術平均
-        utilization: calculateUtilization(totalRunTime, totalStopTime)
+        // 與月報同口徑:負荷時間 = 運轉 + 停機 − 準備
+        utilization: calculateUtilization(totalRunTime, totalStopTime, totalPrepTime)
     };
 }
 

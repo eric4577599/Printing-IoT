@@ -507,7 +507,9 @@ public class ProductionService : IProductionService
             TotalStopCount = rows.Sum(c => c.StopCount),
             // 規則 6:依產量加權,不是算術平均 —— 算術平均會讓 10 張小單稀釋掉 1 張大單
             AvgOEE = OeeCalculator.WeightedAverageOee(rows.Select(c => (c.Oee, c.GoodQty + c.DefectQty))),
-            Utilization = OeeCalculator.Utilization(totalRun, totalStop, 0m),
+            // 與月報同口徑:負荷時間 = 運轉 + 停機 − 準備(§5.1 規則 1、2)。
+            // 原本這裡傳 0 使日報稼動率偏低,與月報及逐筆稼動不一致。
+            Utilization = OeeCalculator.Utilization(totalRun, totalStop, totalPrep),
         };
     }
 

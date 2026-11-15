@@ -263,6 +263,25 @@ public class ProductionSummaryControllerTests : IDisposable
         Assert.Equal(OeeCalculator.Utilization(160m, 60m, 15m), totals.GetProperty("utilizationRate").GetDecimal());
     }
 
+    [Fact(DisplayName = "日報彙總稼動率與月報同口徑:負荷時間 = 運轉 + 停機 − 準備")]
+    public async Task DailySummary_Utilization_SubtractsPrepTime_SameAsMonthly()
+    {
+        var db = "Summary-DailyUtil-" + Guid.NewGuid();
+        var (client, factory) = CreateApp(db);
+
+        Seed(factory,
+            Row("2026-04-01", "A", target: 1000, good: 900, defect: 100, run: 100, stop: 20, prep: 10),
+            Row("2026-04-01", "A", target: 500, good: 400, defect: 50, run: 60, stop: 40, prep: 5));
+
+        var daily = await ReadJson(await client.GetAsync("/api/production/summary/daily?from=2026-04-01&to=2026-04-01"));
+        var monthly = await ReadJson(await client.GetAsync("/api/production/summary/monthly?from=2026-04-01&to=2026-04-01"));
+
+        // 舊行為(不扣準備時間)會得到 160/220 = 72.7;正確口徑是 160/(220-15) = 78.0
+        Assert.Equal(OeeCalculator.Utilization(160m, 60m, 15m), daily.GetProperty("utilization").GetDecimal());
+        Assert.Equal(monthly.GetProperty("totals").GetProperty("utilizationRate").GetDecimal(),
+            daily.GetProperty("utilization").GetDecimal());
+    }
+
     // ── AC-07 ─────────────────────────────────────────────────────────────
 
     [Fact(DisplayName = "AC-07 停機原因依次數遞減,空原因歸入未分類")]
