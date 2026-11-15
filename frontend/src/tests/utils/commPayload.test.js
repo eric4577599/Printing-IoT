@@ -39,6 +39,11 @@ describe('buildCommPayload', () => {
         expect(p.mqtt_topic).toBe('Advantech/+/data');
     });
 
+    it('ERP 協定選 Mitsubishi Evol(mhi_evol)時原樣送出,不被改寫', () => {
+        const p = buildCommPayload({ ...full, erp: { ...full.erp, protocol: 'mhi_evol' } });
+        expect(p.erp_protocol).toBe('mhi_evol');
+    });
+
     it('機台識別碼與 MM 網址都送得出去', () => {
         const p = buildCommPayload(full);
         expect(p.machine_id).toBe('M20');

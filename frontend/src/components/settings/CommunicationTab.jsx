@@ -364,6 +364,7 @@ const CommunicationTab = () => {
                         style={{ padding: '6px', width: '300px' }}
                     >
                         <option value="lmc_flexo">LMC Flexo Protocol (@doc/20190323)</option>
+                        <option value="mhi_evol">Mitsubishi Evol (MHI)</option>
                         <option value="custom">Custom JSON / XML</option>
                     </select>
                 </div>
