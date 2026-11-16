@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
 using PrintingIoT.Infrastructure.Data;
 using PrintingIoT.Core.Constants;
+using PrintingIoT.Core.Security;
 using PrintingIoT.Core.Interfaces;
 using PrintingIoT.Infrastructure.Services;
 using PrintingIoT.Infrastructure.Extensions;
@@ -96,6 +97,12 @@ builder.Services.AddAuthorization(options =>
         .AddAuthenticationSchemes(ApiKeyAuthenticationDefaults.Scheme, JwtBearerDefaults.AuthenticationScheme)
         .RequireAuthenticatedUser()
         .RequireRole(AppRoles.ErpService, AppRoles.Admin));
+
+    // 整合契約 v1:MM 唯讀端點只認 API 金鑰 + MM_SERVICE,不接受 JWT / ADMIN(見 AppRoles.Policies.MmRead)
+    options.AddPolicy(AppRoles.Policies.MmRead, p => p
+        .AddAuthenticationSchemes(ApiKeyAuthenticationDefaults.Scheme)
+        .RequireAuthenticatedUser()
+        .RequireRole(AppRoles.MmService));
 });
 
 // Phase 4.5: Rate Limiting
@@ -168,7 +175,44 @@ builder.Services.AddRateLimiter(options =>
                 Window = TimeSpan.FromMinutes(budget.AuthWindowMinutes)
             }));
 
+    // 整合契約 v1:兩個互不搶額度的桶(資料桶 60/分、身分桶 120/分),
+    // 分區鍵取 X-Api-Key 的前綴(限流發生在驗證之前,拿不到身分);格式不符就退回來源 IP,
+    // 避免任意字串無限製造分區。
+    static string MmPartitionKey(HttpContext ctx)
+    {
+        var presented = ctx.Request.Headers[ApiKeyAuthenticationDefaults.HeaderName].ToString().Trim();
+        var prefix = string.IsNullOrEmpty(presented) ? null : ApiKeyGenerator.ExtractPrefix(presented);
+        return prefix != null ? "key:" + prefix : "ip:" + (ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+    }
+    options.AddPolicy("mm-data", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: MmPartitionKey(httpContext),
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                AutoReplenishment = true, PermitLimit = 60, QueueLimit = 0, Window = TimeSpan.FromMinutes(1)
+            }));
+    options.AddPolicy("mm-identity", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: MmPartitionKey(httpContext),
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                AutoReplenishment = true, PermitLimit = 120, QueueLimit = 0, Window = TimeSpan.FromMinutes(1)
+            }));
+
     options.RejectionStatusCode = 429;
+
+    // 429 一律帶 Retry-After;整合契約路徑另回契約規定的錯誤本文
+    options.OnRejected = async (context, token) =>
+    {
+        var http = context.HttpContext;
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+            http.Response.Headers.RetryAfter = Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds)).ToString();
+        if (http.Request.Path.StartsWithSegments("/api/v1/integration"))
+        {
+            http.Response.ContentType = "application/json";
+            await http.Response.WriteAsync("{\"error\":{\"code\":\"rate_limited\",\"message\":\"Too many requests.\"}}", token);
+        }
+    };
 });
 
 // Redis
@@ -176,6 +220,7 @@ builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
     StackExchange.Redis.ConnectionMultiplexer.Connect(builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379"));
 
 // Register Services
+builder.Services.AddSingleton<PrintingIoT.API.Controllers.ILoginCodeStore, PrintingIoT.API.Controllers.RedisLoginCodeStore>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();

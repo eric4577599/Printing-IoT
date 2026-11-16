@@ -62,6 +62,12 @@ public class ApiKeysController : ControllerBase
         if (request!.ExpiresAt is { } expiresAt && expiresAt.ToUniversalTime() <= DateTime.UtcNow)
             return BadRequest("ExpiresAt must be in the future.");
 
+        // 機器身分:未指定時維持舊行為(ERP_SERVICE);只接受 AppRoles.MachineRoles 內的值
+        var role = AppRoles.Normalize(request.Role);
+        if (role.Length == 0) role = AppRoles.ErpService;
+        if (!AppRoles.MachineRoles.Contains(role))
+            return BadRequest($"Role must be one of: {string.Join(", ", AppRoles.MachineRoles)}.");
+
         var (plainKey, prefix, hash) = ApiKeyGenerator.Generate();
 
         var entity = new Core.Entities.Auth.ApiKey
@@ -69,7 +75,7 @@ public class ApiKeysController : ControllerBase
             Name = name,
             Prefix = prefix,
             KeyHash = hash,
-            Role = AppRoles.ErpService,
+            Role = role,
             IsActive = true,
             ExpiresAt = request.ExpiresAt?.ToUniversalTime(),
             CreatedBy = User.Identity?.Name

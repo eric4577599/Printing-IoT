@@ -5,7 +5,7 @@ namespace PrintingIoT.Core.DTOs.Auth;
 /// **任何回應型別都不得包含 KeyHash**;明文金鑰只出現在 <see cref="CreateApiKeyResponse"/>,
 /// 且只在建立當下回傳一次。
 /// </summary>
-public record CreateApiKeyRequest(string Name, DateTime? ExpiresAt);
+public record CreateApiKeyRequest(string Name, DateTime? ExpiresAt, string? Role = null);
 
 /// <summary>金鑰摘要(對外輸出用)。Prefix 是明文但不足以構成憑證,可安全顯示。</summary>
 public record ApiKeySummary(

@@ -34,6 +34,16 @@ public static class AppRoles
     public const string ErpService = "ERP_SERVICE";
 
     /// <summary>
+    /// MM 外掛服務身分(整合契約 v1,設計說明書 §14)—— 同 <see cref="ErpService"/> 規格:
+    /// **只能由 API 金鑰取得,不可指派給人員帳號**,不列入 <see cref="All"/>。
+    /// 只能打整合契約的唯讀端點(MmRead policy),打不開 ERP 推單與其他端點。
+    /// </summary>
+    public const string MmService = "MM_SERVICE";
+
+    /// <summary>可由金鑰管理端點指定的機器身分清單(預設 ERP_SERVICE)。</summary>
+    public static readonly string[] MachineRoles = { ErpService, MmService };
+
+    /// <summary>
     /// 授權原則(policy)名稱常數,對應 Program.cs 的註冊。
     /// </summary>
     public static class Policies
@@ -53,6 +63,12 @@ public static class AppRoles
         /// 現場也需要有人能在 ERP 掛掉時手動補一批單。
         /// </summary>
         public const string ErpPush = "ErpPush";
+
+        /// <summary>
+        /// MM 整合唯讀端點 —— **只認 X-Api-Key 且角色為 MM_SERVICE**。
+        /// 不接受 JWT、也不放行 ADMIN:這組端點是機器對機器契約,人工驗證請用 Swagger 帶金鑰。
+        /// </summary>
+        public const string MmRead = "MmRead";
     }
 
     /// <summary>
