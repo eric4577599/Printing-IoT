@@ -1,5 +1,5 @@
 # Handoff — Claude(Printing IoT)
-> 最後更新:2026-11-20(MM 整合核對完成;本機有 2 個未 push 的 commit,等 MM 同步契約)
+> 最後更新:2026-11-20(MM 整合核對完成;契約文字已 push、前端容器已重建;剩 I4 實測)
 
 ## ⛔ 下一個接手的人先看這段
 
@@ -79,8 +79,8 @@ OP1~OP5 的密碼已改為 `0000`(直接改資料庫雜湊,因為走 API 要輸�
 - ✅ **中英文頁面配置檢查(2026-11-15)**:英文介面逐頁掃描(殘留中文 + 版面溢出),繁中/越南文/泰文掃溢出。結果:排程、報表四分頁、文件頁、設定多數分頁乾淨(殘留中文皆為資料庫資料:客戶/產品/機台部位/停機原因名稱)。**報表設定「休息/點心/支援」已改為可勾選選項**(`utils/reportFilters.js`,存語言無關代號 `rest/snack/support`,舊中文值自動對應;自訂關鍵字改行內輸入;該設定目前**沒有任何報表程式讀取**,只存 localStorage)。
 - ✅ **PRIIOT⇄MM 整合(2026-11-16,見 `docs/report20261116-1.md`、`docs/spec20261116-1.md`、設計說明書 §14)**:原則與契約 v1 雙邊定稿(Eric 四項決定皆採推薦);本系統端已實作並部署(`MM_SERVICE` 金鑰、users/introspect/login-codes/exchange、devices/counter/status-events、限速兩桶),後端測試 382 全過、實機以臨時金鑰驗過並刪除。**待辦**:Eric 建正式金鑰 + 設 `MM_ENTRY_URL` + 實測登入代碼全流程;MM 端依其 `docs/design20261116-1.md` 做 I0~I4。
   **MM 權限矩陣 Eric 已全數定案(11-16,已轉告 MM)**:角色對映採 MM 提案、圖資管理僅 ADMIN、不留本機緊急管理員、故障只提示不自動建單、整合模式關閉第二因子;張數只能由計數器(WISE 等感測)寫入、OPERATOR 不可手填;計數器壞掉由 ADMIN 切回人工再切回,並新增「來源切換」稽核紀錄(選項 1)。**主系統端無待辦**,等 MM 做 I0→I1→I3→I4(I4 需 Eric 在場)。未驗證:登入代碼真實全流程、現場計數是否換單歸零、PLC 故障是否對映成 `Error`。
-- ✅ **MM 整合核對(2026-11-18~19,工單 T-20261118-10)**:逐項核對回覆在 `M-Agent/docs/inbox/20261118-reply-PRIIOT-MM整合核對.md`。結論:`exchange` 對停用/不存在使用者回 400(契約原寫 `{active:false}`)→ Eric 同意**改契約文字**,已改 `docs/spec20261116-1.md`(`838e64f`);PRIIOT 端通訊說明已寫入 `doc/系統設計說明書.md` §14.6(`aa91a83`)。**這兩個 commit 未 push(Eric 指示等 MM 同步契約再說)。** 現況限制:真實設備不會產生 `Error`(WISE 只有運轉/待機/不明、無 PLC 驅動);Worker 一次只處理一台鎖定設備;deviceId 取 MQTT 主題第二段,缺則為 `WISE`。
-  **Next Step(逐字)**:① 等 MM 把 `MM/docs/spec20261116-1.md` 同步成同樣文字 → `diff docs/spec20261116-1.md "/Volumes/G70Pro/cusor pool/MM/docs/spec20261116-1.md"` 應無差異;② 無差異後問 Eric:是否 push 這兩個 commit、何時重建前端容器(`doc/` 為建置時收入,文件頁才看得到 §14.6);③ Eric 在場時 I4 實測(正式金鑰、`MM_ENTRY_URL`)。
+- ✅ **MM 整合核對(2026-11-18~19,工單 T-20261118-10)**:逐項核對回覆在 `M-Agent/docs/inbox/20261118-reply-PRIIOT-MM整合核對.md`。結論:`exchange` 對停用/不存在使用者回 400(契約原寫 `{active:false}`)→ Eric 同意**改契約文字**,已改 `docs/spec20261116-1.md`(`838e64f`);PRIIOT 端通訊說明已寫入 `doc/系統設計說明書.md` §14.6(`aa91a83`)。**2026-11-20 已 push(`9148107`);MM 端契約語意一致、措辭不同(Eric 接受),前端容器已重建,§14.6 已進 bundle(未用瀏覽器看過文件頁)。** 現況限制:真實設備不會產生 `Error`(WISE 只有運轉/待機/不明、無 PLC 驅動);Worker 一次只處理一台鎖定設備;deviceId 取 MQTT 主題第二段,缺則為 `WISE`。
+  **Next Step(逐字)**:Eric 在場時做 I4 實測(正式金鑰、`MM_ENTRY_URL`、登入代碼全流程)。①② 已完成。
 - **配置檢查發現、尚未修(i18n 與版面)**:
   1. ~~分析頁 6 處寫死中文~~ **已修(eb4b679)**:改走 `analysis.startLabel/endLabel/units.*`(5 語系)。
   2. **說明視窗(`components/modals/HelpModal.jsx`)內容全是中文**:載入 `public/help/{monitor,schedule,reports,analysis,settings}.html`(`lang="zh-TW"`),只有視窗標題與側欄有翻譯。要補英文等語系需另寫內容(或改為渲染新操作手冊章節);**待 Eric 決定要補哪些語言**。
