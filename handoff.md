@@ -277,3 +277,5 @@ Claude 可以自己走完**,不必等 Eric 先登入。**管理者登入**(設�
 - 2026-11-05 全體「完成未完成工作」:✅ 已回 `M-Agent/docs/inbox/下班回報-Printing-IoT.md`。
 - 2026-11-13 T-20261113-01(Greenstone 協定學習):✅ 筆記完成;結案回覆檔待寫(沙箱曾擋 M-Agent 目錄)。
 - 2026-11-13 損耗率答案補進 `M-Agent/docs/inbox/20261105-reply-printing-iot-loss-rate.md` §8:未完成,內容見 `docs/inbox/20261106-stacker-loss-rate-answer.md`。
+
+> 2026-11-20 夜班:T-20261105-02(損耗率)核對為已完成並結案;回報在 M-Agent/docs/inbox/夜班回報-Printing IoT.md。白天待決:3.1/3.5 是否實際重算。
