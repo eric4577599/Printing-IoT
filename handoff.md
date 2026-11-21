@@ -279,3 +279,5 @@ Claude 可以自己走完**,不必等 Eric 先登入。**管理者登入**(設�
 - 2026-11-13 損耗率答案補進 `M-Agent/docs/inbox/20261105-reply-printing-iot-loss-rate.md` §8:未完成,內容見 `docs/inbox/20261106-stacker-loss-rate-answer.md`。
 
 > 2026-11-20 夜班:T-20261105-02(損耗率)核對為已完成並結案;回報在 M-Agent/docs/inbox/夜班回報-Printing IoT.md。白天待決:3.1/3.5 是否實際重算。
+
+> **2026-11-21 新增 demo 帳號(Eric 指示)**:帳號 `demo` / 密碼 `demo`,角色 OPERATOR、班別 A。**走資料庫層寫入,不是 API**(`demo` 不符 API 密碼政策;理由同 OP1~OP5)。`UsernameNormalized` 必須是大寫 `DEMO`(登入以 `ToUpperInvariant` 比對,寫成小寫會 401)。實測 `demo/demo` 200、`demo/wrong` 401。登入畫面名冊會自動帶 `0000`,故 demo 需手動輸入帳號密碼。密碼很弱,**對外開放(Cloudflare Tunnel)時請留意**。移除:`delete from "Users" where "Username"='demo';`(UserRoles 連動刪除)。
