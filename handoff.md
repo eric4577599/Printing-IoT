@@ -364,3 +364,9 @@ Claude 可以自己走完**,不必等 Eric 先登入。**管理者登入**(設�
 - 細節見 `docs/report20261125-1.md`。虛擬導覽:依規格 §6 補 C 區像素脫敏(`maskC.py` 產 `outC/1~7.png`)、B 區改名重抓、A 區說明對圖改寫、mrep/main 改開示意播放器、獨立功能測試與美編檢查完成。等 Eric 驗收與 5 個待決項。
 - MM API:兩邊程式符合契約但整合未開(PRIIOT 無 MM_SERVICE 金鑰、`MM_ENTRY_URL` 空;MM 為 standalone,且 compose 未傳 `MMS_AUTH_MODE`/`MMS_PRIIOT_*`)。**Next Step**:Eric 在場做 I4;先請 MM 座位補 compose 的環境變數傳遞。
 - 11-25 補設定:已建 `MM_SERVICE` 金鑰(前綴 ef0938808d9a,DB 層)、PRIIOT `MM_ENTRY_URL` 已設並重建 API、MM compose 已補變數傳遞(MM repo 已 commit、未 push)。MM 仍 standalone、`mm-v2` 未重建。細節與回滾見 `docs/report20261125-1.md` 第三節。**Next Step**:I4 時把 MM `.env` 的 `MMS_AUTH_MODE` 改 priiot 並重建,由 Eric 登入測登入代碼全流程。
+
+### 【2026-11-25 晚】I4 切換已做,等 Eric 真人測全流程
+- MM 已是 `MMS_AUTH_MODE=priiot`(`mm-v2` 以 v2+cutover 重建,healthy);本地登入 404、`/api/auth/mode` 回 priiot、假代碼兌換有打到 PRIIOT。
+- PRIIOT 前端補上入口取代碼(commit `acb6378`,未 push),前端容器已重建。
+- **下一步**:請 Eric 以 ADMIN/ENGINEER/SUPERVISOR 登入 PRIIOT → 點 MM 入口 → 應直接登入 MM。失敗就看 `docker logs mm-v2` 與 API 記錄;要回滾見 `docs/report20261125-1.md` 第四節。
+- 回滾點:`MM/backups/mms-backup-20261125-134906.tar`、映像 `mm-v2:pre-i4-20261125`、`printingiot-frontend:pre-i4-20261125`。
