@@ -261,6 +261,16 @@ export const clearCurrentOrder = async () => {
 
 
 
+/**
+ * 簽發前往 MM 的一次性登入代碼(整合契約 v1 §3)
+ * 輸出:{ code, expiresInSeconds, redirectUrl };redirectUrl = MM 入口網址 + #code=…
+ * 邏輯:以使用者的權杖呼叫;MM 入口網址未設定時後端回 503,由呼叫端決定退路。
+ */
+export const issueMmLoginCode = async () => {
+    const response = await api.post('/v1/integration/login-codes', { audience: 'mm' });
+    return response.data;
+};
+
 // Settings API
 export const getCommunicationSettings = async () => {
     const response = await api.get('/settings/communication');

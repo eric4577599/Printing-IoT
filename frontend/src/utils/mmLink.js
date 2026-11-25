@@ -57,3 +57,62 @@ export function shouldShowMmEntry({ baseUrl, hasRole }) {
     if (!buildMmUrl(baseUrl, '')) return false;
     return hasRole(...MM_ENTRY_ROLES);
 }
+
+/**
+ * 把來源與機台參數補進「帶登入代碼的轉址網址」
+ * @param {string} redirectUrl - 後端簽發的轉址網址(MM 入口 + `#code=…`)
+ * @param {string} machineId - 主系統的機台識別碼
+ * @returns {string|null} 補好參數的網址;redirectUrl 不合法時回 null
+ * @description 代碼放在網址片段(#),這裡只動 query string,片段原樣保留 ——
+ *              代碼不能跑到 query 去,否則會進 access log 與 Referer。
+ */
+export function attachMmParams(redirectUrl, machineId) {
+    let url;
+    try {
+        url = new URL(String(redirectUrl ?? ''));
+    } catch {
+        return null;
+    }
+    if (!/^https?:$/.test(url.protocol)) return null;
+
+    url.searchParams.set('from', 'priiot');
+    const code = String(machineId ?? '').trim();
+    if (code) url.searchParams.set('machine', code);
+
+    return url.toString();
+}
+
+/**
+ * 帶登入代碼開啟 MM(整合契約 v1 §3)
+ * @param {Object} deps
+ * @param {string} deps.plainUrl - 不帶代碼的入口網址(buildMmUrl 的結果),取不到代碼時退回用
+ * @param {string} deps.machineId - 主系統的機台識別碼
+ * @param {() => Promise<{redirectUrl?: string}>} deps.issueCode - 向後端簽發登入代碼
+ * @param {Window} [deps.win] - 測試注入用,預設為瀏覽器的 window
+ * @returns {Promise<'code'|'plain'|'none'>} 以帶代碼網址開啟 / 退回一般網址 / 無網址可開
+ * @description 新分頁必須在點擊當下**同步**開出,等非同步結果回來才開會被瀏覽器擋掉;
+ *              所以先開空白分頁、切斷 opener,再把網址導過去。
+ *              取代碼失敗(整合未啟用回 503、網路不通)時退回一般網址:
+ *              MM 獨立模式照常可登入,整合模式則會提示「請從 PRIIOT 進入」。
+ */
+export async function openMmWithLoginCode({ plainUrl, machineId, issueCode, win = window }) {
+    if (!plainUrl) return 'none';
+
+    const tab = win.open('', '_blank');
+    if (tab) tab.opener = null;
+    const go = (url) => {
+        if (tab) tab.location.replace(url);
+        else win.location.assign(url); // 分頁被擋時改在原分頁前往,不讓入口變成沒反應
+    };
+
+    let target = null;
+    try {
+        const data = await issueCode();
+        target = attachMmParams(data?.redirectUrl, machineId);
+    } catch {
+        target = null;
+    }
+
+    go(target || plainUrl);
+    return target ? 'code' : 'plain';
+}

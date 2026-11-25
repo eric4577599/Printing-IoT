@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import styles from './MainLayout.module.css';
-import { updateSimulationSpeed, getOrders as apiGetOrders, syncSchedule as apiSyncSchedule, deleteOrder as apiDeleteOrder, getCommunicationSettings } from '../../services/api';
+import { updateSimulationSpeed, getOrders as apiGetOrders, syncSchedule as apiSyncSchedule, deleteOrder as apiDeleteOrder, getCommunicationSettings, issueMmLoginCode } from '../../services/api';
 import { fromBackendOrder, toBackendOrder, sortBySequence, isGuid, isSchedulableBackendOrder } from '../../utils/orderMapper';
 
 // 空排程時的等待列(純 UI,id 固定 'placeholder',不上傳後端)
@@ -26,7 +26,7 @@ import { useLanguage } from '../../modules/language/LanguageContext';
 import LanguageSwitcher from '../../modules/language/LanguageSwitcher';
 import LanguageNavMenu from '../../modules/language/LanguageNavMenu';
 import { useAuth } from '../../modules/auth/AuthContext';
-import { buildMmUrl, shouldShowMmEntry } from '../../utils/mmLink';
+import { buildMmUrl, shouldShowMmEntry, openMmWithLoginCode } from '../../utils/mmLink';
 import LoginModal from '../../modules/auth/LoginModal';
 import HelpModal from '../modals/HelpModal';
 import { createSeedProducts } from '../../data/seedProducts';
@@ -441,6 +441,17 @@ const MainLayout = () => {
                             rel="noopener noreferrer"
                             className={styles.navItem}
                             title={t('nav.mmHint')}
+                            onClick={(e) => {
+                                // 整合模式:先取一次性登入代碼再開 MM;取不到就退回原本的連結。
+                                // 有按輔助鍵(開新視窗等)時交還瀏覽器處理。
+                                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                                e.preventDefault();
+                                openMmWithLoginCode({
+                                    plainUrl: buildMmUrl(mmEntry.baseUrl, mmEntry.machineId),
+                                    machineId: mmEntry.machineId,
+                                    issueCode: issueMmLoginCode,
+                                });
+                            }}
                         >
                             🔧 {t('nav.mm')}
                         </a>
