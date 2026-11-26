@@ -94,7 +94,8 @@ const MainLayout = () => {
 
                     // P1:MM 入口所需的兩個值
                     setMmEntry({ baseUrl: parsed.mmBaseUrl || '', machineId: parsed.machineId || '' });
-                    return true;
+                    // 本機有設定但沒有 MM 網址(舊版存下來的)時,視同沒有,仍向後端要一次
+                    return Boolean(String(parsed.mmBaseUrl || '').trim());
                 }
             } catch (e) { }
             return false;
@@ -104,15 +105,15 @@ const MainLayout = () => {
         const hadLocal = loadSettings();
 
         /*
-          P1:這台終端從沒開過設定頁時,localStorage 是空的 —— 入口就永遠不會出現。
-          所以本機沒有時向後端要一次。失敗不影響其他功能(入口不顯示而已)。
+          P1:這台終端從沒開過設定頁、或本機存的是沒有 MM 網址的舊設定時,入口就永遠不會出現。
+          所以本機拿不到 MM 網址時向後端要一次。失敗不影響其他功能(入口不顯示而已)。
         */
         if (!hadLocal) {
             getCommunicationSettings()
-                .then(data => setMmEntry({
+                .then(data => setMmEntry(prev => ({
                     baseUrl: data?.mm_base_url || '',
-                    machineId: data?.machine_id || '',
-                }))
+                    machineId: prev.machineId || data?.machine_id || '',
+                })))
                 .catch(() => { /* 取不到就不顯示入口,不打擾使用者 */ });
         }
 
