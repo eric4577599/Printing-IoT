@@ -375,3 +375,7 @@ Claude 可以自己走完**,不必等 Eric 先登入。**管理者登入**(設�
 - C「現場看板」第四張換成全廠機台看板:原圖只有 430×274,改由 `virtual-tour/sim8.py` 以示意資料重繪(輸出 `outC/8.png`),圖說標「示意重繪」。舊的原因清單圖已移除。
 - 表格欄名與狀態格左下標籤是依版面推測的,Eric 若提供實際名稱,改 `sim8.py` 後跑 `python3 sim8.py && python3 build_tour.py` 再發佈。
 - 未 push:Printing IoT `acb6378`、`eadfcab` 與本筆;MM `9ab5a09`。I4 真人全流程仍待 Eric 測。
+
+### 【2026-11-26】I4 登入全流程通過(Eric 實測)
+- 「🔧 維護」入口出現、可直接登入 MM。入口顯示修正為 commit `78ac870`(已 push)。
+- 剩現場項目:deviceId 對照、計數歸零、故障對映 `Error`、角色權限對映。MM 維持 `MMS_AUTH_MODE=priiot`。
