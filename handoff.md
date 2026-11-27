@@ -379,3 +379,8 @@ Claude 可以自己走完**,不必等 Eric 先登入。**管理者登入**(設�
 ### 【2026-11-26】I4 登入全流程通過(Eric 實測)
 - 「🔧 維護」入口出現、可直接登入 MM。入口顯示修正為 commit `78ac870`(已 push)。
 - 剩現場項目:deviceId 對照、計數歸零、故障對映 `Error`、角色權限對映。MM 維持 `MMS_AUTH_MODE=priiot`。
+
+### 【2026-11-27】已回覆 MM 的 WISE 數字對照(工單 T-20261119-13)
+- 回覆在 `MM/docs/inbox/20261127-PRIIOT-WISE數字對照回覆.md`;測試 `backend/PrintingIoT.Tests/Integration/WiseCounterParityTests.cs`(commit `73263db`,14 項過,全套 396 過)。
+- 結論:序列 100→250→30→80 的 counter 輸出與 MM 表一致。差異與限制:counter 只反映已寫入歷史的紀錄(節流);節流區間內的歸零可能判不出來;數值字串與負數本系統會採用、MM 不採用;本系統沒有 WISE 模擬器,且 Worker 連的是自家 `mqtt-broker`。
+- 未實測真實 MQTT。待 Eric 決定:歸零盲區要不要處理。未 push:`73263db` 與本筆;MM `61282db`。
